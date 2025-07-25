@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { QrCode, Eye, EyeOff, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,18 +29,32 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Simulate login
-    setTimeout(() => {
-      if (formData.email && formData.password) {
-        localStorage.setItem("isAuthenticated", "true")
-        localStorage.setItem("userEmail", formData.email)
-        router.push("/dashboard")
-      } else {
-        setError("Please fill in all fields")
-      }
+    if (!formData.email || !formData.password) {
+      setError("Please fill in all fields")
       setIsLoading(false)
-    }, 1000)
+      return
+    }
+
+    try {
+      const response = await login({
+        email: formData.email,
+        password: formData.password,
+      })
+
+      if (response.error) {
+        setError(response.error)
+      } else {
+        // Successful login - redirect to dashboard
+        router.push("/dashboard")
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  const loading = isLoading || authLoading
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
@@ -74,6 +90,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -87,6 +104,7 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -94,6 +112,7 @@ export default function LoginPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -101,13 +120,17 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:underline">
+                <Link 
+                  href="/auth/forgot-password" 
+                  className="text-sm text-blue-600 hover:underline"
+                  tabIndex={loading ? -1 : 0}
+                >
                   Forgot password?
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>
             </form>
@@ -115,7 +138,11 @@ export default function LoginPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
-                <Link href="/auth/register" className="text-blue-600 hover:underline">
+                <Link 
+                  href="/auth/register" 
+                  className="text-blue-600 hover:underline"
+                  tabIndex={loading ? -1 : 0}
+                >
                   Sign up
                 </Link>
               </p>

@@ -45,8 +45,8 @@ import {
   Bell,
 } from "lucide-react"
 
-// Add ProtectedRoute wrapper and better user state
 import ProtectedRoute from "@/components/auth/protected-route"
+import { useAuth } from "@/contexts/auth-context"
 
 const navigation = [
   {
@@ -87,27 +87,25 @@ const navigation = [
   },
 ]
 
-// Update the component to include protection
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [userEmail, setUserEmail] = useState("")
-  const [companyName, setCompanyName] = useState("")
-  const [userName, setUserName] = useState("")
+  const { user, companies, logout } = useAuth()
 
-  useEffect(() => {
-    // Provide default values without requiring authentication
-    const email = localStorage.getItem("userEmail") || "demo@example.com"
-    const company = localStorage.getItem("companyName") || "Demo Company"
-    const name = localStorage.getItem("userName") || "Demo User"
-    setUserEmail(email)
-    setCompanyName(company)
-    setUserName(name)
-  }, [])
+  // Get the primary company (first one for now)
+  const primaryCompany = companies?.[0]
 
-  const handleLogout = () => {
-    localStorage.clear()
-    router.push("/auth/login")
+  const handleLogout = async () => {
+    await logout()
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   return (
@@ -119,7 +117,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <QrCode className="h-8 w-8 text-blue-600" />
               <div>
                 <span className="text-lg font-bold text-gray-900">MenuAI</span>
-                <p className="text-xs text-gray-600">{companyName}</p>
+                <p className="text-xs text-gray-600">
+                  {primaryCompany?.name || "Loading..."}
+                </p>
               </div>
             </div>
           </SidebarHeader>
@@ -155,12 +155,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <Avatar className="h-6 w-6">
                         <AvatarImage src="/placeholder.svg" />
                         <AvatarFallback>
-                          {userName ? userName.charAt(0).toUpperCase() : userEmail.charAt(0).toUpperCase()}
+                          {user ? getInitials(user.full_name) : "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col items-start">
-                        <span className="text-sm font-medium truncate">{userName || userEmail}</span>
-                        <span className="text-xs text-gray-500 truncate">{companyName}</span>
+                        <span className="text-sm font-medium truncate">
+                          {user?.full_name || "Loading..."}
+                        </span>
+                        <span className="text-xs text-gray-500 truncate">
+                          {primaryCompany?.name || "Loading..."}
+                        </span>
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>

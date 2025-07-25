@@ -12,9 +12,11 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { QrCode, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { register, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     companyName: "",
     firstName: "",
@@ -67,16 +69,31 @@ export default function RegisterPage() {
       return
     }
 
-    // Simulate registration with success feedback
-    setTimeout(() => {
-      localStorage.setItem("isAuthenticated", "true")
-      localStorage.setItem("userEmail", formData.email)
-      localStorage.setItem("companyName", formData.companyName)
-      localStorage.setItem("userName", `${formData.firstName} ${formData.lastName}`)
-      localStorage.setItem("onboardingStep", "1")
-      router.push("/onboarding")
-    }, 1500)
+    try {
+      const response = await register(
+        {
+          email: formData.email,
+          password: formData.password,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+        },
+        formData.companyName
+      )
+
+      if (response.error) {
+        setError(response.error)
+      } else {
+        // Successful registration - redirect to onboarding or dashboard
+        router.push("/onboarding")
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  const loading = isLoading || authLoading
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
@@ -111,6 +128,7 @@ export default function RegisterPage() {
                   value={formData.companyName}
                   onChange={(e) => setFormData((prev) => ({ ...prev, companyName: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -123,6 +141,7 @@ export default function RegisterPage() {
                     value={formData.firstName}
                     onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -133,6 +152,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -146,6 +166,7 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -159,6 +180,7 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -166,6 +188,7 @@ export default function RegisterPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -203,6 +226,7 @@ export default function RegisterPage() {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
                     required
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -210,6 +234,7 @@ export default function RegisterPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={loading}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -221,6 +246,7 @@ export default function RegisterPage() {
                   id="terms"
                   checked={formData.agreeToTerms}
                   onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))}
+                  disabled={loading}
                 />
                 <Label htmlFor="terms" className="text-sm">
                   I agree to the{" "}
@@ -234,8 +260,8 @@ export default function RegisterPage() {
                 </Label>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
               </Button>
             </form>
@@ -243,7 +269,11 @@ export default function RegisterPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{" "}
-                <Link href="/auth/login" className="text-blue-600 hover:underline">
+                <Link 
+                  href="/auth/login" 
+                  className="text-blue-600 hover:underline"
+                  tabIndex={loading ? -1 : 0}
+                >
                   Sign in
                 </Link>
               </p>

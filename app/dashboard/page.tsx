@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Store, Menu, QrCode, MessageCircle, TrendingUp, Eye, Plus, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import { useAuth } from "@/contexts/auth-context"
 
 // Dummy data
 const dashboardStats = {
@@ -25,10 +26,9 @@ const recentActivity = [
 ]
 
 export default function DashboardPage() {
-  const [companyName, setCompanyName] = useState("")
+  const { user, companies } = useAuth()
   // Add state for welcome message
   const [showWelcome, setShowWelcome] = useState(false)
-  const [userName, setUserName] = useState("")
   const [recentRestaurants, setRecentRestaurants] = useState([
     {
       id: "1",
@@ -59,15 +59,13 @@ export default function DashboardPage() {
     },
   ])
 
+  // Get the primary company
+  const primaryCompany = companies?.[0]
+
   useEffect(() => {
-    const company = localStorage.getItem("companyName") || "Your Company"
-    const name = localStorage.getItem("userName") || ""
-    const firstRestaurant = localStorage.getItem("firstRestaurant")
     const urlParams = new URLSearchParams(window.location.search)
     const isWelcome = urlParams.get("welcome") === "true"
 
-    setCompanyName(company)
-    setUserName(name)
     setShowWelcome(isWelcome)
 
     // Clear welcome parameter
@@ -75,23 +73,33 @@ export default function DashboardPage() {
       window.history.replaceState({}, "", "/dashboard")
     }
 
-    // If there's a first restaurant from onboarding, add it to recent restaurants
+    // Check for first restaurant from onboarding (legacy localStorage)
+    const firstRestaurant = localStorage.getItem("firstRestaurant")
     if (firstRestaurant) {
-      const restaurant = JSON.parse(firstRestaurant)
-      setRecentRestaurants((prev) => [
-        {
-          id: restaurant.id,
-          name: restaurant.name,
-          description: restaurant.description,
-          status: "active",
-          menus: 0,
-          qrScans: 0,
-          lastUpdated: "Just created",
-        },
-        ...prev.slice(0, 2), // Keep only 3 total
-      ])
+      try {
+        const restaurant = JSON.parse(firstRestaurant)
+        setRecentRestaurants((prev) => [
+          {
+            id: restaurant.id,
+            name: restaurant.name,
+            description: restaurant.description,
+            status: "active",
+            menus: 0,
+            qrScans: 0,
+            lastUpdated: "Just created",
+          },
+          ...prev.slice(0, 2), // Keep only 3 total
+        ])
+        // Clear the localStorage item after using it
+        localStorage.removeItem("firstRestaurant")
+      } catch (error) {
+        console.error("Error parsing first restaurant:", error)
+      }
     }
   }, [])
+
+  const firstName = user?.first_name || "there"
+  const companyName = primaryCompany?.name || "your company"
 
   return (
     <DashboardLayout>
@@ -100,7 +108,7 @@ export default function DashboardPage() {
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-2">🎉 Welcome to MenuAI, {userName.split(" ")[0]}!</h2>
+                <h2 className="text-2xl font-bold mb-2">🎉 Welcome to MenuAI, {firstName}!</h2>
                 <p className="text-blue-100">
                   Your account has been set up successfully. You can now start uploading menus and generating QR codes.
                 </p>
