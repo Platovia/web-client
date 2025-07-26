@@ -182,34 +182,60 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
     }
   }, [resolvedParams?.id, isNewlyCreated])
 
-  const generateQRCode = () => {
-    // Simulate QR code generation and download
-    const canvas = document.createElement("canvas")
-    canvas.width = 300
-    canvas.height = 300
-    const ctx = canvas.getContext("2d")
-
-    if (ctx) {
-      ctx.fillStyle = "#000000"
-      ctx.fillRect(0, 0, 300, 300)
-      ctx.fillStyle = "#ffffff"
-      ctx.font = "16px Arial"
-      ctx.textAlign = "center"
-      ctx.fillText("QR Code", 150, 140)
-      ctx.fillText(restaurant?.name || "", 150, 160)
-      ctx.fillText(`Menu Link`, 150, 180)
+  const generateQRCode = async () => {
+    // Find the active menu
+    const activeMenu = menus.find(menu => menu.is_active)
+    
+    if (!activeMenu) {
+      alert("No active menu found. Please ensure a menu is marked as active.")
+      return
     }
 
-    canvas.toBlob((blob) => {
-      if (blob) {
+    try {
+      // Check if QR code already exists for this menu
+      let qrCodeUrl = activeMenu.qr_code_url
+      
+      if (!qrCodeUrl) {
+        // Generate QR code if it doesn't exist
+        const generateResponse = await apiClient.generateQRCode(activeMenu.id)
+        if (generateResponse.error) {
+          alert(`Failed to generate QR code: ${generateResponse.error}`)
+          return
+        }
+        if (!generateResponse.data) {
+          alert("Failed to generate QR code: No data returned")
+          return
+        }
+        qrCodeUrl = generateResponse.data.qr_code_url
+      }
+
+      if (qrCodeUrl) {
+        // Extract filename from the QR code URL
+        const urlParts = qrCodeUrl.split('/')
+        const filename = urlParts[urlParts.length - 1]
+        
+        // Download the QR code using the API client
+        const response = await apiClient.downloadQRCode(filename)
+        
+        if (!response.ok) {
+          alert("Failed to download QR code")
+          return
+        }
+        
+        const blob = await response.blob()
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
         a.download = `${restaurant?.name}-qr-code.png`
         a.click()
         URL.revokeObjectURL(url)
+      } else {
+        alert("QR code URL not found")
       }
-    })
+    } catch (error) {
+      console.error("Error downloading QR code:", error)
+      alert("Failed to download QR code. Please try again.")
+    }
   }
 
   if (isLoading) {
@@ -451,7 +477,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                   </Link>
                   <Button variant="outline" className="w-full justify-start bg-transparent" onClick={generateQRCode}>
                     <QrCode className="h-4 w-4 mr-2" />
-                    Generate QR Code
+                    Download QR Code
                   </Button>
                   <Link href={`/dashboard/menus?restaurant=${restaurant.id}`}>
                     <Button variant="outline" className="w-full justify-start bg-transparent">
