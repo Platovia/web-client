@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,17 +33,12 @@ export default function EditMenuPage() {
   const [menuData, setMenuData] = useState<MenuWithItems | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isActivating, setIsActivating] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (id) {
-      loadMenuData()
-    }
-  }, [id])
-
-  const loadMenuData = async () => {
+  const loadMenuData = useCallback(async () => {
     if (!id) return
     
     setIsLoading(true)
@@ -85,7 +80,13 @@ export default function EditMenuPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [id, fromUpload])
+
+  useEffect(() => {
+    if (id) {
+      loadMenuData()
+    }
+  }, [id, loadMenuData])
 
   const categories = menuData ? Array.from(new Set(menuData.items.map((item) => item.category || "Other").filter(Boolean))) : []
 
@@ -113,6 +114,33 @@ export default function EditMenuPage() {
       setError("Failed to save menu")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleActivateMenu = async () => {
+    if (!menuData || menuData.menu.is_active) return
+    
+    setIsActivating(true)
+    setError("")
+
+    try {
+      const response = await apiClient.activateMenu(id)
+      if (response.error) {
+        setError("Failed to activate menu: " + response.error)
+      } else {
+        // Update local state
+        setMenuData(prev => prev ? {
+          ...prev,
+          menu: { ...prev.menu, is_active: true }
+        } : prev)
+        setSuccess("Menu activated successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } catch (err) {
+      console.error("Error activating menu:", err)
+      setError("Failed to activate menu")
+    } finally {
+      setIsActivating(false)
     }
   }
 
@@ -273,6 +301,13 @@ export default function EditMenuPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {!menuData.menu.is_active && (
+              <Button onClick={handleActivateMenu} disabled={isActivating} variant="default" className="bg-green-600 hover:bg-green-700">
+                {isActivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Set as Active
+              </Button>
+            )}
             <Link href={`/dashboard/menus/${id}/qr`}>
               <Button variant="outline">
                 <QrCode className="h-4 w-4 mr-2" />
@@ -517,7 +552,7 @@ export default function EditMenuPage() {
                     <Label htmlFor="allergens">Allergens (comma separated)</Label>
                     <Input
                       id="allergens"
-                      value={editingItem.allergens.join(", ")}
+                      value={editingItem.allergens?.join(", ") || ""}
                       onChange={(e) =>
                         setEditingItem((prev) =>
                           prev
@@ -539,9 +574,9 @@ export default function EditMenuPage() {
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={editingItem.isVegetarian}
+                      checked={editingItem.is_vegetarian}
                       onChange={(e) =>
-                        setEditingItem((prev) => (prev ? { ...prev, isVegetarian: e.target.checked } : null))
+                        setEditingItem((prev) => (prev ? { ...prev, is_vegetarian: e.target.checked } : null))
                       }
                     />
                     Vegetarian
@@ -549,17 +584,17 @@ export default function EditMenuPage() {
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={editingItem.isVegan}
-                      onChange={(e) => setEditingItem((prev) => (prev ? { ...prev, isVegan: e.target.checked } : null))}
+                      checked={editingItem.is_vegan}
+                      onChange={(e) => setEditingItem((prev) => (prev ? { ...prev, is_vegan: e.target.checked } : null))}
                     />
                     Vegan
                   </label>
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={editingItem.isGlutenFree}
+                      checked={editingItem.is_gluten_free}
                       onChange={(e) =>
-                        setEditingItem((prev) => (prev ? { ...prev, isGlutenFree: e.target.checked } : null))
+                        setEditingItem((prev) => (prev ? { ...prev, is_gluten_free: e.target.checked } : null))
                       }
                     />
                     Gluten Free
