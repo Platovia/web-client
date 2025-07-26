@@ -1,149 +1,114 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle } from "lucide-react"
+import { apiClient, type MenuItem, type ChatMessage } from "@/lib/api"
 
 interface Restaurant {
   id: string
   name: string
-  description: string
-  logo_url: string
+  description?: string
+  logo_url?: string
+  address?: any
+  contact_info?: any
 }
-
-interface MenuItem {
-  id: string
-  name: string
-  description: string
-  price: number
-  category: string
-  allergens: string[]
-  is_vegetarian: boolean
-  is_vegan: boolean
-  is_gluten_free: boolean
-}
-
-interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-}
-
-// Dummy data
-const dummyRestaurant: Restaurant = {
-  id: "550e8400-e29b-41d4-a716-446655440000",
-  name: "Bella Vista Restaurant",
-  description: "Authentic Italian cuisine with a modern twist",
-  logo_url: "/placeholder.svg?height=100&width=100",
-}
-
-const dummyMenuItems: MenuItem[] = [
-  {
-    id: "1",
-    name: "Margherita Pizza",
-    description: "Fresh mozzarella, tomato sauce, basil on wood-fired crust",
-    price: 18.99,
-    category: "Pizza",
-    allergens: ["gluten", "dairy"],
-    is_vegetarian: true,
-    is_vegan: false,
-    is_gluten_free: false,
-  },
-  {
-    id: "2",
-    name: "Spaghetti Carbonara",
-    description: "Eggs, pancetta, parmesan, black pepper with fresh pasta",
-    price: 22.99,
-    category: "Pasta",
-    allergens: ["gluten", "dairy", "eggs"],
-    is_vegetarian: false,
-    is_vegan: false,
-    is_gluten_free: false,
-  },
-  {
-    id: "3",
-    name: "Caesar Salad",
-    description: "Romaine lettuce, croutons, parmesan, caesar dressing",
-    price: 14.99,
-    category: "Salads",
-    allergens: ["dairy"],
-    is_vegetarian: true,
-    is_vegan: false,
-    is_gluten_free: false,
-  },
-  {
-    id: "4",
-    name: "Vegan Buddha Bowl",
-    description: "Quinoa, roasted vegetables, avocado, tahini dressing",
-    price: 16.99,
-    category: "Salads",
-    allergens: ["sesame"],
-    is_vegetarian: true,
-    is_vegan: true,
-    is_gluten_free: true,
-  },
-  {
-    id: "5",
-    name: "Grilled Salmon",
-    description: "Atlantic salmon with lemon herb butter and seasonal vegetables",
-    price: 28.99,
-    category: "Main Course",
-    allergens: ["fish"],
-    is_vegetarian: false,
-    is_vegan: false,
-    is_gluten_free: true,
-  },
-  {
-    id: "6",
-    name: "Tiramisu",
-    description: "Coffee-soaked ladyfingers, mascarpone, cocoa powder",
-    price: 8.99,
-    category: "Desserts",
-    allergens: ["gluten", "dairy", "eggs"],
-    is_vegetarian: true,
-    is_vegan: false,
-    is_gluten_free: false,
-  },
-  {
-    id: "7",
-    name: "Mushroom Risotto",
-    description: "Arborio rice with wild mushrooms and truffle oil",
-    price: 24.99,
-    category: "Main Course",
-    allergens: ["dairy"],
-    is_vegetarian: true,
-    is_vegan: false,
-    is_gluten_free: true,
-  },
-  {
-    id: "8",
-    name: "Bruschetta",
-    description: "Toasted bread with tomatoes, garlic, and fresh basil",
-    price: 9.99,
-    category: "Appetizers",
-    allergens: ["gluten"],
-    is_vegetarian: true,
-    is_vegan: true,
-    is_gluten_free: false,
-  },
-]
 
 export default function MenuPage({ params }: { params: { restaurantId: string } }) {
-  const [restaurant] = useState<Restaurant>(dummyRestaurant)
-  const [menuItems] = useState<MenuItem[]>(dummyMenuItems)
-  const [filteredItems, setFilteredItems] = useState<MenuItem[]>(dummyMenuItems)
+  const searchParams = useSearchParams()
+  const qrToken = searchParams?.get('token')
+  
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showChat, setShowChat] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isChatLoading, setIsChatLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [menuId, setMenuId] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadMenuData()
+  }, [params.restaurantId, qrToken])
 
   useEffect(() => {
     filterItems()
   }, [menuItems, searchQuery, selectedCategory])
+
+  const loadMenuData = async () => {
+    setIsLoading(true)
+    setError("")
+
+    try {
+      if (qrToken) {
+        // Load via QR token (preferred method)
+        const response = await apiClient.getPublicMenu(qrToken)
+        
+        if (response.error) {
+          setError(response.error)
+        } else if (response.data) {
+          const { menu, menu_items } = response.data
+          
+          setMenuId(menu.id)
+          setRestaurant({
+            id: menu.restaurant?.id || '',
+            name: menu.restaurant?.name || 'Unknown Restaurant',
+            description: menu.restaurant?.description || '',
+            logo_url: menu.restaurant?.logo_url,
+            address: menu.restaurant?.address,
+            contact_info: menu.restaurant?.contact_info
+          })
+          
+          // Transform menu items to include dietary flags
+          const transformedItems = menu_items.map(item => ({
+            ...item,
+            is_vegetarian: item.allergens ? !item.allergens.some(a => 
+              ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood'].includes(a.toLowerCase())
+            ) : false,
+            is_vegan: item.allergens ? !item.allergens.some(a => 
+              ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'dairy', 'eggs', 'honey'].includes(a.toLowerCase())
+            ) : false,
+            is_gluten_free: item.allergens ? !item.allergens.includes('gluten') : false
+          }))
+          
+          setMenuItems(transformedItems)
+          setFilteredItems(transformedItems)
+        }
+      } else {
+        // Fallback: try to get restaurant info directly (less secure)
+        const restaurantResponse = await apiClient.getRestaurant(params.restaurantId)
+        
+        if (restaurantResponse.error) {
+          setError("Restaurant not found or not accessible")
+                 } else if (restaurantResponse.data) {
+           setRestaurant({
+             id: restaurantResponse.data.id,
+             name: restaurantResponse.data.name,
+             description: restaurantResponse.data.description || '',
+             address: restaurantResponse.data.address,
+             contact_info: restaurantResponse.data.contact_info
+           })
+           // Note: This approach doesn't load menu items as it requires authentication
+           setError("To view the menu, please scan the QR code provided by the restaurant")
+         }
+      }
+    } catch (err) {
+      setError("Failed to load menu. Please try again.")
+      console.error("Error loading menu:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filterItems = () => {
     let filtered = menuItems
@@ -152,7 +117,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       filtered = filtered.filter(
         (item) =>
           item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchQuery.toLowerCase()),
+          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())),
       )
     }
 
@@ -163,31 +128,88 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
     setFilteredItems(filtered)
   }
 
-  const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category)))]
+  const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category || "Other").filter(Boolean)))]
 
   const sendMessage = async () => {
-    if (!chatInput.trim()) return
+    if (!chatInput.trim() || !menuId) return
 
     const userMessage: ChatMessage = { role: "user", content: chatInput }
     setChatMessages((prev) => [...prev, userMessage])
     setChatInput("")
-    setIsLoading(true)
+    setIsChatLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "I'd be happy to help you with our menu! What would you like to know?",
-        "Our Margherita Pizza is very popular and perfect for vegetarians!",
-        "For vegan options, I recommend our Vegan Buddha Bowl - it's delicious and nutritious.",
-        "If you have any allergies, please let me know and I can suggest suitable dishes.",
-        "Our Grilled Salmon is gluten-free and pairs wonderfully with our seasonal vegetables.",
-      ]
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
+    try {
+      const response = await apiClient.sendChatMessage(menuId, chatInput, chatMessages)
+      
+      if (response.error) {
+        // Fallback to a generic response if AI chat fails
+        const fallbackMessage: ChatMessage = { 
+          role: "assistant", 
+          content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" 
+        }
+        setChatMessages((prev) => [...prev, fallbackMessage])
+      } else if (response.data) {
+        const assistantMessage: ChatMessage = { role: "assistant", content: response.data.response }
+        setChatMessages((prev) => [...prev, assistantMessage])
+      }
+    } catch (err) {
+      console.error("Chat error:", err)
+      const errorMessage: ChatMessage = { 
+        role: "assistant", 
+        content: "I'm sorry, there was an error processing your message. Please try again." 
+      }
+      setChatMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsChatLoading(false)
+    }
+  }
 
-      const assistantMessage: ChatMessage = { role: "assistant", content: randomResponse }
-      setChatMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 1000)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-16 h-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Menu</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -197,13 +219,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             <img
-              src={restaurant.logo_url || "/placeholder.svg"}
-              alt={restaurant.name}
+              src={restaurant?.logo_url || "/placeholder.svg"}
+              alt={restaurant?.name || "Restaurant"}
               className="w-16 h-16 rounded-full object-cover"
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{restaurant.name}</h1>
-              <p className="text-gray-600">{restaurant.description}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{restaurant?.name}</h1>
+                             <p className="text-gray-600">{restaurant?.description || ''}</p>
             </div>
           </div>
         </div>
@@ -244,13 +266,15 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <span className="text-lg font-bold text-orange-600">${item.price.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-orange-600">
+                    {item.price ? `$${item.price.toFixed(2)}` : 'Price on request'}
+                  </span>
                 </div>
                 <CardDescription>{item.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{item.category}</Badge>
+                  {item.category && <Badge variant="secondary">{item.category}</Badge>}
                   {item.is_vegetarian && (
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       <Leaf className="h-3 w-3 mr-1" />
@@ -280,21 +304,29 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
           ))}
         </div>
 
-        {filteredItems.length === 0 && (
+        {filteredItems.length === 0 && menuItems.length > 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No menu items found matching your search.</p>
           </div>
         )}
+
+        {menuItems.length === 0 && !error && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No menu items available at this time.</p>
+          </div>
+        )}
       </div>
 
-      {/* Chat Button */}
-      <Button
-        onClick={() => setShowChat(true)}
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-orange-600 hover:bg-orange-700"
-        size="lg"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </Button>
+      {/* Chat Button - only show if we have a menu */}
+      {menuId && (
+        <Button
+          onClick={() => setShowChat(true)}
+          className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-orange-600 hover:bg-orange-700"
+          size="lg"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </Button>
+      )}
 
       {/* Chat Modal */}
       {showChat && (
@@ -328,7 +360,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                 </div>
               ))}
 
-              {isLoading && (
+              {isChatLoading && (
                 <div className="flex justify-start">
                   <div className="bg-gray-100 p-3 rounded-lg">
                     <div className="flex space-x-1">
@@ -354,9 +386,9 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  disabled={isLoading}
+                  disabled={isChatLoading}
                 />
-                <Button onClick={sendMessage} disabled={isLoading || !chatInput.trim()}>
+                <Button onClick={sendMessage} disabled={isChatLoading || !chatInput.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

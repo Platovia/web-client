@@ -366,7 +366,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     <Clock className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="font-medium">Created</p>
-                      <p className="text-sm text-gray-600">{new Date(restaurant.createdAt).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-600">{new Date(restaurant.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </CardContent>

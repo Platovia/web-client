@@ -68,6 +68,27 @@ export default function RestaurantsPage() {
     setSearchQuery(query)
   }
 
+  const handleDeleteRestaurant = async (restaurant: Restaurant) => {
+    if (!confirm(`Are you sure you want to delete "${restaurant.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await apiClient.deleteRestaurant(restaurant.id)
+      
+      if (response.error) {
+        setError(`Failed to delete restaurant: ${response.error}`)
+      } else {
+        // Remove from local state
+        setRestaurants(prev => prev.filter(r => r.id !== restaurant.id))
+        setFilteredRestaurants(prev => prev.filter(r => r.id !== restaurant.id))
+      }
+    } catch (err) {
+      setError("Failed to delete restaurant. Please try again.")
+      console.error("Error deleting restaurant:", err)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -261,7 +282,10 @@ export default function RestaurantsPage() {
                           <QrCode className="mr-2 h-4 w-4" />
                           Generate QR Code
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => handleDeleteRestaurant(restaurant)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -307,7 +331,7 @@ export default function RestaurantsPage() {
                   </div>
                 </CardContent>
             </Card>
-          ))}
+          )))}
         </div>
 
         {filteredRestaurants.length === 0 && (

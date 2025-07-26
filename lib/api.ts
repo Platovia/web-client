@@ -85,6 +85,54 @@ interface RestaurantListResponse {
   total: number;
 }
 
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  allergens?: string[];
+  is_available: boolean;
+  image_url?: string;
+  is_vegetarian?: boolean;
+  is_vegan?: boolean;
+  is_gluten_free?: boolean;
+}
+
+interface PublicMenuResponse {
+  menu: {
+    id: string;
+    name: string;
+    restaurant: {
+      id: string;
+      name: string;
+      description?: string;
+      address?: any;
+      contact_info?: any;
+      logo_url?: string;
+    } | null;
+    template_id?: string;
+    created_at: string;
+    updated_at: string;
+  };
+  menu_items: MenuItem[];
+  access_info: {
+    token: string;
+    access_count: number;
+    accessed_at: string;
+  };
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface ChatResponse {
+  response: string;
+  context?: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -281,6 +329,42 @@ class ApiClient {
     });
   }
 
+  // Public menu endpoints (no authentication required)
+  async getPublicMenu(token: string): Promise<ApiResponse<PublicMenuResponse>> {
+    return this.makeRequest<PublicMenuResponse>(`/public/menu/${token}`);
+  }
+
+  async getPublicMenuItems(token: string): Promise<ApiResponse<{
+    menu_id: string;
+    menu_name: string;
+    categories: { [key: string]: MenuItem[] };
+    total_items: number;
+  }>> {
+    return this.makeRequest<{
+      menu_id: string;
+      menu_name: string;
+      categories: { [key: string]: MenuItem[] };
+      total_items: number;
+    }>(`/public/menu/${token}/items`);
+  }
+
+  // Restaurant-specific menu access (requires knowing restaurant has active menu)
+  async getRestaurantPublicInfo(restaurantId: string): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}`);
+  }
+
+  // Chat endpoints
+  async sendChatMessage(menuId: string, message: string, conversationHistory?: ChatMessage[]): Promise<ApiResponse<ChatResponse>> {
+    return this.makeRequest<ChatResponse>('/chat/menu', {
+      method: 'POST',
+      body: JSON.stringify({
+        menu_id: menuId,
+        message,
+        conversation_history: conversationHistory || []
+      }),
+    });
+  }
+
   // Health check
   async healthCheck(): Promise<ApiResponse<{ status: string; version: string }>> {
     return this.makeRequest<{ status: string; version: string }>('/health');
@@ -300,5 +384,9 @@ export type {
   AuthTokens, 
   LoginRequest, 
   RegisterRequest, 
-  ApiResponse 
+  ApiResponse,
+  MenuItem,
+  PublicMenuResponse,
+  ChatMessage,
+  ChatResponse
 }; 
