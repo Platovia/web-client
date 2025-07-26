@@ -255,6 +255,41 @@ interface ChatResponse {
   context?: string;
 }
 
+interface MenuWithDetails {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  qr_code_url?: string;
+  qr_code_data?: string;
+  template_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  restaurant: {
+    id: string;
+    name: string;
+    description?: string;
+    address?: any;
+    contact_info?: any;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  stats: {
+    total_items: number;
+    active_items: number;
+    categories: string[];
+    average_price?: number;
+    last_updated: string;
+  };
+  image?: string;
+}
+
+interface MenuWithDetailsListResponse {
+  menus: MenuWithDetails[];
+  total: number;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -696,6 +731,21 @@ class ApiClient {
   async healthCheck(): Promise<ApiResponse<{ status: string; version: string }>> {
     return this.makeRequest<{ status: string; version: string }>('/health');
   }
+
+  async getAllMenusWithDetails(): Promise<ApiResponse<MenuWithDetailsListResponse>> {
+    // Get user's companies first, then get menus for the first company
+    const companiesResponse = await this.getUserCompanies();
+    if (companiesResponse.error || !companiesResponse.data?.companies?.length) {
+      return { error: "No companies found" };
+    }
+    
+    const firstCompany = companiesResponse.data.companies[0];
+    return this.makeRequest<MenuWithDetailsListResponse>(`/companies/${firstCompany.id}/menus`);
+  }
+
+  async getRestaurantMenusWithDetails(restaurantId: string): Promise<ApiResponse<MenuWithDetailsListResponse>> {
+    return this.makeRequest<MenuWithDetailsListResponse>(`/restaurants/${restaurantId}/menus/with-details`);
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -731,5 +781,7 @@ export type {
   OCRResultUpdateRequest,
   PublicMenuResponse,
   ChatMessage,
-  ChatResponse
+  ChatResponse,
+  MenuWithDetails,
+  MenuWithDetailsListResponse
 }; 

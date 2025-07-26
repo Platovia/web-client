@@ -10,12 +10,36 @@ import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Downlo
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
-import { apiClient, type Menu, type Restaurant, type MenuStats } from "@/lib/api"
+import { apiClient } from "@/lib/api"
 
-interface MenuWithDetails extends Menu {
-  restaurant?: Restaurant
-  stats?: MenuStats
-  image?: string
+interface MenuWithDetails {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  qr_code_url?: string;
+  qr_code_data?: string;
+  template_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  restaurant: {
+    id: string;
+    name: string;
+    description?: string;
+    address?: any;
+    contact_info?: any;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  stats: {
+    total_items: number;
+    active_items: number;
+    categories: string[];
+    average_price?: number;
+    last_updated: string;
+  };
+  image?: string;
 }
 
 export default function MenusPage() {
@@ -44,79 +68,33 @@ export default function MenusPage() {
     setError("")
 
     try {
-      // Get user's companies and their restaurants
-      const companiesResponse = await apiClient.getUserCompanies()
-      if (companiesResponse.error) {
-        setError("Failed to load companies")
+      // Get all menus with details in a single request
+      const response = await apiClient.getAllMenusWithDetails()
+      
+      if (response.error) {
+        setError("Failed to load menus")
         return
       }
 
-      const allMenus: MenuWithDetails[] = []
-      let totalViews = 0
-      let totalScans = 0
+      if (response.data) {
+        const allMenus = response.data.menus
+        let totalViews = 0
+        let totalScans = 0
 
-      if (companiesResponse.data?.companies) {
-        for (const company of companiesResponse.data.companies) {
-          // Get restaurants for this company
-          const restaurantsResponse = await apiClient.getCompanyRestaurants(company.id)
-          if (restaurantsResponse.error) continue
+        // Calculate totals (using dummy data for now since backend doesn't track views/scans)
+        allMenus.forEach(() => {
+          totalViews += Math.floor(Math.random() * 1000)
+          totalScans += Math.floor(Math.random() * 500)
+        })
 
-          if (restaurantsResponse.data?.restaurants) {
-            for (const restaurant of restaurantsResponse.data.restaurants) {
-              // Get menus for this restaurant
-              const menusResponse = await apiClient.getRestaurantMenus(restaurant.id)
-              if (menusResponse.error) continue
-
-              if (menusResponse.data?.menus) {
-                for (const menu of menusResponse.data.menus) {
-                  // Get menu stats
-                  const statsResponse = await apiClient.getMenuStats(menu.id)
-                  const menuStats = statsResponse.data
-
-                  // Get menu images
-                  const imagesResponse = await apiClient.getMenuImages(menu.id)
-                  const firstImage = imagesResponse.data?.images?.[0]?.image_url
-
-                  // Ensure menu has QR code data, generate if missing
-                  let menuWithQR = menu
-                  if (!menu.qr_code_data) {
-                    try {
-                      const qrResponse = await apiClient.generateQRCode(menu.id, {
-                        regenerate: false,
-                        expires_in_days: 365
-                      })
-                      if (qrResponse.data) {
-                        menuWithQR = { ...menu, qr_code_data: qrResponse.data.public_menu_url }
-                      }
-                    } catch (err) {
-                      console.warn(`Failed to generate QR code for menu ${menu.id}:`, err)
-                    }
-                  }
-
-                  allMenus.push({
-                    ...menuWithQR,
-                    restaurant,
-                    stats: menuStats,
-                    image: firstImage || "/placeholder.svg"
-                  })
-
-                  // Add to totals (using dummy data for now since backend doesn't track views/scans)
-                  totalViews += Math.floor(Math.random() * 1000)
-                  totalScans += Math.floor(Math.random() * 500)
-                }
-              }
-            }
-          }
-        }
+        setMenus(allMenus)
+        setStats({
+          totalMenus: allMenus.length,
+          activeMenus: allMenus.filter(m => m.is_active).length,
+          totalViews,
+          totalScans
+        })
       }
-
-      setMenus(allMenus)
-      setStats({
-        totalMenus: allMenus.length,
-        activeMenus: allMenus.filter(m => m.is_active).length,
-        totalViews,
-        totalScans
-      })
     } catch (err) {
       console.error("Error loading menus:", err)
       setError("Failed to load menus")

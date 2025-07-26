@@ -28,11 +28,36 @@ import {
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { apiClient, type Restaurant, type Menu, type MenuStats } from "@/lib/api"
+import { apiClient, type Restaurant } from "@/lib/api"
 
-interface MenuWithDetails extends Menu {
-  stats?: MenuStats | null
-  image?: string
+interface MenuWithDetails {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  qr_code_url?: string;
+  qr_code_data?: string;
+  template_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  restaurant: {
+    id: string;
+    name: string;
+    description?: string;
+    address?: any;
+    contact_info?: any;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+  stats: {
+    total_items: number;
+    active_items: number;
+    categories: string[];
+    average_price?: number;
+    last_updated: string;
+  };
+  image?: string;
 }
 
 export default function RestaurantDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -71,53 +96,20 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
     
     setIsLoadingMenus(true)
     try {
-      const menusResponse = await apiClient.getRestaurantMenus(restaurantId)
-      console.log("menusResponse", menusResponse)
-      if (menusResponse.error) {
-        console.error("Failed to load menus:", menusResponse.error)
-        setMenus([])
-        return
-      } 
+      // Get all menus with details in a single request
+      const response = await apiClient.getRestaurantMenusWithDetails(restaurantId)
       
-      if (!menusResponse.data?.menus) {
+      if (response.error) {
+        console.error("Failed to load menus:", response.error)
         setMenus([])
         return
       }
-
-      // Process menus in parallel for better performance
-      const menuPromises = menusResponse.data.menus.map(async (menu) => {
-        try {
-          console.log(`Loading details for menu ${menu.id}...`)
-          
-          // Get menu stats and images in parallel
-          const [statsResponse, imagesResponse] = await Promise.all([
-            apiClient.getMenuStats(menu.id),
-            apiClient.getMenuImages(menu.id)
-          ])
-          
-          console.log(`Menu ${menu.id} - Stats response:`, statsResponse)
-          console.log(`Menu ${menu.id} - Images response:`, imagesResponse)
-          
-          const firstImage = imagesResponse.data?.images?.[0]?.image_url
-
-          return {
-            ...menu,
-            stats: statsResponse.data || null,
-            image: firstImage || "/placeholder.svg"
-          }
-        } catch (err) {
-          console.error(`Error loading details for menu ${menu.id}:`, err)
-          // Return menu with default values if details fail to load
-          return {
-            ...menu,
-            stats: null,
-            image: "/placeholder.svg"
-          }
-        }
-      })
       
-      const resolvedMenus = await Promise.all(menuPromises)
-      setMenus(resolvedMenus)
+      if (response.data) {
+        setMenus(response.data.menus)
+      } else {
+        setMenus([])
+      }
     } catch (err) {
       console.error("Error loading menus:", err)
       setMenus([])
