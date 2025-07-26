@@ -520,10 +520,13 @@ class ApiClient {
   }
 
   async uploadMenuImages(menuId: string, formData: FormData): Promise<ApiResponse<MenuImageUploadResponse>> {
+    const headers = {
+      ...this.getAuthHeader(),
+    };
     return this.makeRequest<MenuImageUploadResponse>(`/menus/menus/${menuId}/images`, {
       method: 'POST',
       body: formData,
-      headers: {}, // Let browser set Content-Type for FormData
+      headers: headers, // Let browser set Content-Type for FormData
     });
   }
 
@@ -650,9 +653,13 @@ class ApiClient {
 
   // OCR management endpoints
   async createOCRJob(menuId: string, jobData: OCRJobCreateRequest): Promise<ApiResponse<OCRJobResponse>> {
+    const headers = {
+      ...this.getAuthHeader(),
+    };
     return this.makeRequest<OCRJobResponse>(`/ocr/menus/${menuId}/ocr/jobs`, {
       method: 'POST',
       body: JSON.stringify(jobData),
+      headers: headers,
     });
   }
 

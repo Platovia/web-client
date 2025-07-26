@@ -21,7 +21,7 @@ interface UploadedFile {
   id: string
   file: File
   preview: string
-  status: "uploading" | "processing" | "completed" | "error"
+  status: "pending" | "uploading" | "processing" | "completed" | "error"
   progress: number
   extractedItems?: number
   imageUrl?: string
@@ -154,27 +154,6 @@ export default function UploadMenuPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
 
-    // First, we need to create the menu if it doesn't exist
-    let menuToUse = createdMenu
-    if (!menuToUse && selectedRestaurant && menuName) {
-      try {
-        menuToUse = await createMenuFirst()
-        
-        if (!menuToUse) {
-          setError("Failed to create menu. Please try again.")
-          return
-        }
-      } catch (err) {
-        setError("Failed to create menu. Please check your inputs and try again.")
-        return
-      }
-    }
-
-    if (!menuToUse) {
-      setError("Please enter a menu name and select a restaurant before uploading files")
-      return
-    }
-
     for (const file of files) {
       const id = `file-${Date.now()}-${Math.random()}`
       const preview = URL.createObjectURL(file)
@@ -183,14 +162,11 @@ export default function UploadMenuPage() {
         id,
         file,
         preview,
-        status: "uploading",
+        status: "pending",
         progress: 0,
       }
 
       setUploadedFiles((prev) => [...prev, newFile])
-
-      // Process file upload and OCR
-      processFile(file, id, menuToUse.id)
     }
   }
 
@@ -226,13 +202,16 @@ export default function UploadMenuPage() {
 
       // Upload file to server
       const imageUrl = await uploadFileToServer(file, menuId)
+
+      const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${backendBaseUrl}${imageUrl}`
       
       setUploadedFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, progress: 50, imageUrl } : f
+        f.id === fileId ? { ...f, progress: 50, imageUrl: fullImageUrl } : f
       ))
 
       // Start OCR processing
-      const ocrJob = await processWithOCR(imageUrl, menuId)
+      const ocrJob = await processWithOCR(fullImageUrl, menuId)
       
       setUploadedFiles(prev => prev.map(f => 
         f.id === fileId ? { 
@@ -270,47 +249,52 @@ export default function UploadMenuPage() {
     setError("")
 
     try {
-      // Create menu if not already created
-      if (!createdMenu) {
-        await createMenuFirst()
-      }
-
-      if (!createdMenu) {
+      // Create menu first
+      const menu = await createMenuFirst()
+      if (!menu) {
         setError("Failed to create menu")
         setIsProcessing(false)
         return
       }
 
-      // Wait for all OCR jobs to complete
-      const incompleteFiles = uploadedFiles.filter(f => f.status !== "completed")
-      if (incompleteFiles.length > 0) {
-        setError("Please wait for all files to finish processing")
+      // Process all pending files sequentially
+      for (const file of uploadedFiles.filter(f => f.status === "pending")) {
+        await processFile(file.file, file.id, menu.id)
+      }
+
+      // Wait until all files reach completed or error
+      await new Promise<void>((resolve, reject) => {
+        const check = () => {
+          const files = uploadedFiles.filter(f => ["completed", "error"].includes(f.status))
+          const done = files.every(f => ["completed", "error"].includes(f.status))
+          const hasError = files.some(f => f.status === "error")
+          if (done) {
+            if (hasError) reject(new Error("Some files failed"))
+            else resolve()
+          } else setTimeout(check, 1000)
+        }
+        check()
+      })
+
+      const activateResp = await apiClient.activateMenu(menu.id)
+      if (activateResp.error) {
+        setError(activateResp.error)
         setIsProcessing(false)
         return
       }
 
-      // Activate the menu
-      const activateResponse = await apiClient.activateMenu(createdMenu.id)
-      if (activateResponse.error) {
-        setError(activateResponse.error)
-        setIsProcessing(false)
-        return
-      }
-
-      // Navigate to the menu edit page to review extracted items
-      router.push(`/dashboard/menus/${createdMenu.id}/edit?fromUpload=true`)
+      router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
     } catch (err) {
-      console.error("Error submitting menu:", err)
-      setError("Failed to finalize menu creation")
+      console.error(err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
       setIsProcessing(false)
     }
   }
 
   const canSubmit =
-    selectedRestaurant &&
-    menuName &&
+    Boolean(selectedRestaurant) &&
+    Boolean(menuName) &&
     uploadedFiles.length > 0 &&
-    uploadedFiles.every((file) => file.status === "completed") &&
     !isProcessing
 
   return (
