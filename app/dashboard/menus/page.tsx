@@ -77,8 +77,24 @@ export default function MenusPage() {
                   const imagesResponse = await apiClient.getMenuImages(menu.id)
                   const firstImage = imagesResponse.data?.images?.[0]?.image_url
 
+                  // Ensure menu has QR code data, generate if missing
+                  let menuWithQR = menu
+                  if (!menu.qr_code_data) {
+                    try {
+                      const qrResponse = await apiClient.generateQRCode(menu.id, {
+                        regenerate: false,
+                        expires_in_days: 365
+                      })
+                      if (qrResponse.data) {
+                        menuWithQR = { ...menu, qr_code_data: qrResponse.data.public_menu_url }
+                      }
+                    } catch (err) {
+                      console.warn(`Failed to generate QR code for menu ${menu.id}:`, err)
+                    }
+                  }
+
                   allMenus.push({
-                    ...menu,
+                    ...menuWithQR,
                     restaurant,
                     stats: menuStats,
                     image: firstImage || "/placeholder.svg"
@@ -321,10 +337,10 @@ export default function MenusPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <Link href={`/menu/${menu.restaurant_id}`}>
+                      <Link href={menu.qr_code_data || `/dashboard/menus/${menu.id}/qr`} target={menu.qr_code_data ? "_blank" : "_self"}>
                         <DropdownMenuItem>
                           <Eye className="mr-2 h-4 w-4" />
-                          View Menu
+                          {menu.qr_code_data ? "View Menu" : "Generate QR"}
                         </DropdownMenuItem>
                       </Link>
                       <Link href={`/dashboard/menus/${menu.id}/edit`}>
@@ -386,10 +402,14 @@ export default function MenusPage() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Link href={`/menu/${menu.restaurant_id}`} className="flex-1">
+                  <Link 
+                    href={menu.qr_code_data || `/dashboard/menus/${menu.id}/qr`} 
+                    className="flex-1"
+                    target={menu.qr_code_data ? "_blank" : "_self"}
+                  >
                     <Button variant="outline" size="sm" className="w-full bg-transparent">
                       <Eye className="h-4 w-4 mr-1" />
-                      View
+                      {menu.qr_code_data ? "View" : "Generate QR"}
                     </Button>
                   </Link>
                   <Link href={`/dashboard/menus/${menu.id}/edit`} className="flex-1">

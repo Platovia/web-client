@@ -279,10 +279,10 @@ export default function EditMenuPage() {
                 QR Code
               </Button>
             </Link>
-            <Link href={`/menu/${menuData.menu.restaurant_id}?token=${menuData.menu.qr_code_data}`}>
+            <Link href={menuData.menu.qr_code_data || `/dashboard/menus/${id}/qr`} target={menuData.menu.qr_code_data ? "_blank" : "_self"}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
-                Preview
+                {menuData.menu.qr_code_data ? "Preview" : "Generate QR"}
               </Button>
             </Link>
             <Button onClick={handleSaveMenu} disabled={isSaving}>
