@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,9 +24,10 @@ interface MenuWithItems {
   }
 }
 
-export default function EditMenuPage({ params }: { params: { id: string } }) {
+export default function EditMenuPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { id } = useParams<{ id: string }>()
   const fromUpload = searchParams.get('fromUpload') === 'true'
   
   const [menuData, setMenuData] = useState<MenuWithItems | null>(null)
@@ -37,23 +38,27 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    loadMenuData()
-  }, [params.id])
+    if (id) {
+      loadMenuData()
+    }
+  }, [id])
 
   const loadMenuData = async () => {
+    if (!id) return
+    
     setIsLoading(true)
     setError("")
 
     try {
       // Load menu details
-      const menuResponse = await apiClient.getMenu(params.id)
+      const menuResponse = await apiClient.getMenu(id)
       if (menuResponse.error) {
         setError("Failed to load menu: " + menuResponse.error)
         return
       }
 
       // Load menu items
-      const itemsResponse = await apiClient.getMenuItems(params.id)
+      const itemsResponse = await apiClient.getMenuItems(id)
       if (itemsResponse.error) {
         setError("Failed to load menu items: " + itemsResponse.error)
         return
@@ -96,7 +101,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
         is_active: menuData.menu.is_active
       }
 
-      const response = await apiClient.updateMenu(params.id, updateData)
+      const response = await apiClient.updateMenu(id, updateData)
       if (response.error) {
         setError("Failed to save menu: " + response.error)
       } else {
@@ -125,7 +130,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
         image_url: updatedItem.image_url
       }
 
-      const response = await apiClient.updateMenuItem(params.id, updatedItem.id, updateData)
+      const response = await apiClient.updateMenuItem(id, updatedItem.id, updateData)
       if (response.error) {
         setError("Failed to update item: " + response.error)
       } else {
@@ -152,7 +157,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
     if (!menuData) return
 
     try {
-      const response = await apiClient.deleteMenuItem(params.id, itemId)
+      const response = await apiClient.deleteMenuItem(id, itemId)
       if (response.error) {
         setError("Failed to delete item: " + response.error)
       } else {
@@ -181,7 +186,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
         is_available: !item.is_available
       }
 
-      const response = await apiClient.updateMenuItem(params.id, itemId, updateData)
+      const response = await apiClient.updateMenuItem(id, itemId, updateData)
       if (response.error) {
         setError("Failed to update item availability: " + response.error)
       } else {
@@ -201,7 +206,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
     if (!menuData) return
 
     try {
-      const response = await apiClient.createMenuItem(params.id, itemData)
+      const response = await apiClient.createMenuItem(id, itemData)
       if (response.error) {
         setError("Failed to add item: " + response.error)
       } else {
@@ -268,7 +273,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href={`/dashboard/menus/${params.id}/qr`}>
+            <Link href={`/dashboard/menus/${id}/qr`}>
               <Button variant="outline">
                 <QrCode className="h-4 w-4 mr-2" />
                 QR Code

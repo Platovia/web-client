@@ -653,13 +653,9 @@ class ApiClient {
 
   // OCR management endpoints
   async createOCRJob(menuId: string, jobData: OCRJobCreateRequest): Promise<ApiResponse<OCRJobResponse>> {
-    const headers = {
-      ...this.getAuthHeader(),
-    };
     return this.makeRequest<OCRJobResponse>(`/ocr/menus/${menuId}/ocr/jobs`, {
       method: 'POST',
       body: JSON.stringify(jobData),
-      headers: headers,
     });
   }
 

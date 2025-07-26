@@ -276,13 +276,7 @@ export default function UploadMenuPage() {
         check()
       })
 
-      const activateResp = await apiClient.activateMenu(menu.id)
-      if (activateResp.error) {
-        setError(activateResp.error)
-        setIsProcessing(false)
-        return
-      }
-
+      // Navigate to edit page (menu is active by default after creation)
       router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
     } catch (err) {
       console.error(err)
