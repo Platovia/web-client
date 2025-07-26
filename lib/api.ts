@@ -99,6 +99,128 @@ interface MenuItem {
   is_gluten_free?: boolean;
 }
 
+interface Menu {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  qr_code_url?: string;
+  qr_code_data?: string;
+  template_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MenuCreateRequest {
+  name: string;
+  template_id?: string;
+}
+
+interface MenuUpdateRequest {
+  name?: string;
+  template_id?: string;
+  is_active?: boolean;
+}
+
+interface MenuListResponse {
+  menus: Menu[];
+  total: number;
+}
+
+interface MenuImageUploadResponse {
+  id: string;
+  menu_id: string;
+  image_url: string;
+  image_filename: string;
+  upload_order: number;
+  created_at: string;
+}
+
+interface MenuImageListResponse {
+  images: MenuImageUploadResponse[];
+  total: number;
+}
+
+interface QRCodeGenerateRequest {
+  regenerate?: boolean;
+  expires_in_days?: number;
+}
+
+interface QRCodeResponse {
+  qr_code_url: string;
+  qr_code_data: string;
+  public_menu_url: string;
+  token?: string;
+  expires_at?: string;
+}
+
+interface OCRJobCreateRequest {
+  image_urls: string[];
+  processing_options?: { [key: string]: any };
+}
+
+interface OCRJobResponse {
+  job_id: string;
+  status: string;
+  total_images: number;
+  processed_images: number;
+  progress_percentage: number;
+  created_at: string;
+  processing_started_at?: string;
+  processing_completed_at?: string;
+  error_message?: string;
+}
+
+interface OCRResultResponse {
+  id: string;
+  image_url: string;
+  raw_text?: string;
+  structured_data?: { [key: string]: any };
+  confidence_score?: string;
+  is_manually_corrected: boolean;
+  corrected_text?: string;
+  correction_notes?: string;
+  extraction_method?: string;
+}
+
+interface OCRResultListResponse {
+  results: OCRResultResponse[];
+  total: number;
+}
+
+interface OCRResultUpdateRequest {
+  corrected_text?: string;
+  correction_notes?: string;
+}
+
+interface MenuItemCreateRequest {
+  name: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  allergens?: string[];
+  is_available?: boolean;
+  image_url?: string;
+}
+
+interface MenuItemUpdateRequest {
+  name?: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  allergens?: string[];
+  is_available?: boolean;
+  image_url?: string;
+}
+
+interface MenuStats {
+  total_items: number;
+  active_items: number;
+  categories: string[];
+  average_price?: number;
+  last_updated: string;
+}
+
 interface PublicMenuResponse {
   menu: {
     id: string;
@@ -151,8 +273,11 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
+      
+      // Don't set Content-Type for FormData - let browser handle it
+      const isFormData = options.body instanceof FormData;
       const headers = {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...this.getAuthHeader(),
         ...options.headers,
       };
@@ -353,6 +478,205 @@ class ApiClient {
     return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}`);
   }
 
+  // Menu management endpoints
+  async createMenu(restaurantId: string, menuData: MenuCreateRequest): Promise<ApiResponse<Menu>> {
+    return this.makeRequest<Menu>(`/menus/restaurants/${restaurantId}/menus`, {
+      method: 'POST',
+      body: JSON.stringify(menuData),
+    });
+  }
+
+  async getRestaurantMenus(restaurantId: string): Promise<ApiResponse<MenuListResponse>> {
+    return this.makeRequest<MenuListResponse>(`/menus/restaurants/${restaurantId}/menus`);
+  }
+
+  async getMenu(menuId: string): Promise<ApiResponse<Menu>> {
+    return this.makeRequest<Menu>(`/menus/menus/${menuId}`);
+  }
+
+  async updateMenu(menuId: string, updateData: MenuUpdateRequest): Promise<ApiResponse<Menu>> {
+    return this.makeRequest<Menu>(`/menus/menus/${menuId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteMenu(menuId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/menus/menus/${menuId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async activateMenu(menuId: string): Promise<ApiResponse<Menu>> {
+    return this.makeRequest<Menu>(`/menus/menus/${menuId}/activate`, {
+      method: 'POST',
+    });
+  }
+
+  async deactivateMenu(menuId: string): Promise<ApiResponse<Menu>> {
+    return this.makeRequest<Menu>(`/menus/menus/${menuId}/deactivate`, {
+      method: 'POST',
+    });
+  }
+
+  async uploadMenuImages(menuId: string, formData: FormData): Promise<ApiResponse<MenuImageUploadResponse>> {
+    return this.makeRequest<MenuImageUploadResponse>(`/menus/menus/${menuId}/images`, {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Let browser set Content-Type for FormData
+    });
+  }
+
+  async getMenuImages(menuId: string): Promise<ApiResponse<MenuImageListResponse>> {
+    return this.makeRequest<MenuImageListResponse>(`/menus/menus/${menuId}/images`);
+  }
+
+  async deleteMenuImage(imageId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/menus/menu-images/${imageId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMenuStats(menuId: string): Promise<ApiResponse<MenuStats>> {
+    return this.makeRequest<MenuStats>(`/menus/${menuId}/stats`);
+  }
+
+  async processMenu(menuId: string): Promise<ApiResponse<{ job_id: string; message: string }>> {
+    return this.makeRequest<{ job_id: string; message: string }>(`/menus/${menuId}/process`, {
+      method: 'POST',
+    });
+  }
+
+  async reprocessMenu(menuId: string): Promise<ApiResponse<{ job_id: string; message: string }>> {
+    return this.makeRequest<{ job_id: string; message: string }>(`/menus/${menuId}/reprocess`, {
+      method: 'POST',
+    });
+  }
+
+  async getProcessingStatus(menuId: string): Promise<ApiResponse<{ status: string; progress: number }>> {
+    return this.makeRequest<{ status: string; progress: number }>(`/menus/${menuId}/processing-status`);
+  }
+
+  async getProcessedItems(menuId: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
+    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/processed-items`);
+  }
+
+  // Menu Item management endpoints
+  async createMenuItem(menuId: string, itemData: MenuItemCreateRequest): Promise<ApiResponse<MenuItem>> {
+    return this.makeRequest<MenuItem>(`/menus/${menuId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(itemData),
+    });
+  }
+
+  async getMenuItems(menuId: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
+    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/items`);
+  }
+
+  async getMenuItem(menuId: string, itemId: string): Promise<ApiResponse<MenuItem>> {
+    return this.makeRequest<MenuItem>(`/menus/${menuId}/items/${itemId}`);
+  }
+
+  async updateMenuItem(menuId: string, itemId: string, updateData: MenuItemUpdateRequest): Promise<ApiResponse<MenuItem>> {
+    return this.makeRequest<MenuItem>(`/menus/${menuId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteMenuItem(menuId: string, itemId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/menus/${menuId}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkCreateMenuItems(menuId: string, items: MenuItemCreateRequest[]): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
+    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/items/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  }
+
+  async batchActivateMenuItems(menuId: string, itemIds: string[]): Promise<ApiResponse<{ message: string; updated_count: number }>> {
+    return this.makeRequest<{ message: string; updated_count: number }>(`/menus/${menuId}/items/batch-activate`, {
+      method: 'POST',
+      body: JSON.stringify({ item_ids: itemIds }),
+    });
+  }
+
+  async batchDeleteMenuItems(menuId: string, itemIds: string[]): Promise<ApiResponse<{ message: string; deleted_count: number }>> {
+    return this.makeRequest<{ message: string; deleted_count: number }>(`/menus/${menuId}/items/batch-delete`, {
+      method: 'POST',
+      body: JSON.stringify({ item_ids: itemIds }),
+    });
+  }
+
+  async approveMenuItem(menuId: string, itemId: string): Promise<ApiResponse<MenuItem>> {
+    return this.makeRequest<MenuItem>(`/menus/${menuId}/items/${itemId}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async getMenuItemCategories(menuId: string): Promise<ApiResponse<{ categories: string[] }>> {
+    return this.makeRequest<{ categories: string[] }>(`/menus/${menuId}/items/categories`);
+  }
+
+  // QR Code management endpoints
+  async generateQRCode(menuId: string, options?: QRCodeGenerateRequest): Promise<ApiResponse<QRCodeResponse>> {
+    return this.makeRequest<QRCodeResponse>(`/qr/menus/${menuId}/qr/generate`, {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+  }
+
+  async getQRCodeInfo(menuId: string): Promise<ApiResponse<QRCodeResponse>> {
+    return this.makeRequest<QRCodeResponse>(`/qr/menus/${menuId}/qr`);
+  }
+
+  async deactivateQRCode(menuId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/qr/menus/${menuId}/qr`, {
+      method: 'DELETE',
+    });
+  }
+
+  async downloadQRCode(filename: string): Promise<Response> {
+    const url = `${this.baseUrl}/qr/download/${filename}`;
+    const headers = {
+      ...this.getAuthHeader(),
+    };
+    
+    return fetch(url, { headers });
+  }
+
+  // OCR management endpoints
+  async createOCRJob(menuId: string, jobData: OCRJobCreateRequest): Promise<ApiResponse<OCRJobResponse>> {
+    return this.makeRequest<OCRJobResponse>(`/ocr/menus/${menuId}/ocr/jobs`, {
+      method: 'POST',
+      body: JSON.stringify(jobData),
+    });
+  }
+
+  async getOCRJobStatus(jobId: string): Promise<ApiResponse<OCRJobResponse>> {
+    return this.makeRequest<OCRJobResponse>(`/ocr/ocr/jobs/${jobId}`);
+  }
+
+  async processOCRJob(jobId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/ocr/ocr/jobs/${jobId}/process`, {
+      method: 'POST',
+    });
+  }
+
+  async getOCRJobResults(jobId: string): Promise<ApiResponse<OCRResultListResponse>> {
+    return this.makeRequest<OCRResultListResponse>(`/ocr/ocr/jobs/${jobId}/results`);
+  }
+
+  async updateOCRResult(resultId: string, updateData: OCRResultUpdateRequest): Promise<ApiResponse<OCRResultResponse>> {
+    return this.makeRequest<OCRResultResponse>(`/ocr/ocr/results/${resultId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
   // Chat endpoints
   async sendChatMessage(menuId: string, message: string, conversationHistory?: ChatMessage[]): Promise<ApiResponse<ChatResponse>> {
     return this.makeRequest<ChatResponse>('/chat/menu', {
@@ -386,6 +710,22 @@ export type {
   RegisterRequest, 
   ApiResponse,
   MenuItem,
+  Menu,
+  MenuCreateRequest,
+  MenuUpdateRequest,
+  MenuListResponse,
+  MenuImageUploadResponse,
+  MenuImageListResponse,
+  MenuItemCreateRequest,
+  MenuItemUpdateRequest,
+  MenuStats,
+  QRCodeGenerateRequest,
+  QRCodeResponse,
+  OCRJobCreateRequest,
+  OCRJobResponse,
+  OCRResultResponse,
+  OCRResultListResponse,
+  OCRResultUpdateRequest,
   PublicMenuResponse,
   ChatMessage,
   ChatResponse

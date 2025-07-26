@@ -19,7 +19,7 @@ import {
   Phone,
   Globe,
   Clock,
-  Menu,
+  Menu as MenuIcon,
   MessageCircle,
   BarChart3,
   CheckCircle,
@@ -28,40 +28,12 @@ import {
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { apiClient, type Restaurant } from "@/lib/api"
+import { apiClient, type Restaurant, type Menu, type MenuStats } from "@/lib/api"
 
-// Remove duplicate interface since we're importing it from lib/api
-
-// Dummy menu data
-const dummyMenus = [
-  {
-    id: "menu-1",
-    name: "Main Menu",
-    description: "Our complete dining menu",
-    items: 24,
-    lastUpdated: "2 hours ago",
-    status: "active",
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: "menu-2",
-    name: "Lunch Specials",
-    description: "Weekday lunch offerings",
-    items: 12,
-    lastUpdated: "1 day ago",
-    status: "active",
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: "menu-3",
-    name: "Wine List",
-    description: "Curated wine selection",
-    items: 8,
-    lastUpdated: "3 days ago",
-    status: "draft",
-    image: "/placeholder.svg?height=200&width=300",
-  },
-]
+interface MenuWithDetails extends Menu {
+  stats?: MenuStats
+  image?: string
+}
 
 export default function RestaurantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -70,7 +42,9 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [menus, setMenus] = useState<MenuWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMenus, setIsLoadingMenus] = useState(false)
   const [error, setError] = useState("")
   const [showSuccess, setShowSuccess] = useState(isNewlyCreated)
 
@@ -82,6 +56,38 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
     }
     resolveParams()
   }, [params])
+
+  const loadMenus = async (restaurantId: string) => {
+    setIsLoadingMenus(true)
+    try {
+      const menusResponse = await apiClient.getRestaurantMenus(restaurantId)
+      if (menusResponse.error) {
+        console.error("Failed to load menus:", menusResponse.error)
+      } else if (menusResponse.data) {
+        const menusWithDetails: MenuWithDetails[] = []
+        
+        for (const menu of menusResponse.data.menus) {
+          // Get menu stats
+          const statsResponse = await apiClient.getMenuStats(menu.id)
+          // Get menu images
+          const imagesResponse = await apiClient.getMenuImages(menu.id)
+          const firstImage = imagesResponse.data?.images?.[0]?.image_url
+
+          menusWithDetails.push({
+            ...menu,
+            stats: statsResponse.data,
+            image: firstImage || "/placeholder.svg"
+          })
+        }
+        
+        setMenus(menusWithDetails)
+      }
+    } catch (err) {
+      console.error("Error loading menus:", err)
+    } finally {
+      setIsLoadingMenus(false)
+    }
+  }
 
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -99,6 +105,8 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
           setError(response.error)
         } else if (response.data) {
           setRestaurant(response.data)
+          // Load menus for this restaurant
+          await loadMenus(response.data.id)
         }
       } catch (err) {
         setError("Failed to load restaurant. Please try again.")
@@ -273,10 +281,10 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <Menu className="h-5 w-5 text-blue-600" />
+                    <MenuIcon className="h-5 w-5 text-blue-600" />
                     <div>
                       <p className="text-sm text-gray-600">Active Menus</p>
-                      <p className="text-2xl font-bold">3</p>
+                      <p className="text-2xl font-bold">{menus.filter(m => m.is_active).length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -420,7 +428,25 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyMenus.map((menu) => (
+              {isLoadingMenus ? (
+                <div className="col-span-full text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-600 mt-2">Loading menus...</p>
+                </div>
+              ) : menus.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <MenuIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No menus found</h3>
+                  <p className="text-gray-600 mb-4">This restaurant doesn't have any menus yet.</p>
+                  <Link href={`/dashboard/menus/upload?restaurant=${restaurant?.id}`}>
+                    <Button>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload First Menu
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                menus.map((menu) => (
                 <Card key={menu.id} className="hover:shadow-lg transition-shadow">
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">
                     <img
@@ -429,20 +455,24 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-2 right-2">
-                      <Badge variant={menu.status === "active" ? "default" : "secondary"}>{menu.status}</Badge>
+                      <Badge variant={menu.is_active ? "default" : "secondary"}>
+                        {menu.is_active ? "active" : "inactive"}
+                      </Badge>
                     </div>
                   </div>
                   <CardHeader>
                     <CardTitle className="text-lg">{menu.name}</CardTitle>
-                    <CardDescription>{menu.description}</CardDescription>
+                    <CardDescription>
+                      {restaurant?.description || "Restaurant menu"}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                      <span>{menu.items} items</span>
-                      <span>Updated {menu.lastUpdated}</span>
+                      <span>{menu.stats?.total_items || 0} items</span>
+                      <span>Updated {new Date(menu.updated_at).toLocaleDateString()}</span>
                     </div>
                     <div className="flex gap-2">
-                      <Link href={`/dashboard/menus/${menu.id}`} className="flex-1">
+                      <Link href={`/menu/${menu.restaurant_id}?token=${menu.qr_code_data}`} className="flex-1">
                         <Button variant="outline" size="sm" className="w-full bg-transparent">
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -457,7 +487,8 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              )}
             </div>
           </TabsContent>
 

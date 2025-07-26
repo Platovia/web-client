@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,113 +10,241 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest } from "@/lib/api"
 
-interface MenuItem {
-  id: string
-  name: string
-  description: string
-  price: number
-  category: string
-  allergens: string[]
-  isVegetarian: boolean
-  isVegan: boolean
-  isGlutenFree: boolean
-  isAvailable: boolean
-}
-
-// Dummy menu data
-const dummyMenuData = {
-  id: "menu-1",
-  name: "Main Menu",
-  restaurant: "Bella Vista Italian",
-  description: "Our complete dining menu with appetizers, mains, and desserts",
-  status: "active",
-  items: [
-    {
-      id: "item-1",
-      name: "Margherita Pizza",
-      description: "Fresh mozzarella, tomato sauce, basil on wood-fired crust",
-      price: 18.99,
-      category: "Pizza",
-      allergens: ["gluten", "dairy"],
-      isVegetarian: true,
-      isVegan: false,
-      isGlutenFree: false,
-      isAvailable: true,
-    },
-    {
-      id: "item-2",
-      name: "Spaghetti Carbonara",
-      description: "Eggs, pancetta, parmesan, black pepper with fresh pasta",
-      price: 22.99,
-      category: "Pasta",
-      allergens: ["gluten", "dairy", "eggs"],
-      isVegetarian: false,
-      isVegan: false,
-      isGlutenFree: false,
-      isAvailable: true,
-    },
-    {
-      id: "item-3",
-      name: "Caesar Salad",
-      description: "Romaine lettuce, croutons, parmesan, caesar dressing",
-      price: 14.99,
-      category: "Salads",
-      allergens: ["dairy"],
-      isVegetarian: true,
-      isVegan: false,
-      isGlutenFree: false,
-      isAvailable: true,
-    },
-  ],
+interface MenuWithItems {
+  menu: Menu
+  items: MenuItem[]
+  restaurant?: {
+    id: string
+    name: string
+  }
 }
 
 export default function EditMenuPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [menuData, setMenuData] = useState(dummyMenuData)
+  const searchParams = useSearchParams()
+  const fromUpload = searchParams.get('fromUpload') === 'true'
+  
+  const [menuData, setMenuData] = useState<MenuWithItems | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [success, setSuccess] = useState("")
+  const [error, setError] = useState("")
 
-  const categories = Array.from(new Set(menuData.items.map((item) => item.category)))
+  useEffect(() => {
+    loadMenuData()
+  }, [params.id])
 
-  const handleSaveMenu = async () => {
+  const loadMenuData = async () => {
     setIsLoading(true)
+    setError("")
 
-    // Simulate API call
-    setTimeout(() => {
-      setSuccess("Menu updated successfully!")
+    try {
+      // Load menu details
+      const menuResponse = await apiClient.getMenu(params.id)
+      if (menuResponse.error) {
+        setError("Failed to load menu: " + menuResponse.error)
+        return
+      }
+
+      // Load menu items
+      const itemsResponse = await apiClient.getMenuItems(params.id)
+      if (itemsResponse.error) {
+        setError("Failed to load menu items: " + itemsResponse.error)
+        return
+      }
+
+      // Load restaurant info
+      const restaurantResponse = await apiClient.getRestaurant(menuResponse.data!.restaurant_id)
+
+      setMenuData({
+        menu: menuResponse.data!,
+        items: itemsResponse.data?.items || [],
+        restaurant: restaurantResponse.data ? {
+          id: restaurantResponse.data.id,
+          name: restaurantResponse.data.name
+        } : undefined
+      })
+
+      if (fromUpload) {
+        setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+      }
+    } catch (err) {
+      console.error("Error loading menu data:", err)
+      setError("Failed to load menu data")
+    } finally {
       setIsLoading(false)
-
-      setTimeout(() => setSuccess(""), 3000)
-    }, 1500)
-  }
-
-  const handleUpdateItem = (updatedItem: MenuItem) => {
-    setMenuData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-    }))
-    setEditingItem(null)
-  }
-
-  const handleDeleteItem = (itemId: string) => {
-    if (confirm("Are you sure you want to delete this menu item?")) {
-      setMenuData((prev) => ({
-        ...prev,
-        items: prev.items.filter((item) => item.id !== itemId),
-      }))
     }
   }
 
-  const toggleItemAvailability = (itemId: string) => {
-    setMenuData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item)),
-    }))
+  const categories = menuData ? Array.from(new Set(menuData.items.map((item) => item.category || "Other").filter(Boolean))) : []
+
+  const handleSaveMenu = async () => {
+    if (!menuData) return
+    
+    setIsSaving(true)
+    setError("")
+
+    try {
+      const updateData: MenuUpdateRequest = {
+        name: menuData.menu.name,
+        is_active: menuData.menu.is_active
+      }
+
+      const response = await apiClient.updateMenu(params.id, updateData)
+      if (response.error) {
+        setError("Failed to save menu: " + response.error)
+      } else {
+        setSuccess("Menu updated successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } catch (err) {
+      console.error("Error saving menu:", err)
+      setError("Failed to save menu")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleUpdateItem = async (updatedItem: MenuItem) => {
+    if (!menuData) return
+
+    try {
+      const updateData: MenuItemUpdateRequest = {
+        name: updatedItem.name,
+        description: updatedItem.description,
+        price: updatedItem.price,
+        category: updatedItem.category,
+        allergens: updatedItem.allergens,
+        is_available: updatedItem.is_available,
+        image_url: updatedItem.image_url
+      }
+
+      const response = await apiClient.updateMenuItem(params.id, updatedItem.id, updateData)
+      if (response.error) {
+        setError("Failed to update item: " + response.error)
+      } else {
+        // Update local state
+        setMenuData(prev => prev ? {
+          ...prev,
+          items: prev.items.map(item => item.id === updatedItem.id ? response.data! : item)
+        } : prev)
+        setEditingItem(null)
+        setSuccess("Item updated successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } catch (err) {
+      console.error("Error updating item:", err)
+      setError("Failed to update item")
+    }
+  }
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this menu item?")) {
+      return
+    }
+
+    if (!menuData) return
+
+    try {
+      const response = await apiClient.deleteMenuItem(params.id, itemId)
+      if (response.error) {
+        setError("Failed to delete item: " + response.error)
+      } else {
+        // Update local state
+        setMenuData(prev => prev ? {
+          ...prev,
+          items: prev.items.filter(item => item.id !== itemId)
+        } : prev)
+        setSuccess("Item deleted successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } catch (err) {
+      console.error("Error deleting item:", err)
+      setError("Failed to delete item")
+    }
+  }
+
+  const toggleItemAvailability = async (itemId: string) => {
+    if (!menuData) return
+
+    const item = menuData.items.find(i => i.id === itemId)
+    if (!item) return
+
+    try {
+      const updateData: MenuItemUpdateRequest = {
+        is_available: !item.is_available
+      }
+
+      const response = await apiClient.updateMenuItem(params.id, itemId, updateData)
+      if (response.error) {
+        setError("Failed to update item availability: " + response.error)
+      } else {
+        // Update local state
+        setMenuData(prev => prev ? {
+          ...prev,
+          items: prev.items.map(item => item.id === itemId ? response.data! : item)
+        } : prev)
+      }
+    } catch (err) {
+      console.error("Error updating item availability:", err)
+      setError("Failed to update item availability")
+    }
+  }
+
+  const handleAddItem = async (itemData: MenuItemCreateRequest) => {
+    if (!menuData) return
+
+    try {
+      const response = await apiClient.createMenuItem(params.id, itemData)
+      if (response.error) {
+        setError("Failed to add item: " + response.error)
+      } else {
+        // Update local state
+        setMenuData(prev => prev ? {
+          ...prev,
+          items: [...prev.items, response.data!]
+        } : prev)
+        setSuccess("Item added successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } catch (err) {
+      console.error("Error adding item:", err)
+      setError("Failed to add item")
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 max-w-6xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading menu...</span>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!menuData) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 max-w-6xl mx-auto">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {error || "Menu not found"}
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -134,25 +262,38 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Edit Menu</h1>
               <p className="text-gray-600">
-                {menuData.name} - {menuData.restaurant}
+                {menuData.menu.name} - {menuData.restaurant?.name}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href={`/menu/${params.id}`}>
+            <Link href={`/dashboard/menus/${params.id}/qr`}>
+              <Button variant="outline">
+                <QrCode className="h-4 w-4 mr-2" />
+                QR Code
+              </Button>
+            </Link>
+            <Link href={`/menu/${menuData.menu.restaurant_id}?token=${menuData.menu.qr_code_data}`}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
             </Link>
-            <Button onClick={handleSaveMenu} disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button onClick={handleSaveMenu} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>
           </div>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {success && (
           <Alert className="mb-6 border-green-200 bg-green-50">
@@ -192,20 +333,20 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
                               <h4 className="font-medium">{item.name}</h4>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-green-600">
-                                  ${item.price.toFixed(2)}
+                                  ${item.price?.toFixed(2) || 'N/A'}
                                 </Badge>
-                                {!item.isAvailable && <Badge variant="destructive">Unavailable</Badge>}
-                                {item.isVegetarian && (
+                                {!item.is_available && <Badge variant="destructive">Unavailable</Badge>}
+                                {item.is_vegetarian && (
                                   <Badge variant="outline" className="text-green-600">
                                     Vegetarian
                                   </Badge>
                                 )}
-                                {item.isVegan && (
+                                {item.is_vegan && (
                                   <Badge variant="outline" className="text-green-700">
                                     Vegan
                                   </Badge>
                                 )}
-                                {item.isGlutenFree && (
+                                {item.is_gluten_free && (
                                   <Badge variant="outline" className="text-blue-600">
                                     Gluten Free
                                   </Badge>
@@ -213,7 +354,7 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
                               </div>
                             </div>
                             <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-                            {item.allergens.length > 0 && (
+                            {item.allergens && item.allergens.length > 0 && (
                               <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                                 <span className="text-xs text-gray-500">Allergens: {item.allergens.join(", ")}</span>
@@ -223,11 +364,11 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
 
                           <div className="flex items-center gap-2">
                             <Button
-                              variant={item.isAvailable ? "outline" : "default"}
+                              variant={item.is_available ? "outline" : "default"}
                               size="sm"
                               onClick={() => toggleItemAvailability(item.id)}
                             >
-                              {item.isAvailable ? "Available" : "Unavailable"}
+                              {item.is_available ? "Available" : "Unavailable"}
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
                               <Edit className="h-4 w-4" />
@@ -256,21 +397,26 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
                     <Label htmlFor="menuName">Menu Name</Label>
                     <Input
                       id="menuName"
-                      value={menuData.name}
-                      onChange={(e) => setMenuData((prev) => ({ ...prev, name: e.target.value }))}
+                      value={menuData.menu.name}
+                      onChange={(e) => setMenuData((prev) => prev ? ({
+                        ...prev,
+                        menu: { ...prev.menu, name: e.target.value }
+                      }) : prev)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <select
                       id="status"
-                      value={menuData.status}
-                      onChange={(e) => setMenuData((prev) => ({ ...prev, status: e.target.value }))}
+                      value={menuData.menu.is_active ? "active" : "inactive"}
+                      onChange={(e) => setMenuData((prev) => prev ? ({
+                        ...prev,
+                        menu: { ...prev.menu, is_active: e.target.value === "active" }
+                      }) : prev)}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="active">Active</option>
-                      <option value="draft">Draft</option>
-                      <option value="archived">Archived</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                   </div>
                 </div>
@@ -279,9 +425,14 @@ export default function EditMenuPage({ params }: { params: { id: string } }) {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    value={menuData.description}
-                    onChange={(e) => setMenuData((prev) => ({ ...prev, description: e.target.value }))}
+                    value={menuData.restaurant?.description || ""}
+                    onChange={(e) => setMenuData((prev) => prev ? ({
+                      ...prev,
+                      restaurant: prev.restaurant ? { ...prev.restaurant, description: e.target.value } : undefined
+                    }) : prev)}
                     rows={3}
+                    placeholder="Menu description (controlled by restaurant settings)"
+                    disabled
                   />
                 </div>
               </CardContent>
