@@ -14,6 +14,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Loader2, Upload, MapPin, Phone, Globe, Camera } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import { useAuth } from "@/contexts/auth-context"
+import { apiClient, type RestaurantCreateRequest } from "@/lib/api"
 
 const cuisineTypes = [
   "Italian",
@@ -36,6 +38,7 @@ const cuisineTypes = [
 
 export default function NewRestaurantPage() {
   const router = useRouter()
+  const { companies } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [formData, setFormData] = useState({
@@ -92,25 +95,52 @@ export default function NewRestaurantPage() {
       return
     }
 
+    if (!companies || companies.length === 0) {
+      setError("No company found. Please contact support.")
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      const newRestaurant = {
-        id: `restaurant-${Date.now()}`,
-        ...formData,
-        createdAt: new Date().toISOString(),
-        status: "active",
+    try {
+      const company = companies[0] // Use the first company
+      
+      // Prepare restaurant data for API
+      const restaurantPayload: RestaurantCreateRequest = {
+        name: formData.name,
+        description: formData.description,
+        address: {
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+        },
+        contact_info: {
+          phone: formData.phone,
+          email: formData.email,
+          website: formData.website,
+          cuisine: formData.cuisine,
+          hours: formData.hours,
+        }
       }
-
-      // Save to localStorage for demo
-      const existingRestaurants = JSON.parse(localStorage.getItem("restaurants") || "[]")
-      existingRestaurants.push(newRestaurant)
-      localStorage.setItem("restaurants", JSON.stringify(existingRestaurants))
-
+      
+      // Create restaurant via API
+      const response = await apiClient.createRestaurant(company.id, restaurantPayload)
+      
+      if (response.error) {
+        setError(response.error)
+        return
+      }
+      
+      // Success - redirect to restaurant detail page
+      router.push(`/dashboard/restaurants/${response.data?.id}?created=true`)
+      
+    } catch (err) {
+      setError("Failed to create restaurant. Please try again.")
+      console.error("Restaurant creation error:", err)
+    } finally {
       setIsLoading(false)
-      router.push(`/dashboard/restaurants/${newRestaurant.id}?created=true`)
-    }, 2000)
+    }
   }
 
   return (

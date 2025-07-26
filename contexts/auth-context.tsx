@@ -50,8 +50,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshCompanies = async () => {
     try {
       const response = await apiClient.getUserCompanies();
-      if (response.data) {
-        setCompanies(response.data);
+      if (response.data && response.data.companies) {
+        setCompanies(response.data.companies);
       }
     } catch (error) {
       console.error('Failed to fetch companies:', error);

@@ -53,6 +53,38 @@ interface Company {
   updated_at: string;
 }
 
+interface Restaurant {
+  id: string;
+  company_id: string;
+  name: string;
+  description?: string;
+  address?: any;
+  contact_info?: any;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RestaurantCreateRequest {
+  name: string;
+  description?: string;
+  address?: any;
+  contact_info?: any;
+}
+
+interface RestaurantUpdateRequest {
+  name?: string;
+  description?: string;
+  address?: any;
+  contact_info?: any;
+  is_active?: boolean;
+}
+
+interface RestaurantListResponse {
+  restaurants: Restaurant[];
+  total: number;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -71,19 +103,26 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+        ...options.headers,
+      };
+      
+      console.log('Making API request:', { url, headers: { ...headers, Authorization: (headers as any).Authorization ? 'Bearer [REDACTED]' : 'None' } });
+      
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.getAuthHeader(),
-          ...options.headers,
-        },
+        headers,
         ...options,
       });
+
+      console.log('API response status:', response.status, response.statusText);
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
           const errorData = await response.json();
+          console.log('API error data:', errorData);
           errorMessage = errorData.detail || errorData.message || errorMessage;
         } catch {
           // If parsing fails, use the status text
@@ -93,8 +132,10 @@ class ApiClient {
       }
 
       const data = await response.json();
+      console.log('API success data:', data);
       return { data };
     } catch (error) {
+      console.error('API request failed:', error);
       return { 
         error: error instanceof Error ? error.message : 'Network error occurred' 
       };
@@ -195,8 +236,49 @@ class ApiClient {
     });
   }
 
-  async getUserCompanies(): Promise<ApiResponse<Company[]>> {
-    return this.makeRequest<Company[]>('/companies');
+  async getUserCompanies(): Promise<ApiResponse<{ companies: Company[], total: number }>> {
+    return this.makeRequest<{ companies: Company[], total: number }>('/companies');
+  }
+
+  // Restaurant endpoints
+  async createRestaurant(companyId: string, restaurantData: RestaurantCreateRequest): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/companies/${companyId}/restaurants`, {
+      method: 'POST',
+      body: JSON.stringify(restaurantData),
+    });
+  }
+
+  async getCompanyRestaurants(companyId: string): Promise<ApiResponse<RestaurantListResponse>> {
+    return this.makeRequest<RestaurantListResponse>(`/companies/${companyId}/restaurants`);
+  }
+
+  async getRestaurant(restaurantId: string): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}`);
+  }
+
+  async updateRestaurant(restaurantId: string, updateData: RestaurantUpdateRequest): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteRestaurant(restaurantId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/restaurants/${restaurantId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async activateRestaurant(restaurantId: string): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}/activate`, {
+      method: 'POST',
+    });
+  }
+
+  async deactivateRestaurant(restaurantId: string): Promise<ApiResponse<Restaurant>> {
+    return this.makeRequest<Restaurant>(`/restaurants/${restaurantId}/deactivate`, {
+      method: 'POST',
+    });
   }
 
   // Health check
@@ -208,4 +290,15 @@ class ApiClient {
 export const apiClient = new ApiClient();
 
 // Type exports for use in components
-export type { User, Company, AuthTokens, LoginRequest, RegisterRequest, ApiResponse }; 
+export type { 
+  User, 
+  Company, 
+  Restaurant, 
+  RestaurantCreateRequest, 
+  RestaurantUpdateRequest, 
+  RestaurantListResponse, 
+  AuthTokens, 
+  LoginRequest, 
+  RegisterRequest, 
+  ApiResponse 
+}; 

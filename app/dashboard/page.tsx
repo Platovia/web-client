@@ -8,8 +8,9 @@ import { Store, Menu, QrCode, MessageCircle, TrendingUp, Eye, Plus, ArrowUpRight
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
+import { apiClient, type Restaurant } from "@/lib/api"
 
-// Dummy data
+// Dummy data for stats that don't come from API yet
 const dashboardStats = {
   totalRestaurants: 3,
   totalMenus: 8,
@@ -27,40 +28,42 @@ const recentActivity = [
 
 export default function DashboardPage() {
   const { user, companies } = useAuth()
-  // Add state for welcome message
   const [showWelcome, setShowWelcome] = useState(false)
-  const [recentRestaurants, setRecentRestaurants] = useState([
-    {
-      id: "1",
-      name: "Bella Vista Italian",
-      description: "Authentic Italian cuisine",
-      status: "active",
-      menus: 3,
-      qrScans: 456,
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: "2",
-      name: "Tokyo Sushi Bar",
-      description: "Fresh sushi and Japanese dishes",
-      status: "active",
-      menus: 2,
-      qrScans: 321,
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: "3",
-      name: "Mountain Grill",
-      description: "American steakhouse",
-      status: "draft",
-      menus: 1,
-      qrScans: 89,
-      lastUpdated: "3 days ago",
-    },
-  ])
+  const [recentRestaurants, setRecentRestaurants] = useState<Restaurant[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
 
   // Get the primary company
   const primaryCompany = companies?.[0]
+
+  // Fetch restaurants from API
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      if (!companies || companies.length === 0) return
+      
+      setIsLoading(true)
+      setError("")
+      
+      try {
+        const company = companies[0] // Use the first company
+        const response = await apiClient.getCompanyRestaurants(company.id)
+        
+        if (response.error) {
+          setError(response.error)
+        } else if (response.data) {
+          // Show only the most recent 3 restaurants
+          setRecentRestaurants(response.data.restaurants.slice(0, 3))
+        }
+      } catch (err) {
+        setError("Failed to load restaurants. Please try again.")
+        console.error("Error fetching restaurants:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchRestaurants()
+  }, [companies])
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -71,30 +74,6 @@ export default function DashboardPage() {
     // Clear welcome parameter
     if (isWelcome) {
       window.history.replaceState({}, "", "/dashboard")
-    }
-
-    // Check for first restaurant from onboarding (legacy localStorage)
-    const firstRestaurant = localStorage.getItem("firstRestaurant")
-    if (firstRestaurant) {
-      try {
-        const restaurant = JSON.parse(firstRestaurant)
-        setRecentRestaurants((prev) => [
-          {
-            id: restaurant.id,
-            name: restaurant.name,
-            description: restaurant.description,
-            status: "active",
-            menus: 0,
-            qrScans: 0,
-            lastUpdated: "Just created",
-          },
-          ...prev.slice(0, 2), // Keep only 3 total
-        ])
-        // Clear the localStorage item after using it
-        localStorage.removeItem("firstRestaurant")
-      } catch (error) {
-        console.error("Error parsing first restaurant:", error)
-      }
     }
   }, [])
 
@@ -145,8 +124,10 @@ export default function DashboardPage() {
               <Store className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalRestaurants}</div>
-              <p className="text-xs text-muted-foreground">+1 from last month</p>
+              <div className="text-2xl font-bold">
+                {isLoading ? "..." : recentRestaurants.length}
+              </div>
+              <p className="text-xs text-muted-foreground">Restaurants created</p>
             </CardContent>
           </Card>
 
@@ -199,29 +180,52 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentRestaurants.map((restaurant) => (
-                <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium">{restaurant.name}</h4>
-                      <Badge variant={restaurant.status === "active" ? "default" : "secondary"}>
-                        {restaurant.status}
-                      </Badge>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/4"></div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{restaurant.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>{restaurant.menus} menus</span>
-                      <span>{restaurant.qrScans} scans</span>
-                      <span>Updated {restaurant.lastUpdated}</span>
-                    </div>
+                    <div className="h-8 w-8 bg-gray-200 rounded"></div>
                   </div>
-                  <Link href={`/dashboard/restaurants/${restaurant.id}`}>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
+                ))
+              ) : recentRestaurants.length === 0 ? (
+                <div className="text-center py-8">
+                  <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No restaurants yet</h3>
+                  <p className="text-gray-600 mb-4">Get started by adding your first restaurant location</p>
+                  <Link href="/dashboard/restaurants/new">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Restaurant
                     </Button>
                   </Link>
                 </div>
-              ))}
+              ) : (
+                recentRestaurants.map((restaurant) => (
+                  <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium">{restaurant.name}</h4>
+                        <Badge variant={restaurant.is_active ? "default" : "secondary"}>
+                          {restaurant.is_active ? "active" : "inactive"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{restaurant.description}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>Created {new Date(restaurant.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/restaurants/${restaurant.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

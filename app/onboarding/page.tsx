@@ -8,11 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
-import { QrCode, ArrowRight, ArrowLeft, Check } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { QrCode, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { apiClient } from "@/lib/api"
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { companies } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [restaurantData, setRestaurantData] = useState({
     name: "",
     description: "",
@@ -58,29 +64,65 @@ export default function OnboardingPage() {
     }
   }
 
-  // Update handleNext with validation
-  const handleNext = () => {
+  // Update handleNext with validation and API integration
+  const handleNext = async () => {
+    setError("")
+    
     if (currentStep < totalSteps) {
       if (validateStep(currentStep)) {
         setCurrentStep(currentStep + 1)
       } else {
-        // Show validation error
+        setError("Please fill in all required fields")
         return
       }
     } else {
-      // Complete onboarding with success animation
-      localStorage.setItem("onboardingComplete", "true")
-      localStorage.setItem(
-        "firstRestaurant",
-        JSON.stringify({
-          id: "first-restaurant",
-          ...restaurantData,
-          createdAt: new Date().toISOString(),
-        }),
-      )
-      localStorage.removeItem("onboardingStep")
-      localStorage.removeItem("restaurantOnboardingData")
-      router.push("/dashboard?welcome=true")
+      // Complete onboarding by creating restaurant
+      if (!companies || companies.length === 0) {
+        setError("No company found. Please contact support.")
+        return
+      }
+
+      setIsLoading(true)
+      
+      try {
+        // Get the first company (should be the one created during registration)
+        const company = companies[0]
+        
+        // Prepare restaurant data for API
+        const restaurantPayload = {
+          name: restaurantData.name,
+          description: restaurantData.description,
+          address: {
+            street: restaurantData.address,
+          },
+          contact_info: {
+            phone: restaurantData.phone,
+            website: restaurantData.website,
+            cuisine: restaurantData.cuisine,
+          }
+        }
+        
+        // Create restaurant via API
+        const response = await apiClient.createRestaurant(company.id, restaurantPayload)
+        
+        if (response.error) {
+          setError(response.error)
+          return
+        }
+        
+        // Success - clean up and redirect
+        localStorage.setItem("onboardingComplete", "true")
+        localStorage.removeItem("onboardingStep")
+        localStorage.removeItem("restaurantOnboardingData")
+        
+        router.push(`/dashboard/restaurants/${response.data?.id}?created=true`)
+        
+      } catch (err) {
+        setError("Failed to create restaurant. Please try again.")
+        console.error("Restaurant creation error:", err)
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -227,14 +269,21 @@ export default function OnboardingPage() {
           <CardContent>
             {renderStep()}
 
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex justify-between mt-8">
-              <Button variant="outline" onClick={handleBack} disabled={currentStep === 1}>
+              <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isLoading}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {currentStep === totalSteps ? "Complete Setup" : "Next"}
-                {currentStep < totalSteps && <ArrowRight className="h-4 w-4 ml-2" />}
+                {currentStep < totalSteps && !isLoading && <ArrowRight className="h-4 w-4 ml-2" />}
               </Button>
             </div>
           </CardContent>

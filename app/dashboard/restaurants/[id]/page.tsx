@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   ArrowLeft,
   Edit,
@@ -27,22 +28,9 @@ import {
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { apiClient, type Restaurant } from "@/lib/api"
 
-interface Restaurant {
-  id: string
-  name: string
-  description: string
-  cuisine: string
-  address: string
-  city: string
-  state: string
-  zipCode: string
-  phone: string
-  email: string
-  website: string
-  status: string
-  createdAt: string
-}
+// Remove duplicate interface since we're importing it from lib/api
 
 // Dummy menu data
 const dummyMenus = [
@@ -75,40 +63,59 @@ const dummyMenus = [
   },
 ]
 
-export default function RestaurantDetailPage({ params }: { params: { id: string } }) {
+export default function RestaurantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isNewlyCreated = searchParams.get("created") === "true"
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
   const [showSuccess, setShowSuccess] = useState(isNewlyCreated)
 
+  // Resolve params promise
   useEffect(() => {
-    // Load restaurant data (in real app, this would be an API call)
-    const dummyRestaurant: Restaurant = {
-      id: params.id,
-      name: "Bella Vista Italian",
-      description:
-        "Authentic Italian cuisine with a modern twist, featuring fresh ingredients and traditional recipes passed down through generations.",
-      cuisine: "Italian",
-      address: "123 Main Street",
-      city: "Downtown",
-      state: "CA",
-      zipCode: "90210",
-      phone: "(555) 123-4567",
-      email: "contact@bellavista.com",
-      website: "https://bellavista.com",
-      status: "active",
-      createdAt: "2024-01-15T10:30:00Z",
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
     }
-    setRestaurant(dummyRestaurant)
+    resolveParams()
+  }, [params])
+
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      if (!resolvedParams?.id) return
+      
+      setIsLoading(true)
+      setError("")
+      
+      try {
+        console.log("Fetching restaurant with ID:", resolvedParams.id)
+        const response = await apiClient.getRestaurant(resolvedParams.id)
+        console.log("Restaurant API response:", response)
+        
+        if (response.error) {
+          setError(response.error)
+        } else if (response.data) {
+          setRestaurant(response.data)
+        }
+      } catch (err) {
+        setError("Failed to load restaurant. Please try again.")
+        console.error("Error fetching restaurant:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRestaurant()
 
     // Clear success message after 5 seconds
     if (isNewlyCreated) {
       const timer = setTimeout(() => setShowSuccess(false), 5000)
       return () => clearTimeout(timer)
     }
-  }, [params.id, isNewlyCreated])
+  }, [resolvedParams?.id, isNewlyCreated])
 
   const generateQRCode = () => {
     // Simulate QR code generation and download
@@ -140,14 +147,46 @@ export default function RestaurantDetailPage({ params }: { params: { id: string 
     })
   }
 
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 max-w-6xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-48" />
+            </div>
+            <Skeleton className="h-4 w-3/4" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 max-w-6xl mx-auto">
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   if (!restaurant) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
+        <div className="p-6 max-w-6xl mx-auto">
+          <Alert>
+            <AlertDescription>Restaurant not found.</AlertDescription>
+          </Alert>
         </div>
       </DashboardLayout>
     )
@@ -178,7 +217,9 @@ export default function RestaurantDetailPage({ params }: { params: { id: string 
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{restaurant.name}</h1>
-                <Badge variant={restaurant.status === "active" ? "default" : "secondary"}>{restaurant.status}</Badge>
+                <Badge variant={restaurant.is_active ? "default" : "secondary"}>
+                  {restaurant.is_active ? "active" : "inactive"}
+                </Badge>
               </div>
               <p className="text-gray-600">{restaurant.description}</p>
             </div>
@@ -287,7 +328,10 @@ export default function RestaurantDetailPage({ params }: { params: { id: string 
                     <div>
                       <p className="font-medium">Address</p>
                       <p className="text-sm text-gray-600">
-                        {restaurant.address}, {restaurant.city}, {restaurant.state} {restaurant.zipCode}
+                        {restaurant.address?.street || "No address provided"}
+                        {restaurant.address?.city && `, ${restaurant.address.city}`}
+                        {restaurant.address?.state && `, ${restaurant.address.state}`}
+                        {restaurant.address?.zipCode && ` ${restaurant.address.zipCode}`}
                       </p>
                     </div>
                   </div>
@@ -295,17 +339,26 @@ export default function RestaurantDetailPage({ params }: { params: { id: string 
                     <Phone className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="font-medium">Phone</p>
-                      <p className="text-sm text-gray-600">{restaurant.phone}</p>
+                      <p className="text-sm text-gray-600">{restaurant.contact_info?.phone || "No phone provided"}</p>
                     </div>
                   </div>
-                  {restaurant.website && (
+                  {restaurant.contact_info?.website && (
                     <div className="flex items-center gap-3">
                       <Globe className="h-5 w-5 text-gray-400" />
                       <div>
                         <p className="font-medium">Website</p>
-                        <a href={restaurant.website} className="text-sm text-blue-600 hover:underline">
-                          {restaurant.website}
+                        <a href={restaurant.contact_info.website} className="text-sm text-blue-600 hover:underline">
+                          {restaurant.contact_info.website}
                         </a>
+                      </div>
+                    </div>
+                  )}
+                  {restaurant.contact_info?.email && (
+                    <div className="flex items-center gap-3">
+                      <span className="h-5 w-5 text-gray-400">✉️</span>
+                      <div>
+                        <p className="font-medium">Email</p>
+                        <p className="text-sm text-gray-600">{restaurant.contact_info.email}</p>
                       </div>
                     </div>
                   )}
