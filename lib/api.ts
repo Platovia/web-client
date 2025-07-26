@@ -282,7 +282,7 @@ class ApiClient {
         ...options.headers,
       };
       
-      console.log('Making API request:', { url, headers: { ...headers, Authorization: (headers as any).Authorization ? 'Bearer [REDACTED]' : 'None' } });
+      // console.log('Making API request:', { url, headers: { ...headers, Authorization: (headers as any).Authorization ? 'Bearer [REDACTED]' : 'None' } });
       
       const response = await fetch(url, {
         headers,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,7 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { apiClient, type Restaurant, type Menu, type MenuStats } from "@/lib/api"
 
 interface MenuWithDetails extends Menu {
-  stats?: MenuStats
+  stats?: MenuStats | null
   image?: string
 }
 
@@ -47,9 +47,12 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
   const [isLoadingMenus, setIsLoadingMenus] = useState(false)
   const [error, setError] = useState("")
   const [showSuccess, setShowSuccess] = useState(isNewlyCreated)
+  const [menusLoaded, setMenusLoaded] = useState(false)
+  const [loadAttempts, setLoadAttempts] = useState(0)
 
   // Resolve params promise
   useEffect(() => {
+    console.log("useEffect1")
     const resolveParams = async () => {
       const resolved = await params
       setResolvedParams(resolved)
@@ -57,39 +60,81 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
     resolveParams()
   }, [params])
 
-  const loadMenus = async (restaurantId: string) => {
+  const loadMenus = useCallback(async (restaurantId: string) => {
+    if (!restaurantId) return
+    
+    // Prevent multiple simultaneous calls
+    if (isLoadingMenus) {
+      console.log("Already loading menus, skipping...")
+      return
+    }
+    
     setIsLoadingMenus(true)
     try {
       const menusResponse = await apiClient.getRestaurantMenus(restaurantId)
+      console.log("menusResponse", menusResponse)
       if (menusResponse.error) {
         console.error("Failed to load menus:", menusResponse.error)
-      } else if (menusResponse.data) {
-        const menusWithDetails: MenuWithDetails[] = []
-        
-        for (const menu of menusResponse.data.menus) {
-          // Get menu stats
-          const statsResponse = await apiClient.getMenuStats(menu.id)
-          // Get menu images
-          const imagesResponse = await apiClient.getMenuImages(menu.id)
+        setMenus([])
+        return
+      } 
+      
+      if (!menusResponse.data?.menus) {
+        setMenus([])
+        return
+      }
+
+      // Process menus in parallel for better performance
+      const menuPromises = menusResponse.data.menus.map(async (menu) => {
+        try {
+          console.log(`Loading details for menu ${menu.id}...`)
+          
+          // Get menu stats and images in parallel
+          const [statsResponse, imagesResponse] = await Promise.all([
+            apiClient.getMenuStats(menu.id),
+            apiClient.getMenuImages(menu.id)
+          ])
+          
+          console.log(`Menu ${menu.id} - Stats response:`, statsResponse)
+          console.log(`Menu ${menu.id} - Images response:`, imagesResponse)
+          
           const firstImage = imagesResponse.data?.images?.[0]?.image_url
 
-          menusWithDetails.push({
+          return {
             ...menu,
-            stats: statsResponse.data,
+            stats: statsResponse.data || null,
             image: firstImage || "/placeholder.svg"
-          })
+          }
+        } catch (err) {
+          console.error(`Error loading details for menu ${menu.id}:`, err)
+          // Return menu with default values if details fail to load
+          return {
+            ...menu,
+            stats: null,
+            image: "/placeholder.svg"
+          }
         }
-        
-        setMenus(menusWithDetails)
-      }
+      })
+      
+      const resolvedMenus = await Promise.all(menuPromises)
+      setMenus(resolvedMenus)
     } catch (err) {
       console.error("Error loading menus:", err)
+      setMenus([])
     } finally {
       setIsLoadingMenus(false)
     }
-  }
+  }, [isLoadingMenus])
 
   useEffect(() => {
+    console.log("useEffect2")
+    let isMounted = true
+    
+    // Reset menus loaded flag when restaurant ID changes
+    setMenusLoaded(false)
+    setMenus([])
+    setLoadAttempts(0)
+    
     const fetchRestaurant = async () => {
       if (!resolvedParams?.id) return
       
@@ -101,18 +146,27 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
         const response = await apiClient.getRestaurant(resolvedParams.id)
         console.log("Restaurant API response:", response)
         
+        if (!isMounted) return
+        
         if (response.error) {
           setError(response.error)
         } else if (response.data) {
           setRestaurant(response.data)
-          // Load menus for this restaurant
-          await loadMenus(response.data.id)
+          // Load menus for this restaurant only if not already loaded or loading, and max attempts not reached
+          if (!menusLoaded && !isLoadingMenus && loadAttempts < 3) {
+            setLoadAttempts(prev => prev + 1)
+            await loadMenus(response.data.id)
+            setMenusLoaded(true)
+          }
         }
       } catch (err) {
+        if (!isMounted) return
         setError("Failed to load restaurant. Please try again.")
         console.error("Error fetching restaurant:", err)
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -120,8 +174,19 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
 
     // Clear success message after 5 seconds
     if (isNewlyCreated) {
-      const timer = setTimeout(() => setShowSuccess(false), 5000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setShowSuccess(false)
+        }
+      }, 5000)
+      return () => {
+        clearTimeout(timer)
+        isMounted = false
+      }
+    }
+    
+    return () => {
+      isMounted = false
     }
   }, [resolvedParams?.id, isNewlyCreated])
 
