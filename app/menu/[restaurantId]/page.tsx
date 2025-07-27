@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle } from "lucide-react"
-import { apiClient, type MenuItem, type ChatMessage } from "@/lib/api"
+import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
 
 interface Restaurant {
   id: string
@@ -36,6 +36,8 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [error, setError] = useState("")
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null)
+  const [isCreatingSession, setIsCreatingSession] = useState(false)
 
   useEffect(() => {
     loadMenuData()
@@ -130,8 +132,26 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
 
   const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category || "Other").filter(Boolean)))]
 
+  const createChatSession = async () => {
+    if (!qrToken || chatSession) return
+    
+    setIsCreatingSession(true)
+    try {
+      const response = await apiClient.createChatSession(qrToken)
+      if (response.data) {
+        setChatSession(response.data)
+      } else {
+        console.error("Failed to create chat session:", response.error)
+      }
+    } catch (err) {
+      console.error("Error creating chat session:", err)
+    } finally {
+      setIsCreatingSession(false)
+    }
+  }
+
   const sendMessage = async () => {
-    if (!chatInput.trim() || !menuId) return
+    if (!chatInput.trim() || !qrToken || !chatSession) return
 
     const userMessage: ChatMessage = { role: "user", content: chatInput }
     setChatMessages((prev) => [...prev, userMessage])
@@ -139,7 +159,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
     setIsChatLoading(true)
 
     try {
-      const response = await apiClient.sendChatMessage(menuId, chatInput, chatMessages)
+      const response = await apiClient.sendChatMessage(qrToken, chatSession.id, chatInput)
       
       if (response.error) {
         // Fallback to a generic response if AI chat fails
@@ -149,7 +169,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         }
         setChatMessages((prev) => [...prev, fallbackMessage])
       } else if (response.data) {
-        const assistantMessage: ChatMessage = { role: "assistant", content: response.data.response }
+        const assistantMessage: ChatMessage = { role: "assistant", content: response.data.bot_response }
         setChatMessages((prev) => [...prev, assistantMessage])
       }
     } catch (err) {
@@ -317,10 +337,15 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         )}
       </div>
 
-      {/* Chat Button - only show if we have a menu */}
-      {menuId && (
+      {/* Chat Button - only show if we have a QR token */}
+      {qrToken && (
         <Button
-          onClick={() => setShowChat(true)}
+          onClick={() => {
+            setShowChat(true)
+            if (!chatSession && !isCreatingSession) {
+              createChatSession()
+            }
+          }}
           className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg bg-orange-600 hover:bg-orange-700"
           size="lg"
         >
@@ -340,7 +365,24 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {chatMessages.length === 0 && (
+              {isCreatingSession && (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="flex space-x-1 justify-center mb-4">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                  <p>Connecting to menu assistant...</p>
+                </div>
+              )}
+
+              {!isCreatingSession && chatMessages.length === 0 && (
                 <div className="text-center text-gray-500 py-8">
                   <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>Ask me anything about our menu!</p>
@@ -382,13 +424,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             <div className="p-4 border-t">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ask about our menu..."
+                  placeholder={isCreatingSession ? "Connecting..." : "Ask about our menu..."}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  disabled={isChatLoading}
+                  disabled={isChatLoading || isCreatingSession || !chatSession}
                 />
-                <Button onClick={sendMessage} disabled={isChatLoading || !chatInput.trim()}>
+                <Button onClick={sendMessage} disabled={isChatLoading || isCreatingSession || !chatSession || !chatInput.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

@@ -255,6 +255,36 @@ interface ChatResponse {
   context?: string;
 }
 
+interface ChatSession {
+  id: string;
+  menu_id: string;
+  session_token: string;
+  created_at: string;
+  last_activity: string;
+}
+
+interface ChatMessageResponse {
+  user_message: string;
+  bot_response: string;
+  response_source: string;
+  session_id: string;
+  timestamp: string;
+}
+
+interface ChatHistoryMessage {
+  id: string;
+  message: string;
+  response?: string;
+  type: string;
+  timestamp: string;
+}
+
+interface ChatHistoryResponse {
+  session_id: string;
+  messages: ChatHistoryMessage[];
+  total_messages: number;
+}
+
 interface MenuWithDetails {
   id: string;
   restaurant_id: string;
@@ -716,14 +746,26 @@ class ApiClient {
   }
 
   // Chat endpoints
-  async sendChatMessage(menuId: string, message: string, conversationHistory?: ChatMessage[]): Promise<ApiResponse<ChatResponse>> {
-    return this.makeRequest<ChatResponse>('/chat/menu', {
+  async createChatSession(qrToken: string): Promise<ApiResponse<ChatSession>> {
+    return this.makeRequest<ChatSession>(`/chat/public/${qrToken}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  async sendChatMessage(qrToken: string, sessionId: string, message: string): Promise<ApiResponse<ChatMessageResponse>> {
+    return this.makeRequest<ChatMessageResponse>(`/chat/public/${qrToken}/sessions/${sessionId}/messages`, {
       method: 'POST',
       body: JSON.stringify({
-        menu_id: menuId,
         message,
-        conversation_history: conversationHistory || []
+        use_cache: true
       }),
+    });
+  }
+
+  async getChatHistory(sessionId: string, limit: number = 50): Promise<ApiResponse<ChatHistoryResponse>> {
+    return this.makeRequest<ChatHistoryResponse>(`/chat/sessions/${sessionId}/history?limit=${limit}`, {
+      method: 'GET',
     });
   }
 
@@ -782,6 +824,10 @@ export type {
   PublicMenuResponse,
   ChatMessage,
   ChatResponse,
+  ChatSession,
+  ChatMessageResponse,
+  ChatHistoryMessage,
+  ChatHistoryResponse,
   MenuWithDetails,
   MenuWithDetailsListResponse
 }; 
