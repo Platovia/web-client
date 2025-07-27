@@ -39,6 +39,7 @@ export default function UploadMenuPage() {
   const [menuDescription, setMenuDescription] = useState("")
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isFinalizing, setIsFinalizing] = useState(false)
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true)
   const [error, setError] = useState("")
   const [createdMenu, setCreatedMenu] = useState<Menu | null>(null)
@@ -126,7 +127,7 @@ export default function UploadMenuPage() {
                 ...file, 
                 status: "completed", 
                 progress: 100,
-                extractedItems: Math.floor(Math.random() * 20) + 5 // Will be replaced with actual count
+                extractedItems: undefined // Will be updated after getting actual count
               }
             } else if (job.status === "failed") {
               return { ...file, status: "error" }
@@ -262,19 +263,56 @@ export default function UploadMenuPage() {
         await processFile(file.file, file.id, menu.id)
       }
 
-      // Wait until all files reach completed or error
+      // Wait until all files reach completed or error using a proper polling mechanism
       await new Promise<void>((resolve, reject) => {
         const check = () => {
-          const files = uploadedFiles.filter(f => ["completed", "error"].includes(f.status))
-          const done = files.every(f => ["completed", "error"].includes(f.status))
-          const hasError = files.some(f => f.status === "error")
-          if (done) {
-            if (hasError) reject(new Error("Some files failed"))
-            else resolve()
-          } else setTimeout(check, 1000)
+          // Get current state by using a ref callback
+          setUploadedFiles(currentFiles => {
+            const pendingFiles = currentFiles.filter(f => f.status === "pending" || f.status === "uploading" || f.status === "processing")
+            const completedFiles = currentFiles.filter(f => f.status === "completed")
+            const errorFiles = currentFiles.filter(f => f.status === "error")
+            
+            if (pendingFiles.length === 0) {
+              // All files are done processing
+              if (errorFiles.length > 0) {
+                reject(new Error("Some files failed to process"))
+              } else {
+                resolve()
+              }
+            } else {
+              // Still processing, check again in 1 second
+              setTimeout(check, 1000)
+            }
+            
+            return currentFiles // Return unchanged state
+          })
         }
         check()
       })
+
+      // Get actual count of extracted menu items
+      setIsFinalizing(true)
+      try {
+        const menuItemsResponse = await apiClient.getMenuItems(menu.id)
+        if (menuItemsResponse.data) {
+          const totalExtractedItems = menuItemsResponse.data.total
+          
+          // Update all completed files with the total count
+          setUploadedFiles(prev => prev.map(file => 
+            file.status === "completed" 
+              ? { ...file, extractedItems: totalExtractedItems }
+              : file
+          ))
+          
+          // Small delay to show the updated count before redirect
+          await new Promise(resolve => setTimeout(resolve, 1500))
+        }
+      } catch (err) {
+        console.warn("Could not get menu items count:", err)
+        // Continue anyway
+      } finally {
+        setIsFinalizing(false)
+      }
 
       // Navigate to edit page (menu is active by default after creation)
       router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
@@ -461,7 +499,10 @@ export default function UploadMenuPage() {
 
                               {file.status === "completed" && (
                                 <div className="text-sm text-green-600">
-                                  ✓ Extracted {file.extractedItems} menu items
+                                  {file.extractedItems !== undefined 
+                                    ? `✓ Extracted ${file.extractedItems} menu items`
+                                    : "✓ Processing completed"
+                                  }
                                 </div>
                               )}
 
@@ -490,6 +531,16 @@ export default function UploadMenuPage() {
             </Alert>
           )}
 
+          {/* Finalizing Info */}
+          {isFinalizing && (
+            <Alert>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                All images processed successfully! Gathering extracted menu items and preparing your menu...
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Submit Button */}
           <div className="flex justify-end gap-4">
             <Link href="/dashboard/menus">
@@ -499,7 +550,12 @@ export default function UploadMenuPage() {
             </Link>
             <Button type="submit" disabled={!canSubmit || isProcessing}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isProcessing ? "Finalizing Menu..." : createdMenu ? "Review & Activate Menu" : "Create Menu"}
+              {isProcessing 
+                ? (isFinalizing ? "Finalizing & Preparing Menu..." : "Processing & Extracting Items...") 
+                : createdMenu 
+                ? "Process Images & Create Menu" 
+                : "Create Menu"
+              }
             </Button>
           </div>
         </form>
