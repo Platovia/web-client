@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus } from "lucide-react"
-import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
+import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw } from "lucide-react"
+import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
 
 interface Restaurant {
   id: string
@@ -39,6 +39,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [menuId, setMenuId] = useState<string | null>(null)
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
+  const [isResettingChat, setIsResettingChat] = useState(false)
 
   useEffect(() => {
     loadMenuData()
@@ -141,6 +142,25 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       const response = await apiClient.createChatSession(qrToken)
       if (response.data) {
         setChatSession(response.data)
+        
+        // Try to load existing chat history for this session
+        const historyResponse = await apiClient.getChatHistory(response.data.id)
+        
+        if (historyResponse.data && historyResponse.data.messages.length > 0) {
+          // Convert history to chat messages format
+          const historyMessages: ChatMessage[] = historyResponse.data.messages.map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.type === 'user' ? msg.message : (msg.response || msg.message)
+          }))
+          setChatMessages(historyMessages)
+        } else {
+          // No history found - this is a new session, add welcome message
+          const welcomeMessage: ChatMessage = {
+            role: "assistant",
+            content: "Hi! I'm your menu assistant. I can help you find dishes, answer questions about ingredients, dietary restrictions, and make recommendations. What would you like to know about our menu?"
+          }
+          setChatMessages([welcomeMessage])
+        }
       } else {
         console.error("Failed to create chat session:", response.error)
       }
@@ -211,12 +231,21 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       const response = await apiClient.sendChatMessage(qrToken, chatSession.id, chatInput)
       
       if (response.error) {
-        // Fallback to a generic response if AI chat fails
-        const fallbackMessage: ChatMessage = { 
-          role: "assistant", 
-          content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" 
+        // Check if it's a session expiration error
+        if (response.error.includes("expired") || response.error.includes("inactivity")) {
+          const expirationMessage: ChatMessage = { 
+            role: "assistant", 
+            content: "Your chat session has expired due to inactivity. Please reset the chat to continue our conversation!" 
+          }
+          setChatMessages((prev) => [...prev, expirationMessage])
+        } else {
+          // Fallback to a generic response if AI chat fails
+          const fallbackMessage: ChatMessage = { 
+            role: "assistant", 
+            content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" 
+          }
+          setChatMessages((prev) => [...prev, fallbackMessage])
         }
-        setChatMessages((prev) => [...prev, fallbackMessage])
       } else if (response.data) {
         const assistantMessage: ChatMessage = { role: "assistant", content: response.data.bot_response }
         setChatMessages((prev) => [...prev, assistantMessage])
@@ -230,6 +259,38 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       setChatMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsChatLoading(false)
+    }
+  }
+
+  const resetChat = async () => {
+    if (!chatSession || isResettingChat) return
+
+    setIsResettingChat(true)
+    
+    try {
+      const response = await apiClient.resetChatSession(chatSession.id)
+      
+      if (response.data) {
+        // Update with new session
+        setChatSession(response.data.new_session)
+        // Clear chat messages to start fresh
+        setChatMessages([])
+        // Add a welcome message
+        const welcomeMessage: ChatMessage = {
+          role: "assistant",
+          content: "Hi! I'm your menu assistant. I can help you find dishes, answer questions about ingredients, dietary restrictions, and make recommendations. What would you like to know about our menu?"
+        }
+        setChatMessages([welcomeMessage])
+      } else {
+        // If reset fails, try creating a new session
+        await createChatSession()
+      }
+    } catch (err) {
+      console.error("Reset chat error:", err)
+      // Fallback to creating a new session
+      await createChatSession()
+    } finally {
+      setIsResettingChat(false)
     }
   }
 
@@ -428,7 +489,17 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b bg-orange-600 text-white rounded-t-lg">
               <h3 className="font-semibold text-sm">Menu Assistant</h3>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={resetChat}
+                  disabled={isResettingChat || !chatSession}
+                  className="text-white hover:bg-orange-700 h-6 w-6 p-0"
+                  title="Reset chat"
+                >
+                  <RotateCcw className={`h-3 w-3 ${isResettingChat ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button 
                   variant="ghost" 
                   size="sm" 

@@ -259,8 +259,19 @@ interface ChatSession {
   id: string;
   menu_id: string;
   session_token: string;
+  ip_address?: string;
   created_at: string;
   last_activity: string;
+}
+
+interface ChatSessionResetRequest {
+  ip_address?: string;
+}
+
+interface ChatSessionResetResponse {
+  old_session_id: string;
+  new_session: ChatSession;
+  message: string;
 }
 
 interface ChatMessageResponse {
@@ -763,6 +774,13 @@ class ApiClient {
     });
   }
 
+  async resetChatSession(sessionId: string, resetData: ChatSessionResetRequest = {}): Promise<ApiResponse<ChatSessionResetResponse>> {
+    return this.makeRequest<ChatSessionResetResponse>(`/chat/sessions/${sessionId}/reset`, {
+      method: 'POST',
+      body: JSON.stringify(resetData),
+    });
+  }
+
   async getChatHistory(sessionId: string, limit: number = 50): Promise<ApiResponse<ChatHistoryResponse>> {
     return this.makeRequest<ChatHistoryResponse>(`/chat/sessions/${sessionId}/history?limit=${limit}`, {
       method: 'GET',
@@ -825,6 +843,8 @@ export type {
   ChatMessage,
   ChatResponse,
   ChatSession,
+  ChatSessionResetRequest,
+  ChatSessionResetResponse,
   ChatMessageResponse,
   ChatHistoryMessage,
   ChatHistoryResponse,
