@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle } from "lucide-react"
+import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus } from "lucide-react"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
 
 interface Restaurant {
@@ -30,6 +30,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showChat, setShowChat] = useState(false)
+  const [isChatMinimized, setIsChatMinimized] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -148,6 +149,54 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
     } finally {
       setIsCreatingSession(false)
     }
+  }
+
+  const formatMessage = (content: string) => {
+    // Split by double newlines for paragraphs
+    const paragraphs = content.split('\n\n')
+    
+    return paragraphs.map((paragraph, index) => {
+      // Handle lists (lines starting with - or numbers)
+      const lines = paragraph.split('\n')
+      if (lines.length > 1 && lines.some(line => line.trim().match(/^[-*•]\s+|^\d+\.\s+/))) {
+        return (
+          <div key={index} className="mb-2">
+            {lines.map((line, lineIndex) => {
+              const trimmed = line.trim()
+              if (trimmed.match(/^[-*•]\s+/)) {
+                return (
+                  <div key={lineIndex} className="ml-2 mb-1">
+                    <span className="text-orange-600 mr-2">•</span>
+                    {trimmed.replace(/^[-*•]\s+/, '')}
+                  </div>
+                )
+              } else if (trimmed.match(/^\d+\.\s+/)) {
+                return (
+                  <div key={lineIndex} className="ml-2 mb-1">
+                    <span className="text-orange-600 mr-2 font-medium">
+                      {trimmed.match(/^\d+/)?.[0]}.
+                    </span>
+                    {trimmed.replace(/^\d+\.\s+/, '')}
+                  </div>
+                )
+              } else if (trimmed) {
+                return <div key={lineIndex} className="mb-1">{trimmed}</div>
+              }
+              return null
+            })}
+          </div>
+        )
+      } else {
+        // Regular paragraph
+        return (
+          <div key={index} className="mb-2">
+            {paragraph.split('\n').map((line, lineIndex) => (
+              line.trim() ? <div key={lineIndex}>{line}</div> : null
+            ))}
+          </div>
+        )
+      }
+    })
   }
 
   const sendMessage = async () => {
@@ -354,90 +403,144 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       )}
 
       {/* Chat Modal */}
-      {showChat && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center p-4">
-          <div className="bg-white rounded-t-2xl md:rounded-2xl w-full max-w-md h-96 md:h-[500px] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Menu Assistant</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowChat(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {isCreatingSession && (
-                <div className="text-center text-gray-500 py-8">
-                  <div className="flex space-x-1 justify-center mb-4">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.1s" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    ></div>
-                  </div>
-                  <p>Connecting to menu assistant...</p>
-                </div>
-              )}
-
-              {!isCreatingSession && chatMessages.length === 0 && (
-                <div className="text-center text-gray-500 py-8">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Ask me anything about our menu!</p>
-                  <p className="text-sm mt-2">I can help with ingredients, allergens, recommendations, and more.</p>
-                </div>
-              )}
-
-              {chatMessages.map((message, index) => (
-                <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.role === "user" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                </div>
-              ))}
-
-              {isChatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 p-3 rounded-lg">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t">
+      {/* Chat Widget - Bottom Right Position */}
+      <div className="fixed bottom-4 right-4 z-50">
+        {!showChat ? (
+          /* Minimized Chat Button */
+          <Button
+            onClick={() => {
+              setShowChat(true)
+              setIsChatMinimized(false)
+              if (qrToken && !chatSession) {
+                createChatSession()
+              }
+            }}
+            className="bg-orange-600 hover:bg-orange-700 text-white rounded-full p-4 shadow-lg"
+            size="lg"
+          >
+            <MessageCircle className="h-6 w-6" />
+          </Button>
+        ) : (
+          /* Chat Widget */
+          <div className={`bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ${
+            isChatMinimized ? 'w-80 h-16' : 'w-96 h-[500px]'
+          } flex flex-col`}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-orange-600 text-white rounded-t-lg">
+              <h3 className="font-semibold text-sm">Menu Assistant</h3>
               <div className="flex gap-2">
-                <Input
-                  placeholder={isCreatingSession ? "Connecting..." : "Ask about our menu..."}
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  disabled={isChatLoading || isCreatingSession || !chatSession}
-                />
-                <Button onClick={sendMessage} disabled={isChatLoading || isCreatingSession || !chatSession || !chatInput.trim()}>
-                  <Send className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsChatMinimized(!isChatMinimized)}
+                  className="text-white hover:bg-orange-700 h-6 w-6 p-0"
+                >
+                  {isChatMinimized ? 
+                    <ChevronUp className="h-3 w-3" /> : 
+                    <Minus className="h-3 w-3" />
+                  }
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowChat(false)}
+                  className="text-white hover:bg-orange-700 h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             </div>
+
+            {/* Chat Content - Only show when not minimized */}
+            {!isChatMinimized && (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
+                  {isCreatingSession && (
+                    <div className="text-center text-gray-500 py-6">
+                      <div className="flex space-x-1 justify-center mb-3">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                      </div>
+                      <p className="text-sm">Connecting to menu assistant...</p>
+                    </div>
+                  )}
+
+                  {!isCreatingSession && chatMessages.length === 0 && (
+                    <div className="text-center text-gray-500 py-6">
+                      <MessageCircle className="h-8 w-8 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm">Ask me anything about our menu!</p>
+                      <p className="text-xs mt-1 text-gray-400">
+                        I can help with ingredients, allergens, recommendations, and more.
+                      </p>
+                    </div>
+                  )}
+
+                  {chatMessages.map((message, index) => (
+                    <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[85%] p-3 rounded-lg text-sm ${
+                          message.role === "user" 
+                            ? "bg-orange-600 text-white rounded-br-sm" 
+                            : "bg-gray-100 text-gray-900 rounded-bl-sm"
+                        }`}
+                      >
+                        {message.role === "assistant" ? formatMessage(message.content) : message.content}
+                      </div>
+                    </div>
+                  ))}
+
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-100 p-3 rounded-lg rounded-bl-sm">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.1s" }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input Section */}
+                <div className="p-3 border-t bg-gray-50 rounded-b-lg">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={isCreatingSession ? "Connecting..." : "Ask about our menu..."}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                      disabled={isChatLoading || isCreatingSession || !chatSession}
+                      className="text-sm"
+                    />
+                    <Button 
+                      onClick={sendMessage} 
+                      disabled={isChatLoading || isCreatingSession || !chatSession || !chatInput.trim()}
+                      size="sm"
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      <Send className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
