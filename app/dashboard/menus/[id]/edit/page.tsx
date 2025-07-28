@@ -33,6 +33,7 @@ export default function EditMenuPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isActivating, setIsActivating] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
+  const [addingItem, setAddingItem] = useState<string | null>(null) // category for which we're adding an item
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
@@ -238,6 +239,7 @@ export default function EditMenuPage() {
           ...prev,
           items: [...prev.items, response.data!]
         } : prev)
+        setAddingItem(null) // Close the add item modal
         setSuccess("Item added successfully!")
         setTimeout(() => setSuccess(""), 3000)
       }
@@ -245,6 +247,26 @@ export default function EditMenuPage() {
       console.error("Error adding item:", err)
       setError("Failed to add item")
     }
+  }
+
+  const handleSubmitNewItem = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!addingItem) return
+
+    const formData = new FormData(e.currentTarget)
+    const itemData: MenuItemCreateRequest = {
+      name: formData.get('name') as string,
+      description: formData.get('description') as string,
+      price: parseFloat(formData.get('price') as string) || 0,
+      category: addingItem,
+      allergens: (formData.get('allergens') as string)
+        .split(',')
+        .map(a => a.trim())
+        .filter(a => a),
+      is_available: true,
+    }
+
+    handleAddItem(itemData)
   }
 
   if (isLoading) {
@@ -351,7 +373,7 @@ export default function EditMenuPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{category}</CardTitle>
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => setAddingItem(category)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Item
                     </Button>
@@ -602,6 +624,77 @@ export default function EditMenuPage() {
                   </Button>
                   <Button onClick={() => editingItem && handleUpdateItem(editingItem)}>Save Changes</Button>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Add Item Modal */}
+        {addingItem && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <CardTitle>Add New Item to {addingItem}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmitNewItem} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newItemName">Item Name</Label>
+                      <Input
+                        id="newItemName"
+                        name="name"
+                        required
+                        placeholder="Enter item name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newItemPrice">Price</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="newItemPrice"
+                          name="price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          required
+                          placeholder="0.00"
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newItemDescription">Description</Label>
+                    <Textarea
+                      id="newItemDescription"
+                      name="description"
+                      rows={3}
+                      placeholder="Enter item description"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newItemAllergens">Allergens (comma separated)</Label>
+                    <Input
+                      id="newItemAllergens"
+                      name="allergens"
+                      placeholder="e.g., nuts, dairy, gluten"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-4 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setAddingItem(null)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Item
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </div>
