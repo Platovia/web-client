@@ -235,6 +235,7 @@ interface PublicMenuResponse {
       address?: any;
       contact_info?: any;
       logo_url?: string;
+      currency_code?: string;
     } | null;
     template_id?: string;
     created_at: string;

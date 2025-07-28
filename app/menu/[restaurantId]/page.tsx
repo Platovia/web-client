@@ -95,7 +95,8 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             description: menu.restaurant?.description || '',
             logo_url: menu.restaurant?.logo_url,
             address: menu.restaurant?.address,
-            contact_info: menu.restaurant?.contact_info
+            contact_info: menu.restaurant?.contact_info,
+            currency_code: menu.restaurant?.currency_code || 'USD'
           })
           
           // Transform menu items to include dietary flags
