@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, MapPin, Clock, AlertCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, MapPin, Clock, AlertCircle, Loader2, Camera, Upload } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient, type RestaurantCreateRequest, type Currency } from "@/lib/api"
 import { fetchPopularCurrencies } from "@/lib/currency"
+import { LocaleSelect } from "@/components/ui/locale-select"
 
 const cuisineTypes = [
   "American", "Italian", "Chinese", "Japanese", "Mexican", "Indian", "Thai", "French", 
@@ -40,6 +41,7 @@ export default function NewRestaurantPage() {
     description: "",
     cuisine: "",
     currency_code: "USD",
+    locale: "en-US",
     address: "",
     city: "",
     state: "",
@@ -118,6 +120,7 @@ export default function NewRestaurantPage() {
         name: formData.name,
         description: formData.description,
         currency_code: formData.currency_code,
+        locale: formData.locale,
         address: {
           street: formData.address,
           city: formData.city,
@@ -234,16 +237,26 @@ export default function NewRestaurantPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your restaurant's atmosphere, specialties, and unique features"
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={2}
-                    required
+                  <Label htmlFor="locale">Display Locale *</Label>
+                  <LocaleSelect
+                    value={formData.locale}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, locale: value }))}
+                    placeholder="Select locale"
+                    detectDefault={true}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your restaurant's atmosphere, specialties, and unique features"
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  required
+                />
               </div>
 
               <div className="space-y-2">

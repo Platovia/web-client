@@ -20,6 +20,7 @@ interface Restaurant {
   address?: any
   contact_info?: any
   currency_code?: string
+  locale?: string
 }
 
 export default function MenuPage({ params }: { params: { restaurantId: string } }) {
@@ -96,7 +97,8 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             logo_url: menu.restaurant?.logo_url,
             address: menu.restaurant?.address,
             contact_info: menu.restaurant?.contact_info,
-            currency_code: menu.restaurant?.currency_code || 'USD'
+            currency_code: menu.restaurant?.currency_code || 'USD',
+            locale: menu.restaurant?.locale || 'en-US'
           })
           
           // Transform menu items to include dietary flags
@@ -432,7 +434,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
                   <span className="text-lg font-bold text-orange-600">
-                    {formatPrice(item.price, restaurant?.currency_code)}
+                    {formatPrice(item.price, restaurant?.currency_code, restaurant?.locale)}
                   </span>
                 </div>
                 <CardDescription>{item.description}</CardDescription>

@@ -18,6 +18,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient, type Restaurant, type RestaurantUpdateRequest, type Currency } from "@/lib/api"
 import { fetchPopularCurrencies } from "@/lib/currency"
+import { LocaleSelect } from "@/components/ui/locale-select"
 
 const cuisineTypes = [
   "American", "Italian", "Chinese", "Japanese", "Mexican", "Indian", "Thai", "French", 
@@ -40,6 +41,7 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
     description: "",
     cuisine: "",
     currency_code: "USD",
+    locale: "en-US",
     address: "",
     city: "",
     state: "",
@@ -84,6 +86,7 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
           description: restaurantData.description || "",
           cuisine: restaurantData.contact_info?.cuisine || "",
           currency_code: restaurantData.currency_code || "USD",
+          locale: restaurantData.locale || "en-US",
           address: restaurantData.address?.street || "",
           city: restaurantData.address?.city || "",
           state: restaurantData.address?.state || "",
@@ -152,6 +155,7 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
           hours: formData.hours,
         },
         currency_code: formData.currency_code,
+        locale: formData.locale,
         is_active: formData.is_active,
       }
 
@@ -445,21 +449,31 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
                 </div>
               </div>
 
-              {/* Currency */}
-              <div className="space-y-2">
-                <Label htmlFor="currency_code">Currency</Label>
-                <Select value={formData.currency_code} onValueChange={(value) => handleInputChange("currency_code", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((currency) => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.code} - {currency.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Currency and Locale */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="currency_code">Currency</Label>
+                  <Select value={formData.currency_code} onValueChange={(value) => handleInputChange("currency_code", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          {currency.code} - {currency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="locale">Display Locale</Label>
+                  <LocaleSelect
+                    value={formData.locale}
+                    onValueChange={(value) => handleInputChange("locale", value)}
+                    placeholder="Select locale"
+                  />
+                </div>
               </div>
 
               {/* Status */}

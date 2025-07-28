@@ -61,6 +61,7 @@ interface Restaurant {
   address?: any;
   contact_info?: any;
   currency_code: string;
+  locale: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -72,6 +73,7 @@ interface RestaurantCreateRequest {
   address?: any;
   contact_info?: any;
   currency_code?: string;
+  locale?: string;
 }
 
 interface RestaurantUpdateRequest {
@@ -80,6 +82,7 @@ interface RestaurantUpdateRequest {
   address?: any;
   contact_info?: any;
   currency_code?: string;
+  locale?: string;
   is_active?: boolean;
 }
 
@@ -236,6 +239,7 @@ interface PublicMenuResponse {
       contact_info?: any;
       logo_url?: string;
       currency_code?: string;
+      locale?: string;
     } | null;
     template_id?: string;
     created_at: string;
