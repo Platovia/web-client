@@ -13,15 +13,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
-import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest } from "@/lib/api"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant } from "@/lib/api"
+import { formatPrice } from "@/lib/currency"
 
 interface MenuWithItems {
   menu: Menu
   items: MenuItem[]
-  restaurant?: {
-    id: string
-    name: string
-  }
+  restaurant?: Restaurant
 }
 
 export default function EditMenuPage() {
@@ -65,10 +63,7 @@ export default function EditMenuPage() {
       setMenuData({
         menu: menuResponse.data!,
         items: itemsResponse.data?.items || [],
-        restaurant: restaurantResponse.data ? {
-          id: restaurantResponse.data.id,
-          name: restaurantResponse.data.name
-        } : undefined
+        restaurant: restaurantResponse.data || undefined
       })
 
       if (fromUpload) {
@@ -373,7 +368,7 @@ export default function EditMenuPage() {
                               <h4 className="font-medium">{item.name}</h4>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-green-600">
-                                  ${item.price?.toFixed(2) || 'N/A'}
+                                  {formatPrice(item.price, menuData.restaurant?.currency_code)}
                                 </Badge>
                                 {!item.is_available && <Badge variant="destructive">Unavailable</Badge>}
                                 {item.is_vegetarian && (

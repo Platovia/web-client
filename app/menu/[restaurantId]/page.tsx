@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw } from "lucide-react"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
+import { formatPrice } from "@/lib/currency"
 
 interface Restaurant {
   id: string
@@ -397,7 +398,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
                   <span className="text-lg font-bold text-orange-600">
-                    {item.price ? `$${item.price.toFixed(2)}` : 'Price on request'}
+                    {formatPrice(item.price, restaurant?.currency_code)}
                   </span>
                 </div>
                 <CardDescription>{item.description}</CardDescription>

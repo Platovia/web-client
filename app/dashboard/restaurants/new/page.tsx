@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,29 +9,24 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Loader2, Upload, MapPin, Phone, Globe, Camera } from "lucide-react"
+import { ArrowLeft, MapPin, Clock, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, type RestaurantCreateRequest } from "@/lib/api"
+import { apiClient, type RestaurantCreateRequest, type Currency } from "@/lib/api"
+import { fetchPopularCurrencies } from "@/lib/currency"
 
 const cuisineTypes = [
-  "Italian",
-  "Mexican",
-  "Chinese",
-  "Japanese",
-  "Indian",
-  "Thai",
-  "French",
-  "American",
-  "Mediterranean",
-  "Greek",
-  "Korean",
-  "Vietnamese",
-  "Spanish",
-  "German",
-  "Brazilian",
-  "Other",
+  "American", "Italian", "Chinese", "Japanese", "Mexican", "Indian", "Thai", "French", 
+  "Mediterranean", "Greek", "Korean", "Vietnamese", "Middle Eastern", "Caribbean", 
+  "Seafood", "Steakhouse", "Pizza", "Fast Casual", "Fine Dining", "Cafe", "Other"
+]
+
+const stateOptions = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", 
+  "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", 
+  "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", 
+  "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
 ]
 
 export default function NewRestaurantPage() {
@@ -41,10 +34,12 @@ export default function NewRestaurantPage() {
   const { companies } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [currencies, setCurrencies] = useState<Currency[]>([])
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     cuisine: "",
+    currency_code: "USD",
     address: "",
     city: "",
     state: "",
@@ -62,6 +57,19 @@ export default function NewRestaurantPage() {
       sunday: { open: "10:00", close: "21:00", closed: false },
     },
   })
+
+  useEffect(() => {
+    loadCurrencies()
+  }, [])
+
+  const loadCurrencies = async () => {
+    try {
+      const currencyList = await fetchPopularCurrencies()
+      setCurrencies(currencyList)
+    } catch (error) {
+      console.error('Failed to load currencies:', error)
+    }
+  }
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -109,6 +117,7 @@ export default function NewRestaurantPage() {
       const restaurantPayload: RestaurantCreateRequest = {
         name: formData.name,
         description: formData.description,
+        currency_code: formData.currency_code,
         address: {
           street: formData.address,
           city: formData.city,
@@ -205,16 +214,36 @@ export default function NewRestaurantPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe your restaurant's atmosphere, specialties, and unique features"
-                  value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency *</Label>
+                  <Select
+                    value={formData.currency_code}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, currency_code: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          {currency.code} - {currency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe your restaurant's atmosphere, specialties, and unique features"
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={2}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -60,6 +60,7 @@ interface Restaurant {
   description?: string;
   address?: any;
   contact_info?: any;
+  currency_code: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -70,6 +71,7 @@ interface RestaurantCreateRequest {
   description?: string;
   address?: any;
   contact_info?: any;
+  currency_code?: string;
 }
 
 interface RestaurantUpdateRequest {
@@ -77,6 +79,7 @@ interface RestaurantUpdateRequest {
   description?: string;
   address?: any;
   contact_info?: any;
+  currency_code?: string;
   is_active?: boolean;
 }
 
@@ -806,6 +809,27 @@ class ApiClient {
   async getRestaurantMenusWithDetails(restaurantId: string): Promise<ApiResponse<MenuWithDetailsListResponse>> {
     return this.makeRequest<MenuWithDetailsListResponse>(`/restaurants/${restaurantId}/menus/with-details`);
   }
+
+  // Currency management
+  async getCurrencies(): Promise<ApiResponse<CurrencyListResponse>> {
+    return this.makeRequest<CurrencyListResponse>('/currencies');
+  }
+
+  async getPopularCurrencies(): Promise<ApiResponse<CurrencyListResponse>> {
+    return this.makeRequest<CurrencyListResponse>('/currencies/popular');
+  }
+}
+
+// Currency-related interfaces
+interface Currency {
+  code: string;
+  name: string;
+  symbol: string;
+}
+
+interface CurrencyListResponse {
+  currencies: Currency[];
+  total: number;
 }
 
 export const apiClient = new ApiClient();
@@ -848,6 +872,6 @@ export type {
   ChatMessageResponse,
   ChatHistoryMessage,
   ChatHistoryResponse,
-  MenuWithDetails,
-  MenuWithDetailsListResponse
+  Currency,
+  CurrencyListResponse
 }; 

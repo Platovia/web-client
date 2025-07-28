@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, ArrowLeft, ChevronUp, Minus } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Search, Clock, MapPin, Phone, Globe, Leaf, Heart, Wheat, MessageCircle, X, ArrowLeft, ChevronUp, Minus, Send } from "lucide-react"
+import { formatPrice } from "@/lib/currency"
 import Link from "next/link"
 
 interface MenuItem {
@@ -286,7 +288,7 @@ export default function DemoPage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <span className="text-lg font-bold text-blue-600">${item.price.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-blue-600">{formatPrice(item.price)}</span>
                 </div>
                 <CardDescription>{item.description}</CardDescription>
               </CardHeader>

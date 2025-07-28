@@ -10,30 +10,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Loader2, Save, Trash2, AlertCircle } from "lucide-react"
+import { ArrowLeft, Save, Trash2, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, type Restaurant, type RestaurantUpdateRequest } from "@/lib/api"
+import { apiClient, type Restaurant, type RestaurantUpdateRequest, type Currency } from "@/lib/api"
+import { fetchPopularCurrencies } from "@/lib/currency"
 
 const cuisineTypes = [
-  "Italian",
-  "Mexican",
-  "Chinese",
-  "Japanese",
-  "Indian",
-  "Thai",
-  "French",
-  "American",
-  "Mediterranean",
-  "Greek",
-  "Korean",
-  "Vietnamese",
-  "Spanish",
-  "German",
-  "Brazilian",
-  "Other",
+  "American", "Italian", "Chinese", "Japanese", "Mexican", "Indian", "Thai", "French", 
+  "Mediterranean", "Greek", "Korean", "Vietnamese", "Middle Eastern", "Caribbean", 
+  "Seafood", "Steakhouse", "Pizza", "Fast Casual", "Fine Dining", "Cafe", "Other"
 ]
 
 export default function EditRestaurantPage({ params }: { params: { id: string } }) {
@@ -45,10 +34,12 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [currencies, setCurrencies] = useState<Currency[]>([])
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     cuisine: "",
+    currency_code: "USD",
     address: "",
     city: "",
     state: "",
@@ -62,7 +53,17 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     loadRestaurant()
+    loadCurrencies()
   }, [params.id])
+
+  const loadCurrencies = async () => {
+    try {
+      const currencyList = await fetchPopularCurrencies()
+      setCurrencies(currencyList)
+    } catch (error) {
+      console.error('Failed to load currencies:', error)
+    }
+  }
 
   const loadRestaurant = async () => {
     setIsLoading(true)
@@ -82,6 +83,7 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
           name: restaurantData.name || "",
           description: restaurantData.description || "",
           cuisine: restaurantData.contact_info?.cuisine || "",
+          currency_code: restaurantData.currency_code || "USD",
           address: restaurantData.address?.street || "",
           city: restaurantData.address?.city || "",
           state: restaurantData.address?.state || "",
@@ -149,6 +151,7 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
           cuisine: formData.cuisine,
           hours: formData.hours,
         },
+        currency_code: formData.currency_code,
         is_active: formData.is_active,
       }
 
@@ -442,16 +445,31 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
                 </div>
               </div>
 
+              {/* Currency */}
+              <div className="space-y-2">
+                <Label htmlFor="currency_code">Currency</Label>
+                <Select value={formData.currency_code} onValueChange={(value) => handleInputChange("currency_code", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.code} - {currency.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Status */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Restaurant Status</h3>
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Switch
                     id="is_active"
                     checked={formData.is_active}
-                    onChange={(e) => handleInputChange("is_active", e.target.checked)}
-                    className="rounded border-gray-300"
+                    onCheckedChange={(checked) => handleInputChange("is_active", checked)}
                   />
                   <Label htmlFor="is_active">Restaurant is active</Label>
                 </div>
