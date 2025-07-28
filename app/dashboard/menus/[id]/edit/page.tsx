@@ -34,6 +34,7 @@ export default function EditMenuPage() {
   const [isActivating, setIsActivating] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [addingItem, setAddingItem] = useState<string | null>(null) // category for which we're adding an item
+  const [menuAnalytics, setMenuAnalytics] = useState({ totalViews: 0, uniqueViewers: 0, qrScans: 0 })
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
@@ -66,6 +67,20 @@ export default function EditMenuPage() {
         items: itemsResponse.data?.items || [],
         restaurant: restaurantResponse.data || undefined
       })
+
+      // Load analytics for this menu
+      try {
+        const analyticsResponse = await apiClient.getMenuAnalytics(id)
+        if (analyticsResponse.data?.data) {
+          setMenuAnalytics({
+            totalViews: analyticsResponse.data.data.total_views,
+            uniqueViewers: analyticsResponse.data.data.unique_viewers,
+            qrScans: analyticsResponse.data.data.qr_scans
+          })
+        }
+      } catch (analyticsError) {
+        console.error("Error loading menu analytics:", analyticsError)
+      }
 
       if (fromUpload) {
         setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
@@ -503,7 +518,20 @@ export default function EditMenuPage() {
                 <CardDescription>Performance metrics for this menu</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Analytics data will be displayed here...</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{menuAnalytics.totalViews.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">Total Views</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{menuAnalytics.uniqueViewers.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">Unique Viewers</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">{menuAnalytics.qrScans.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">QR Scans</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

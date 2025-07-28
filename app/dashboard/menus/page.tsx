@@ -39,6 +39,10 @@ interface MenuWithDetails {
     average_price?: number;
     last_updated: string;
   };
+  analytics?: {
+    total_views: number;
+    qr_scans: number;
+  };
   image?: string;
 }
 
@@ -78,22 +82,60 @@ export default function MenusPage() {
 
       if (response.data) {
         const allMenus = response.data.menus
-        let totalViews = 0
-        let totalScans = 0
 
-        // Calculate totals (using dummy data for now since backend doesn't track views/scans)
-        allMenus.forEach(() => {
-          totalViews += Math.floor(Math.random() * 1000)
-          totalScans += Math.floor(Math.random() * 500)
-        })
+        // Load individual menu analytics
+        const menusWithAnalytics = await Promise.all(
+          allMenus.map(async (menu) => {
+            try {
+              const analyticsResponse = await apiClient.getMenuAnalytics(menu.id)
+              return {
+                ...menu,
+                analytics: analyticsResponse.data?.data ? {
+                  total_views: analyticsResponse.data.data.total_views,
+                  qr_scans: analyticsResponse.data.data.qr_scans
+                } : { total_views: 0, qr_scans: 0 }
+              }
+            } catch (error) {
+              console.error(`Error loading analytics for menu ${menu.id}:`, error)
+              return {
+                ...menu,
+                analytics: { total_views: 0, qr_scans: 0 }
+              }
+            }
+          })
+        )
 
-        setMenus(allMenus)
-        setStats({
-          totalMenus: allMenus.length,
-          activeMenus: allMenus.filter(m => m.is_active).length,
-          totalViews,
-          totalScans
-        })
+        setMenus(menusWithAnalytics)
+        
+        // Get overview analytics data
+        try {
+          const analyticsResponse = await apiClient.getAnalyticsOverview()
+          if (analyticsResponse.data) {
+            setStats({
+              totalMenus: analyticsResponse.data.data.total_menus,
+              activeMenus: analyticsResponse.data.data.active_menus,
+              totalViews: analyticsResponse.data.data.total_views,
+              totalScans: analyticsResponse.data.data.total_qr_scans
+            })
+          } else {
+            // Fallback to menu count from the menu data
+            setStats({
+              totalMenus: allMenus.length,
+              activeMenus: allMenus.filter(m => m.is_active).length,
+              totalViews: 0,
+              totalScans: 0
+            })
+          }
+        } catch (analyticsError) {
+          console.error("Error loading analytics:", analyticsError)
+          // Fallback to menu count from the menu data
+          setStats({
+            totalMenus: allMenus.length,
+            activeMenus: allMenus.filter(m => m.is_active).length,
+            totalViews: 0,
+            totalScans: 0
+          })
+        }
       }
     } catch (err) {
       console.error("Error loading menus:", err)
@@ -370,11 +412,11 @@ export default function MenusPage() {
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                   <div className="text-center">
-                    <p className="text-lg font-semibold">{Math.floor(Math.random() * 1000)}</p>
+                    <p className="text-lg font-semibold">{menu.analytics?.total_views?.toLocaleString() || '0'}</p>
                     <p className="text-xs text-gray-600">Views</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold">{Math.floor(Math.random() * 500)}</p>
+                    <p className="text-lg font-semibold">{menu.analytics?.qr_scans?.toLocaleString() || '0'}</p>
                     <p className="text-xs text-gray-600">QR Scans</p>
                   </div>
                 </div>

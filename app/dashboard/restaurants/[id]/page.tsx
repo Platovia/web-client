@@ -68,6 +68,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menus, setMenus] = useState<MenuWithDetails[]>([])
+  const [analytics, setAnalytics] = useState({ qrScans: 0, totalViews: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMenus, setIsLoadingMenus] = useState(false)
   const [error, setError] = useState("")
@@ -107,6 +108,19 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
       
       if (response.data) {
         setMenus(response.data.menus)
+        
+        // Load analytics for this restaurant
+        try {
+          const analyticsResponse = await apiClient.getAnalyticsOverview(restaurantId)
+          if (analyticsResponse.data?.data) {
+            setAnalytics({
+              qrScans: analyticsResponse.data.data.total_qr_scans,
+              totalViews: analyticsResponse.data.data.total_views
+            })
+          }
+        } catch (analyticsError) {
+          console.error("Error loading analytics:", analyticsError)
+        }
       } else {
         setMenus([])
       }
@@ -378,7 +392,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     <QrCode className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-sm text-gray-600">QR Scans</p>
-                      <p className="text-2xl font-bold">1,247</p>
+                      <p className="text-2xl font-bold">{analytics.qrScans.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>

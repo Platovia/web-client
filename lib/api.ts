@@ -818,6 +818,16 @@ class ApiClient {
   async getPopularCurrencies(): Promise<ApiResponse<CurrencyListResponse>> {
     return this.makeRequest<CurrencyListResponse>('/currencies/popular');
   }
+
+  // Analytics methods
+  async getMenuAnalytics(menuId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/analytics/menus/${menuId}/analytics`);
+  }
+
+  async getAnalyticsOverview(restaurantId?: string): Promise<ApiResponse<any>> {
+    const params = restaurantId ? `?restaurant_id=${restaurantId}` : '';
+    return this.makeRequest<any>(`/analytics/menus/analytics/overview${params}`);
+  }
 }
 
 // Currency-related interfaces

@@ -10,13 +10,13 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient, type Restaurant } from "@/lib/api"
 
-// Dummy data for stats that don't come from API yet
-const dashboardStats = {
-  totalRestaurants: 3,
-  totalMenus: 8,
-  totalQRScans: 1247,
-  totalChatInteractions: 892,
-  monthlyGrowth: 23.5,
+// Initial data structure - will be populated from API
+const initialDashboardStats = {
+  totalRestaurants: 0,
+  totalMenus: 0,
+  totalQRScans: 0,
+  totalChatInteractions: 0,
+  monthlyGrowth: 0,
 }
 
 const recentActivity = [
@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const { user, companies } = useAuth()
   const [showWelcome, setShowWelcome] = useState(false)
   const [recentRestaurants, setRecentRestaurants] = useState<Restaurant[]>([])
+  const [dashboardStats, setDashboardStats] = useState(initialDashboardStats)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -53,6 +54,30 @@ export default function DashboardPage() {
         } else if (response.data) {
           // Show only the most recent 3 restaurants
           setRecentRestaurants(response.data.restaurants.slice(0, 3))
+          
+          // Load analytics data
+          try {
+            const analyticsResponse = await apiClient.getAnalyticsOverview()
+            if (analyticsResponse.data?.data) {
+              setDashboardStats({
+                totalRestaurants: response.data.restaurants.length,
+                totalMenus: analyticsResponse.data.data.total_menus,
+                totalQRScans: analyticsResponse.data.data.total_qr_scans,
+                totalChatInteractions: 0, // TODO: Add chat analytics
+                monthlyGrowth: 0, // TODO: Calculate growth
+              })
+            }
+          } catch (analyticsError) {
+            console.error("Error loading analytics:", analyticsError)
+            // Set basic stats without analytics
+            setDashboardStats({
+              totalRestaurants: response.data.restaurants.length,
+              totalMenus: 0,
+              totalQRScans: 0,
+              totalChatInteractions: 0,
+              monthlyGrowth: 0,
+            })
+          }
         }
       } catch (err) {
         setError("Failed to load restaurants. Please try again.")

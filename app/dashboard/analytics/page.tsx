@@ -1,20 +1,22 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, Users, MessageCircle, QrCode, Eye, Clock, Star } from "lucide-react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import { apiClient } from "@/lib/api"
 
-// Dummy analytics data
-const analyticsData = {
+// Initial analytics data structure
+const initialAnalyticsData = {
   overview: {
-    totalViews: 12847,
-    totalScans: 3421,
-    totalChats: 1892,
-    avgSessionTime: "3m 24s",
-    conversionRate: 23.4,
-    customerSatisfaction: 4.6,
+    totalViews: 0,
+    totalScans: 0,
+    totalChats: 0,
+    avgSessionTime: "0m 0s",
+    conversionRate: 0,
+    customerSatisfaction: 0,
   },
   topRestaurants: [
     { name: "Bella Vista Italian", views: 4521, scans: 1234, chats: 567, rating: 4.8 },
@@ -46,6 +48,43 @@ const analyticsData = {
 }
 
 export default function AnalyticsPage() {
+  const [analyticsData, setAnalyticsData] = useState(initialAnalyticsData)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      setIsLoading(true)
+      setError("")
+      
+      try {
+        const response = await apiClient.getAnalyticsOverview()
+        if (response.error) {
+          setError(response.error)
+        } else if (response.data?.data) {
+          setAnalyticsData({
+            ...initialAnalyticsData,
+            overview: {
+              totalViews: response.data.data.total_views,
+              totalScans: response.data.data.total_qr_scans,
+              totalChats: 0, // TODO: Add chat analytics
+              avgSessionTime: "0m 0s", // TODO: Add session time analytics
+              conversionRate: 0, // TODO: Add conversion rate analytics
+              customerSatisfaction: 0, // TODO: Add satisfaction analytics
+            }
+          })
+        }
+      } catch (err) {
+        console.error("Error loading analytics:", err)
+        setError("Failed to load analytics data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadAnalytics()
+  }, [])
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
