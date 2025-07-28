@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +19,7 @@ interface Restaurant {
   logo_url?: string
   address?: any
   contact_info?: any
+  currency_code?: string
 }
 
 export default function MenuPage({ params }: { params: { restaurantId: string } }) {
@@ -41,6 +42,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
+  const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadMenuData()
@@ -49,6 +51,28 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   useEffect(() => {
     filterItems()
   }, [menuItems, searchQuery, selectedCategory])
+
+  // Auto-scroll to bottom when chat messages change
+  const scrollToBottom = () => {
+    if (chatMessagesRef.current) {
+      setTimeout(() => {
+        if (chatMessagesRef.current) {
+          chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
+        }
+      }, 100) // Small delay to ensure DOM has updated
+    }
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [chatMessages, isChatLoading])
+
+  // Also scroll to bottom when chat opens or expands
+  useEffect(() => {
+    if (showChat && !isChatMinimized) {
+      scrollToBottom()
+    }
+  }, [showChat, isChatMinimized])
 
   const loadMenuData = async () => {
     setIsLoading(true)
@@ -161,6 +185,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             content: "Hi! I'm your menu assistant. I can help you find dishes, answer questions about ingredients, dietary restrictions, and make recommendations. What would you like to know about our menu?"
           }
           setChatMessages([welcomeMessage])
+          setTimeout(() => scrollToBottom(), 100)
         }
       } else {
         console.error("Failed to create chat session:", response.error)
@@ -227,6 +252,9 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
     setChatMessages((prev) => [...prev, userMessage])
     setChatInput("")
     setIsChatLoading(true)
+    
+    // Scroll to bottom after adding user message
+    setTimeout(() => scrollToBottom(), 50)
 
     try {
       const response = await apiClient.sendChatMessage(qrToken, chatSession.id, chatInput)
@@ -239,6 +267,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             content: "Your chat session has expired due to inactivity. Please reset the chat to continue our conversation!" 
           }
           setChatMessages((prev) => [...prev, expirationMessage])
+          setTimeout(() => scrollToBottom(), 100)
         } else {
           // Fallback to a generic response if AI chat fails
           const fallbackMessage: ChatMessage = { 
@@ -246,11 +275,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" 
           }
           setChatMessages((prev) => [...prev, fallbackMessage])
+          setTimeout(() => scrollToBottom(), 100)
         }
-      } else if (response.data) {
-        const assistantMessage: ChatMessage = { role: "assistant", content: response.data.bot_response }
-        setChatMessages((prev) => [...prev, assistantMessage])
-      }
+              } else if (response.data) {
+          const assistantMessage: ChatMessage = { role: "assistant", content: response.data.bot_response }
+          setChatMessages((prev) => [...prev, assistantMessage])
+          setTimeout(() => scrollToBottom(), 100)
+        }
     } catch (err) {
       console.error("Chat error:", err)
       const errorMessage: ChatMessage = { 
@@ -258,6 +289,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         content: "I'm sorry, there was an error processing your message. Please try again." 
       }
       setChatMessages((prev) => [...prev, errorMessage])
+      setTimeout(() => scrollToBottom(), 100)
     } finally {
       setIsChatLoading(false)
     }
@@ -282,6 +314,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
           content: "Hi! I'm your menu assistant. I can help you find dishes, answer questions about ingredients, dietary restrictions, and make recommendations. What would you like to know about our menu?"
         }
         setChatMessages([welcomeMessage])
+        setTimeout(() => scrollToBottom(), 100)
       } else {
         // If reset fails, try creating a new session
         await createChatSession()
@@ -526,7 +559,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             {/* Chat Content - Only show when not minimized */}
             {!isChatMinimized && (
               <>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
+                <div ref={chatMessagesRef} className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
                   {isCreatingSession && (
                     <div className="text-center text-gray-500 py-6">
                       <div className="flex space-x-1 justify-center mb-3">
