@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { TagSelector } from "@/components/ui/tag-selector"
+import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode } from "lucide-react"
@@ -180,6 +182,7 @@ export default function EditMenuPage() {
         price: updatedItem.price,
         category: updatedItem.category,
         allergens: updatedItem.allergens,
+        tags: updatedItem.tags,
         is_available: updatedItem.is_available,
         image_url: updatedItem.image_url
       }
@@ -423,20 +426,27 @@ export default function EditMenuPage() {
                                   {formatPrice(item.price, menuData.restaurant?.currency_code)}
                                 </Badge>
                                 {!item.is_available && <Badge variant="destructive">Unavailable</Badge>}
-                                {item.is_vegetarian && (
-                                  <Badge variant="outline" className="text-green-600">
-                                    Vegetarian
-                                  </Badge>
-                                )}
-                                {item.is_vegan && (
-                                  <Badge variant="outline" className="text-green-700">
-                                    Vegan
-                                  </Badge>
-                                )}
-                                {item.is_gluten_free && (
-                                  <Badge variant="outline" className="text-blue-600">
-                                    Gluten Free
-                                  </Badge>
+                                {/* Display tags if available, otherwise fall back to legacy fields */}
+                                {item.tags && item.tags.length > 0 ? (
+                                  <TagList tags={item.tags} size="sm" maxTags={3} />
+                                ) : (
+                                  <>
+                                    {item.is_vegetarian && (
+                                      <Badge variant="outline" className="text-green-600">
+                                        Vegetarian
+                                      </Badge>
+                                    )}
+                                    {item.is_vegan && (
+                                      <Badge variant="outline" className="text-green-700">
+                                        Vegan
+                                      </Badge>
+                                    )}
+                                    {item.is_gluten_free && (
+                                      <Badge variant="outline" className="text-blue-600">
+                                        Gluten Free
+                                      </Badge>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -642,35 +652,51 @@ export default function EditMenuPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editingItem.is_vegetarian}
-                      onChange={(e) =>
-                        setEditingItem((prev) => (prev ? { ...prev, is_vegetarian: e.target.checked } : null))
-                      }
-                    />
-                    Vegetarian
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editingItem.is_vegan}
-                      onChange={(e) => setEditingItem((prev) => (prev ? { ...prev, is_vegan: e.target.checked } : null))}
-                    />
-                    Vegan
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editingItem.is_gluten_free}
-                      onChange={(e) =>
-                        setEditingItem((prev) => (prev ? { ...prev, is_gluten_free: e.target.checked } : null))
-                      }
-                    />
-                    Gluten Free
-                  </label>
+                <div className="space-y-3">
+                  <Label htmlFor="tags">Tags</Label>
+                  <TagSelector
+                    selectedTags={editingItem.tags || []}
+                    onTagsChange={(tags) =>
+                      setEditingItem((prev) => (prev ? { ...prev, tags } : null))
+                    }
+                    placeholder="Search for tags to add..."
+                    maxTags={10}
+                  />
+                  
+                  {/* Legacy dietary checkboxes for backward compatibility */}
+                  <details className="mt-4">
+                    <summary className="text-sm text-gray-600 cursor-pointer">Legacy dietary options</summary>
+                    <div className="flex gap-4 mt-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editingItem.is_vegetarian}
+                          onChange={(e) =>
+                            setEditingItem((prev) => (prev ? { ...prev, is_vegetarian: e.target.checked } : null))
+                          }
+                        />
+                        Vegetarian
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editingItem.is_vegan}
+                          onChange={(e) => setEditingItem((prev) => (prev ? { ...prev, is_vegan: e.target.checked } : null))}
+                        />
+                        Vegan
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editingItem.is_gluten_free}
+                          onChange={(e) =>
+                            setEditingItem((prev) => (prev ? { ...prev, is_gluten_free: e.target.checked } : null))
+                          }
+                        />
+                        Gluten Free
+                      </label>
+                    </div>
+                  </details>
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">

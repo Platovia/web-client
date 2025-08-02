@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { TagList } from "@/components/ui/tag-badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw, Store } from "lucide-react"
@@ -101,16 +102,20 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             locale: menu.restaurant?.locale || 'en-US'
           })
           
-          // Transform menu items to include dietary flags
+          // Transform menu items to include dietary flags (for backward compatibility)
           const transformedItems = menu_items.map(item => ({
             ...item,
-            is_vegetarian: item.allergens ? !item.allergens.some(a => 
-              ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood'].includes(a.toLowerCase())
-            ) : false,
-            is_vegan: item.allergens ? !item.allergens.some(a => 
-              ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'dairy', 'eggs', 'honey'].includes(a.toLowerCase())
-            ) : false,
-            is_gluten_free: item.allergens ? !item.allergens.includes('gluten') : false
+            // Use tags if available, otherwise fall back to allergens-based logic
+            is_vegetarian: item.tags ? item.tags.includes('vegetarian') : 
+              item.allergens ? !item.allergens.some(a => 
+                ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood'].includes(a.toLowerCase())
+              ) : false,
+            is_vegan: item.tags ? item.tags.includes('vegan') :
+              item.allergens ? !item.allergens.some(a => 
+                ['meat', 'chicken', 'beef', 'pork', 'fish', 'seafood', 'dairy', 'eggs', 'honey'].includes(a.toLowerCase())
+              ) : false,
+            is_gluten_free: item.tags ? item.tags.includes('gluten_free') :
+              item.allergens ? !item.allergens.includes('gluten') : false
           }))
           
           setMenuItems(transformedItems)
@@ -448,23 +453,34 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {item.category && <Badge variant="secondary">{item.category}</Badge>}
-                  {item.is_vegetarian && (
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      <Leaf className="h-3 w-3 mr-1" />
-                      Vegetarian
-                    </Badge>
-                  )}
-                  {item.is_vegan && (
-                    <Badge variant="outline" className="text-green-700 border-green-700">
-                      <Heart className="h-3 w-3 mr-1" />
-                      Vegan
-                    </Badge>
-                  )}
-                  {item.is_gluten_free && (
-                    <Badge variant="outline" className="text-blue-600 border-blue-600">
-                      <Wheat className="h-3 w-3 mr-1" />
-                      Gluten Free
-                    </Badge>
+                  {/* Display tags dynamically if available, otherwise fall back to legacy boolean fields */}
+                  {item.tags && item.tags.length > 0 ? (
+                    <TagList 
+                      tags={item.tags} 
+                      size="sm"
+                      maxTags={5}
+                    />
+                  ) : (
+                    <>
+                      {item.is_vegetarian && (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          <Leaf className="h-3 w-3 mr-1" />
+                          Vegetarian
+                        </Badge>
+                      )}
+                      {item.is_vegan && (
+                        <Badge variant="outline" className="text-green-700 border-green-700">
+                          <Heart className="h-3 w-3 mr-1" />
+                          Vegan
+                        </Badge>
+                      )}
+                      {item.is_gluten_free && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-600">
+                          <Wheat className="h-3 w-3 mr-1" />
+                          Gluten Free
+                        </Badge>
+                      )}
+                    </>
                   )}
                 </div>
                 {item.allergens && item.allergens.length > 0 && (

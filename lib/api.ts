@@ -97,12 +97,24 @@ interface MenuItem {
   description?: string;
   price?: number;
   category?: string;
-  allergens?: string[];
+  allergens?: string[]; // Legacy field
+  dietary_info?: string[]; // Legacy field  
+  tags?: string[]; // New tags system
   is_available: boolean;
   image_url?: string;
-  is_vegetarian?: boolean;
-  is_vegan?: boolean;
-  is_gluten_free?: boolean;
+  is_vegetarian?: boolean; // Legacy field - derived from tags
+  is_vegan?: boolean; // Legacy field - derived from tags
+  is_gluten_free?: boolean; // Legacy field - derived from tags
+}
+
+interface TagDefinition {
+  name: string;
+  display_name: string;
+  category: string;
+  description: string;
+  color: string;
+  icon: string;
+  is_system_tag: boolean;
 }
 
 interface Menu {
@@ -205,6 +217,7 @@ interface MenuItemCreateRequest {
   price?: number;
   category?: string;
   allergens?: string[];
+  tags?: string[];
   is_available?: boolean;
   image_url?: string;
 }
@@ -215,6 +228,7 @@ interface MenuItemUpdateRequest {
   price?: number;
   category?: string;
   allergens?: string[];
+  tags?: string[];
   is_available?: boolean;
   image_url?: string;
 }
@@ -838,6 +852,36 @@ class ApiClient {
     const params = menuId ? `?menu_id=${menuId}` : '';
     return this.makeRequest<any>(`/chat/admin/analytics/overview${params}`);
   }
+
+  // Tag management endpoints
+  async getAvailableTags(category?: string): Promise<ApiResponse<{ tags: TagDefinition[]; total: number }>> {
+    const params = category ? `?category=${category}` : '';
+    return this.makeRequest<{ tags: TagDefinition[]; total: number }>(`/tags/${params}`);
+  }
+
+  async getTagCategories(): Promise<ApiResponse<string[]>> {
+    return this.makeRequest<string[]>('/tags/categories');
+  }
+
+  async validateTags(tags: string[]): Promise<ApiResponse<{
+    valid_tags: string[];
+    invalid_tags: string[];
+    total_tags: number;
+    valid_count: number;
+    invalid_count: number;
+  }>> {
+    return this.makeRequest<{
+      valid_tags: string[];
+      invalid_tags: string[];
+      total_tags: number;
+      valid_count: number;
+      invalid_count: number;
+    }>(`/tags/validate?tags=${tags.join(',')}`);
+  }
+
+  async getTagDefinition(tagName: string): Promise<ApiResponse<TagDefinition>> {
+    return this.makeRequest<TagDefinition>(`/tags/${tagName}`);
+  }
 }
 
 // Currency-related interfaces
@@ -883,6 +927,7 @@ export type {
   OCRResultResponse,
   OCRResultListResponse,
   OCRResultUpdateRequest,
+  TagDefinition,
   PublicMenuResponse,
   ChatMessage,
   ChatResponse,
