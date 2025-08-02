@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw } from "lucide-react"
+import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw, Store } from "lucide-react"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
 
@@ -385,11 +385,17 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            <img
-              src={restaurant?.logo_url || "/placeholder.svg"}
-              alt={restaurant?.name || "Restaurant"}
-              className="w-16 h-16 rounded-full object-cover"
-            />
+            {restaurant?.logo_url ? (
+              <img
+                src={restaurant.logo_url}
+                alt={restaurant.name || "Restaurant"}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                <Store className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{restaurant?.name}</h1>
                              <p className="text-gray-600">{restaurant?.description || ''}</p>

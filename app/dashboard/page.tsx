@@ -19,12 +19,7 @@ const initialDashboardStats = {
   monthlyGrowth: 0,
 }
 
-const recentActivity = [
-  { action: "New menu uploaded", restaurant: "Bella Vista Italian", time: "2 hours ago" },
-  { action: "QR code generated", restaurant: "Tokyo Sushi Bar", time: "4 hours ago" },
-  { action: "Menu items updated", restaurant: "Mountain Grill", time: "1 day ago" },
-  { action: "Customer chat session", restaurant: "Bella Vista Italian", time: "2 days ago" },
-]
+const recentActivity: { action: string; restaurant: string; time: string }[] = []
 
 export default function DashboardPage() {
   const { user, companies } = useAuth()

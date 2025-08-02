@@ -249,14 +249,7 @@ export default function RegisterPage() {
                   disabled={loading}
                 />
                 <Label htmlFor="terms" className="text-sm">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-blue-600 hover:underline">
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/privacy" className="text-blue-600 hover:underline">
-                    Privacy Policy
-                  </Link>
+                  I agree to the Terms of Service and Privacy Policy
                 </Label>
               </div>
 

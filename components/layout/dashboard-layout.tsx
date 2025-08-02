@@ -68,21 +68,6 @@ const navigation = [
     items: [
       { title: "All Menus", url: "/dashboard/menus", icon: Menu },
       { title: "Upload Menu", url: "/dashboard/menus/upload", icon: Upload },
-      { title: "QR Codes", url: "/dashboard/qr-codes", icon: QrCode },
-    ],
-  },
-  {
-    title: "Customer Support",
-    items: [
-      { title: "Chat Analytics", url: "/dashboard/chat", icon: MessageCircle },
-      { title: "Customer Feedback", url: "/dashboard/feedback", icon: Users },
-    ],
-  },
-  {
-    title: "Settings",
-    items: [
-      { title: "Account Settings", url: "/dashboard/settings", icon: Settings },
-      { title: "Team Management", url: "/dashboard/team", icon: Users },
     ],
   },
 ]
@@ -153,7 +138,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton>
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src="/placeholder.svg" />
                         <AvatarFallback>
                           {user ? getInitials(user.full_name) : "U"}
                         </AvatarFallback>

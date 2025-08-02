@@ -78,10 +78,7 @@ export default function SuccessPage() {
                 </Button>
               </Link>
               <div className="text-sm text-gray-600">
-                <p>Need help getting started? Check out our</p>
-                <Link href="/help" className="text-blue-600 hover:underline">
-                  Quick Start Guide
-                </Link>
+                <p>Need help getting started? Documentation coming soon!</p>
               </div>
             </div>
           </CardContent>

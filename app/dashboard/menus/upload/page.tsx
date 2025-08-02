@@ -459,7 +459,7 @@ export default function UploadMenuPage() {
                         <Card key={file.id} className="relative">
                           <div className="aspect-video relative overflow-hidden rounded-t-lg">
                             <img
-                              src={file.preview || "/placeholder.svg"}
+                              src={file.preview || ""}
                               alt={file.file.name}
                               className="w-full h-full object-cover"
                             />

@@ -241,11 +241,9 @@ export default function RestaurantsPage() {
             filteredRestaurants.map((restaurant) => (
               <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                  <img
-                    src="/placeholder.svg"
-                    alt={restaurant.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <Store className="h-12 w-12 text-gray-400" />
+                  </div>
                   <div className="absolute top-2 right-2">
                     <Badge variant={restaurant.is_active ? "default" : "secondary"}>
                       {restaurant.is_active ? "active" : "inactive"}

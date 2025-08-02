@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -335,7 +335,13 @@ export default function MenusPage() {
           {filteredMenus.map((menu) => (
             <Card key={menu.id} className="hover:shadow-lg transition-shadow">
               <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                <img src={menu.image || "/placeholder.svg"} alt={menu.name} className="w-full h-full object-cover" />
+                {menu.image ? (
+                  <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <Menu className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
                 <div className="absolute top-2 right-2">
                   <Badge variant={menu.is_active ? "default" : "secondary"}>
                     {menu.is_active ? "active" : "inactive"}

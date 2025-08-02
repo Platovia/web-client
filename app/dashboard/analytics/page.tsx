@@ -18,33 +18,10 @@ const initialAnalyticsData = {
     conversionRate: 0,
     customerSatisfaction: 0,
   },
-  topRestaurants: [
-    { name: "Bella Vista Italian", views: 4521, scans: 1234, chats: 567, rating: 4.8 },
-    { name: "Tokyo Sushi Bar", views: 3892, scans: 987, chats: 432, rating: 4.7 },
-    { name: "Spice Garden", views: 2834, scans: 756, chats: 389, rating: 4.5 },
-    { name: "Mountain Grill", views: 1600, scans: 444, chats: 504, rating: 4.3 },
-  ],
-  popularMenuItems: [
-    { name: "Margherita Pizza", restaurant: "Bella Vista Italian", views: 892, orders: 234 },
-    { name: "Salmon Teriyaki", restaurant: "Tokyo Sushi Bar", views: 756, orders: 189 },
-    { name: "Butter Chicken", restaurant: "Spice Garden", views: 634, orders: 156 },
-    { name: "Ribeye Steak", restaurant: "Mountain Grill", views: 523, orders: 134 },
-  ],
-  chatInsights: [
-    { question: "What are your vegetarian options?", frequency: 234, restaurant: "All" },
-    { question: "Do you have gluten-free dishes?", frequency: 189, restaurant: "All" },
-    { question: "What's your most popular dish?", frequency: 156, restaurant: "All" },
-    { question: "Are there any allergens in this dish?", frequency: 134, restaurant: "All" },
-  ],
-  weeklyStats: [
-    { day: "Mon", views: 1234, scans: 345, chats: 123 },
-    { day: "Tue", views: 1456, scans: 389, chats: 145 },
-    { day: "Wed", views: 1678, scans: 423, chats: 167 },
-    { day: "Thu", views: 1890, scans: 456, chats: 189 },
-    { day: "Fri", views: 2345, scans: 567, chats: 234 },
-    { day: "Sat", views: 2678, scans: 634, chats: 267 },
-    { day: "Sun", views: 2234, scans: 578, chats: 223 },
-  ],
+  topRestaurants: [],
+  popularMenuItems: [],
+  chatInsights: [],
+  weeklyStats: [],
 }
 
 export default function AnalyticsPage() {
