@@ -131,7 +131,28 @@ export function TagSelector({
           {/* Available tags */}
           <div className="space-y-2">
             {availableTags.length === 0 ? (
-              <p className="text-sm text-gray-500">No tags found</p>
+              <>
+                <p className="text-sm text-gray-500">No tags found</p>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="mt-2 text-sm text-blue-600 hover:underline"
+                    onClick={() => {
+                      // Slugify the tag to match backend behavior
+                      const slugified = searchTerm.trim().toLowerCase()
+                        .replace(/[\s-]+/g, '_')
+                        .replace(/[^a-z0-9_]+/g, '')
+                        .slice(0, 50);
+                      if (slugified && !selectedTags.includes(slugified)) {
+                        onTagsChange([...selectedTags, slugified]);
+                        setSearchTerm('');
+                      }
+                    }}
+                  >
+                    Add "{searchTerm}" as custom tag
+                  </button>
+                )}
+              </>
             ) : (
               <div className="grid grid-cols-1 gap-1">
                 {availableTags.map((tag) => (
