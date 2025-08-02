@@ -16,17 +16,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
         <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
+:root {
+  --font-sans: ${GeistSans.style.fontFamily};
+  --font-mono: ${GeistMono.style.fontFamily};
 }
         `}</style>
       </head>
-      <body>
+      <body className={`font-sans antialiased`} suppressHydrationWarning={true}>
         <AuthProvider>
           {children}
         </AuthProvider>
