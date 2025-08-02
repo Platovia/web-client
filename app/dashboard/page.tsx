@@ -52,13 +52,18 @@ export default function DashboardPage() {
           
           // Load analytics data
           try {
-            const analyticsResponse = await apiClient.getAnalyticsOverview()
+            const [analyticsResponse, chatResponse] = await Promise.all([
+              apiClient.getAnalyticsOverview(),
+              apiClient.getChatAnalytics()
+            ])
+            
             if (analyticsResponse.data?.data) {
+              const chatData = chatResponse.data?.data || {}
               setDashboardStats({
                 totalRestaurants: response.data.restaurants.length,
                 totalMenus: analyticsResponse.data.data.total_menus,
                 totalQRScans: analyticsResponse.data.data.total_qr_scans,
-                totalChatInteractions: 0, // TODO: Add chat analytics
+                totalChatInteractions: chatData.total_sessions || 0,
                 monthlyGrowth: 0, // TODO: Calculate growth
               })
             }

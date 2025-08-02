@@ -34,7 +34,14 @@ export default function EditMenuPage() {
   const [isActivating, setIsActivating] = useState(false)
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
   const [addingItem, setAddingItem] = useState<string | null>(null) // category for which we're adding an item
-  const [menuAnalytics, setMenuAnalytics] = useState({ totalViews: 0, uniqueViewers: 0, qrScans: 0 })
+  const [menuAnalytics, setMenuAnalytics] = useState({ 
+    totalViews: 0, 
+    uniqueViewers: 0, 
+    qrScans: 0, 
+    chatSessions: 0, 
+    chatMessages: 0, 
+    avgMessagesPerSession: 0.0 
+  })
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
@@ -70,12 +77,20 @@ export default function EditMenuPage() {
 
       // Load analytics for this menu
       try {
-        const analyticsResponse = await apiClient.getMenuAnalytics(id)
+        const [analyticsResponse, chatResponse] = await Promise.all([
+          apiClient.getMenuAnalytics(id),
+          apiClient.getChatAnalytics(id)
+        ])
+        
         if (analyticsResponse.data?.data) {
+          const chatData = chatResponse.data?.data || {}
           setMenuAnalytics({
             totalViews: analyticsResponse.data.data.total_views,
             uniqueViewers: analyticsResponse.data.data.unique_viewers,
-            qrScans: analyticsResponse.data.data.qr_scans
+            qrScans: analyticsResponse.data.data.qr_scans,
+            chatSessions: chatData.total_sessions || 0,
+            chatMessages: chatData.total_messages || 0,
+            avgMessagesPerSession: chatData.avg_messages_per_session || 0.0
           })
         }
       } catch (analyticsError) {
@@ -518,18 +533,30 @@ export default function EditMenuPage() {
                 <CardDescription>Performance metrics for this menu</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <p className="text-2xl font-bold text-blue-600">{menuAnalytics.totalViews.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Total Views</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
                     <p className="text-2xl font-bold text-green-600">{menuAnalytics.uniqueViewers.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">Unique Viewers</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
                     <p className="text-2xl font-bold text-purple-600">{menuAnalytics.qrScans.toLocaleString()}</p>
                     <p className="text-sm text-gray-600">QR Scans</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <p className="text-2xl font-bold text-orange-600">{menuAnalytics.chatSessions.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">Chat Sessions</p>
+                  </div>
+                  <div className="text-center p-4 bg-teal-50 rounded-lg">
+                    <p className="text-2xl font-bold text-teal-600">{menuAnalytics.chatMessages.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">Chat Messages</p>
+                  </div>
+                  <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                    <p className="text-2xl font-bold text-indigo-600">{menuAnalytics.avgMessagesPerSession.toFixed(1)}</p>
+                    <p className="text-sm text-gray-600">Avg Messages/Session</p>
                   </div>
                 </div>
               </CardContent>

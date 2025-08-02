@@ -35,20 +35,36 @@ export default function AnalyticsPage() {
       setError("")
       
       try {
-        const response = await apiClient.getAnalyticsOverview()
-        if (response.error) {
-          setError(response.error)
-        } else if (response.data?.data) {
+        const [overviewResponse, chatResponse] = await Promise.all([
+          apiClient.getAnalyticsOverview(),
+          apiClient.getChatAnalytics()
+        ])
+        
+        if (overviewResponse.error) {
+          setError(overviewResponse.error)
+        } else if (overviewResponse.data?.data) {
+          const chatData = chatResponse.data?.data || {}
+          const avgSessionDuration = chatData.avg_session_duration_minutes || 0
+          const formatSessionTime = (minutes: number) => {
+            if (minutes < 60) {
+              return `${Math.round(minutes)}m`
+            }
+            const hours = Math.floor(minutes / 60)
+            const remainingMinutes = Math.round(minutes % 60)
+            return `${hours}h ${remainingMinutes}m`
+          }
+          
           setAnalyticsData({
             ...initialAnalyticsData,
             overview: {
-              totalViews: response.data.data.total_views,
-              totalScans: response.data.data.total_qr_scans,
-              totalChats: 0, // TODO: Add chat analytics
-              avgSessionTime: "0m 0s", // TODO: Add session time analytics
+              totalViews: overviewResponse.data.data.total_views,
+              totalScans: overviewResponse.data.data.total_qr_scans,
+              totalChats: chatData.total_sessions || 0,
+              avgSessionTime: formatSessionTime(avgSessionDuration),
               conversionRate: 0, // TODO: Add conversion rate analytics
               customerSatisfaction: 0, // TODO: Add satisfaction analytics
-            }
+            },
+            chatInsights: chatData.top_queries || []
           })
         }
       } catch (err) {

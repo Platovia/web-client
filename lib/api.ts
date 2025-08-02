@@ -833,6 +833,11 @@ class ApiClient {
     const params = restaurantId ? `?restaurant_id=${restaurantId}` : '';
     return this.makeRequest<any>(`/analytics/menus/analytics/overview${params}`);
   }
+
+  async getChatAnalytics(menuId?: string): Promise<ApiResponse<any>> {
+    const params = menuId ? `?menu_id=${menuId}` : '';
+    return this.makeRequest<any>(`/chat/admin/analytics/overview${params}`);
+  }
 }
 
 // Currency-related interfaces
