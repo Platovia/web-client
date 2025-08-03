@@ -347,7 +347,16 @@ export default function EditMenuPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Edit Menu</h1>
               <p className="text-gray-600">
-                {menuData.menu.name} - {menuData.restaurant?.name}
+                {menuData.menu.name} - {menuData.restaurant ? (
+                  <Link 
+                    href={`/dashboard/restaurants/${menuData.restaurant.id}`}
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {menuData.restaurant.name}
+                  </Link>
+                ) : (
+                  "Unknown Restaurant"
+                )}
               </p>
             </div>
           </div>
