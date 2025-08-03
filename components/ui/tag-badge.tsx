@@ -19,7 +19,6 @@ import {
   Star,
   Zap,
   TrendingDown,
-  Seedling,
   ChefHat,
   Wind,
   Snowflake
@@ -40,7 +39,6 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Star,
   Zap,
   TrendingDown,
-  Seedling,
   ChefHat,
   Wind,
   Snowflake,

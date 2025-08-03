@@ -25,7 +25,7 @@ interface Restaurant {
   locale?: string
 }
 
-export default function MenuPage({ params }: { params: { restaurantId: string } }) {
+export default function MenuPage({ params }: { params: Promise<{ restaurantId: string }> }) {
   const searchParams = useSearchParams()
   const qrToken = searchParams?.get('token')
   
@@ -45,11 +45,22 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
+  const [restaurantId, setRestaurantId] = useState<string>("")
   const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadMenuData()
-  }, [params.restaurantId, qrToken])
+    const initParams = async () => {
+      const resolvedParams = await params
+      setRestaurantId(resolvedParams.restaurantId)
+    }
+    initParams()
+  }, [params])
+
+  useEffect(() => {
+    if (restaurantId) {
+      loadMenuData()
+    }
+  }, [restaurantId, qrToken])
 
   useEffect(() => {
     filterItems()
@@ -124,7 +135,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         }
       } else {
         // Fallback: try to get restaurant info directly (less secure)
-        const restaurantResponse = await apiClient.getRestaurant(params.restaurantId)
+        const restaurantResponse = await apiClient.getRestaurant(restaurantId)
         
         if (restaurantResponse.error) {
           setError("Restaurant not found or not accessible")
