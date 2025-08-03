@@ -26,6 +26,12 @@ interface UploadedFile {
   extractedItems?: number
   imageUrl?: string
   ocrJobId?: string
+  fileType: "image" | "pdf"
+  pdfInfo?: {
+    pageCount: number
+    fileSize: number
+  }
+  errorMessage?: string
 }
 
 export default function UploadMenuPage() {
@@ -78,21 +84,22 @@ export default function UploadMenuPage() {
     }
   }
 
-  const uploadFileToServer = async (file: File, menuId: string): Promise<string> => {
+  const uploadFileToServer = async (file: File, menuId: string): Promise<any> => {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await apiClient.uploadMenuImages(menuId, formData)
+    // Use the new files endpoint that handles both images and PDFs
+    const response = await apiClient.uploadMenuFiles(menuId, formData)
     if (response.error) {
       throw new Error(response.error)
     }
 
-    return response.data!.image_url
+    return response.data!
   }
 
-  const processWithOCR = async (imageUrl: string, menuId: string): Promise<OCRJobResponse> => {
+  const processWithOCR = async (imageUrls: string[], menuId: string): Promise<OCRJobResponse> => {
     const ocrResponse = await apiClient.createOCRJob(menuId, {
-      image_urls: [imageUrl],
+      image_urls: imageUrls,
       processing_options: {
         extract_prices: true,
         categorize_items: true
@@ -156,8 +163,38 @@ export default function UploadMenuPage() {
     const files = Array.from(e.target.files || [])
 
     for (const file of files) {
+      // Validate file type
+      const isImage = file.type.startsWith('image/')
+      const isPDF = file.type === 'application/pdf'
+      
+      if (!isImage && !isPDF) {
+        setError(`File "${file.name}" is not a supported format. Please upload images or PDF files.`)
+        continue
+      }
+
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxSize) {
+        setError(`File "${file.name}" is too large. Maximum size is 10MB.`)
+        continue
+      }
+
       const id = `file-${Date.now()}-${Math.random()}`
-      const preview = URL.createObjectURL(file)
+      let preview = ""
+      let pdfInfo = undefined
+
+      if (isPDF) {
+        // For PDFs, use a PDF icon as preview
+        preview = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDVIMjVMMzUgMTVWMzVIMTBWNVoiIGZpbGw9IiNmMzU1NDUiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik0yNSA1VjE1SDM1IiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSIyMCIgeT0iMjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjgiPlBERjwvdGV4dD4KPC9zdmc+"
+        
+        pdfInfo = {
+          pageCount: 0, // Will be updated after upload
+          fileSize: file.size
+        }
+      } else {
+        // For images, create preview URL
+        preview = URL.createObjectURL(file)
+      }
 
       const newFile: UploadedFile = {
         id,
@@ -165,6 +202,8 @@ export default function UploadMenuPage() {
         preview,
         status: "pending",
         progress: 0,
+        fileType: isPDF ? "pdf" : "image",
+        pdfInfo
       }
 
       setUploadedFiles((prev) => [...prev, newFile])
@@ -201,35 +240,80 @@ export default function UploadMenuPage() {
         f.id === fileId ? { ...f, status: "uploading", progress: 10 } : f
       ))
 
-      // Upload file to server
-      const imageUrl = await uploadFileToServer(file, menuId)
+      // Upload file to server (handles both images and PDFs)
+      const uploadResult = await uploadFileToServer(file, menuId)
 
-      const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${backendBaseUrl}${imageUrl}`
+      const isPDF = uploadResult.type === 'pdf'
       
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, progress: 50, imageUrl: fullImageUrl } : f
-      ))
+      if (isPDF) {
+        // Handle PDF processing
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileId ? { 
+            ...f, 
+            status: "processing", 
+            progress: 70,
+            pdfInfo: uploadResult.pdf_info,
+            extractedItems: uploadResult.file_count
+          } : f
+        ))
 
-      // Start OCR processing
-      const ocrJob = await processWithOCR(fullImageUrl, menuId)
-      
+        // For PDFs, process all converted images with OCR
+        const imageUrls = uploadResult.files.map((fileInfo: any) => {
+          const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+          return fileInfo.image_url.startsWith('http') 
+            ? fileInfo.image_url 
+            : `${backendBaseUrl}${fileInfo.image_url}`
+        })
+
+        const ocrJob = await processWithOCR(imageUrls, menuId)
+        
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileId ? { 
+            ...f, 
+            status: "processing", 
+            progress: 80,
+            ocrJobId: ocrJob.job_id 
+          } : f
+        ))
+
+        // Start polling for OCR completion
+        pollOCRStatus(ocrJob.job_id, fileId)
+      } else {
+        // Handle single image processing
+        const imageInfo = uploadResult.files[0]
+        const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const fullImageUrl = imageInfo.image_url.startsWith('http') 
+          ? imageInfo.image_url 
+          : `${backendBaseUrl}${imageInfo.image_url}`
+        
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileId ? { ...f, progress: 50, imageUrl: fullImageUrl } : f
+        ))
+
+        // Start OCR processing
+        const ocrJob = await processWithOCR([fullImageUrl], menuId)
+        
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileId ? { 
+            ...f, 
+            status: "processing", 
+            progress: 60,
+            ocrJobId: ocrJob.job_id 
+          } : f
+        ))
+
+        // Start polling for OCR completion
+        pollOCRStatus(ocrJob.job_id, fileId)
+      }
+
+    } catch (err: any) {
+      console.error("Error processing file:", err)
       setUploadedFiles(prev => prev.map(f => 
         f.id === fileId ? { 
           ...f, 
-          status: "processing", 
-          progress: 60,
-          ocrJobId: ocrJob.job_id 
+          status: "error",
+          errorMessage: err.message || "Upload failed"
         } : f
-      ))
-
-      // Start polling for OCR completion
-      pollOCRStatus(ocrJob.job_id, fileId)
-
-    } catch (err) {
-      console.error("Error processing file:", err)
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, status: "error" } : f
       ))
     }
   }
@@ -419,10 +503,9 @@ export default function UploadMenuPage() {
           {/* File Upload */}
           <Card>
             <CardHeader>
-              <CardTitle>Upload Menu Images</CardTitle>
+              <CardTitle>Upload Menu Files</CardTitle>
               <CardDescription>
-                Upload clear photos of your menu pages. Our AI will automatically extract items, prices, and
-                descriptions.
+                Upload clear photos of your menu pages or PDF files (max 10 pages). Our AI will automatically extract items, prices, and descriptions.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -430,12 +513,12 @@ export default function UploadMenuPage() {
                 {/* Upload Area */}
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
                   <FileImage className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-700 mb-2">Upload Menu Images</p>
-                  <p className="text-sm text-gray-500 mb-4">Drag and drop files here, or click to select</p>
+                  <p className="text-lg font-medium text-gray-700 mb-2">Upload Menu Files</p>
+                  <p className="text-sm text-gray-500 mb-4">Drag and drop images or PDF files here, or click to select</p>
                   <Input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     onChange={handleFileUpload}
                     className="hidden"
                     id="file-upload"
@@ -480,10 +563,19 @@ export default function UploadMenuPage() {
                                 {file.status === "completed" && <CheckCircle className="h-4 w-4 text-green-600" />}
                               </div>
 
+                              {/* Show file type and PDF info */}
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <span className="capitalize">{file.fileType}</span>
+                                {file.fileType === "pdf" && file.pdfInfo && (
+                                  <span>• {file.pdfInfo.pageCount > 0 ? `${file.pdfInfo.pageCount} pages` : 'Processing...'}</span>
+                                )}
+                                <span>• {(file.file.size / 1024 / 1024).toFixed(1)}MB</span>
+                              </div>
+
                               {file.status === "uploading" && (
                                 <div className="space-y-1">
                                   <div className="flex justify-between text-xs">
-                                    <span>Uploading...</span>
+                                    <span>{file.fileType === "pdf" ? "Uploading & converting PDF..." : "Uploading..."}</span>
                                     <span>{file.progress}%</span>
                                   </div>
                                   <Progress value={file.progress} className="h-2" />
@@ -491,23 +583,31 @@ export default function UploadMenuPage() {
                               )}
 
                               {file.status === "processing" && (
-                                <div className="flex items-center gap-2 text-sm text-blue-600">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  AI extracting menu items...
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 text-sm text-blue-600">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {file.fileType === "pdf" 
+                                      ? `AI processing ${file.pdfInfo?.pageCount || 'multiple'} pages...`
+                                      : "AI extracting menu items..."
+                                    }
+                                  </div>
+                                  <Progress value={file.progress} className="h-2" />
                                 </div>
                               )}
 
                               {file.status === "completed" && (
                                 <div className="text-sm text-green-600">
                                   {file.extractedItems !== undefined 
-                                    ? `✓ Extracted ${file.extractedItems} menu items`
+                                    ? `✓ ${file.fileType === "pdf" ? `${file.extractedItems} pages processed, items extracted` : `Extracted ${file.extractedItems} menu items`}`
                                     : "✓ Processing completed"
                                   }
                                 </div>
                               )}
 
                               {file.status === "error" && (
-                                <div className="text-sm text-red-600">✗ Processing failed</div>
+                                <div className="text-sm text-red-600">
+                                  ✗ {file.errorMessage || "Processing failed"}
+                                </div>
                               )}
                             </div>
                           </CardContent>
