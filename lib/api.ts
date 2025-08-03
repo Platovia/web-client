@@ -211,6 +211,51 @@ interface OCRResultUpdateRequest {
   correction_notes?: string;
 }
 
+interface ExtractedMenuImage {
+  id: string;
+  image_url: string;
+  ai_description?: string;
+  extraction_confidence?: number;
+  is_assigned: boolean;
+  assigned_to_item_id?: string;
+  created_at?: string;
+}
+
+interface ExtractedImagesResponse {
+  extracted_images: ExtractedMenuImage[];
+  total_count: number;
+  assigned_count: number;
+  unassigned_count: number;
+}
+
+interface ImageAssignmentRequest {
+  image_id: string;
+}
+
+interface ImageAssignmentResponse {
+  success: boolean;
+  message: string;
+  item_id: string;
+  image_id: string;
+  image_url: string;
+}
+
+interface AutoMatchImagesResponse {
+  success: boolean;
+  message: string;
+  results: {
+    matched_count: number;
+    total_images: number;
+    total_items: number;
+    matches: Array<{
+      item_id: string;
+      item_name: string;
+      image_id: string;
+      confidence: number;
+    }>;
+  };
+}
+
 interface MenuItemCreateRequest {
   name: string;
   description?: string;
@@ -882,6 +927,36 @@ class ApiClient {
   async getTagDefinition(tagName: string): Promise<ApiResponse<TagDefinition>> {
     return this.makeRequest<TagDefinition>(`/tags/${tagName}`);
   }
+
+  // Image matching endpoints
+  async getExtractedImages(menuId: string): Promise<ApiResponse<ExtractedImagesResponse>> {
+    return this.makeRequest<ExtractedImagesResponse>(`/menus/${menuId}/extracted-images`);
+  }
+
+  async assignImageToItem(menuId: string, itemId: string, imageId: string): Promise<ApiResponse<ImageAssignmentResponse>> {
+    return this.makeRequest<ImageAssignmentResponse>(`/menus/${menuId}/items/${itemId}/assign-image`, {
+      method: 'POST',
+      body: JSON.stringify({ image_id: imageId }),
+    });
+  }
+
+  async removeImageFromItem(menuId: string, itemId: string): Promise<ApiResponse<{ success: boolean; message: string; item_id: string }>> {
+    return this.makeRequest<{ success: boolean; message: string; item_id: string }>(`/menus/${menuId}/items/${itemId}/image`, {
+      method: 'DELETE',
+    });
+  }
+
+  async autoMatchImages(menuId: string): Promise<ApiResponse<AutoMatchImagesResponse>> {
+    return this.makeRequest<AutoMatchImagesResponse>(`/menus/${menuId}/auto-match-images`, {
+      method: 'POST',
+    });
+  }
+
+  async triggerImageExtraction(menuId: string): Promise<ApiResponse<{ success: boolean; message: string; extracted_count: number }>> {
+    return this.makeRequest<{ success: boolean; message: string; extracted_count: number }>(`/menus/${menuId}/extract-images`, {
+      method: 'POST',
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -938,5 +1013,10 @@ export type {
   ChatHistoryMessage,
   ChatHistoryResponse,
   Currency,
-  CurrencyListResponse
+  CurrencyListResponse,
+  ExtractedMenuImage,
+  ExtractedImagesResponse,
+  ImageAssignmentRequest,
+  ImageAssignmentResponse,
+  AutoMatchImagesResponse
 }; 

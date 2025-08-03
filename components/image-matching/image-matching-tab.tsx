@@ -1,0 +1,408 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { 
+  Images, 
+  RefreshCw, 
+  Sparkles, 
+  CheckCircle, 
+  AlertTriangle, 
+  Eye,
+  Link2,
+  Unlink,
+  Loader2,
+  ImageIcon,
+  Zap
+} from "lucide-react"
+import { 
+  apiClient, 
+  type ExtractedMenuImage, 
+  type ExtractedImagesResponse,
+  type AutoMatchImagesResponse,
+  type MenuItem
+} from "@/lib/api"
+import ImageAssignmentModal from "./image-assignment-modal"
+
+interface ImageMatchingTabContentProps {
+  menuId: string
+}
+
+export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabContentProps) {
+  const [extractedImages, setExtractedImages] = useState<ExtractedMenuImage[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [isAutoMatching, setIsAutoMatching] = useState(false)
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [stats, setStats] = useState({ total: 0, assigned: 0, unassigned: 0 })
+
+  useEffect(() => {
+    if (menuId) {
+      loadData()
+    }
+  }, [menuId])
+
+  const loadData = async () => {
+    setIsLoading(true)
+    setError("")
+    
+    try {
+      // Load extracted images
+      const imagesResponse = await apiClient.getExtractedImages(menuId)
+      if (imagesResponse.error) {
+        setError(imagesResponse.error)
+      } else if (imagesResponse.data) {
+        setExtractedImages(imagesResponse.data.extracted_images)
+        setStats({
+          total: imagesResponse.data.total_count,
+          assigned: imagesResponse.data.assigned_count,
+          unassigned: imagesResponse.data.unassigned_count
+        })
+      }
+
+      // Load menu items
+      const itemsResponse = await apiClient.getMenuItems(menuId)
+      if (itemsResponse.error) {
+        setError(itemsResponse.error)
+      } else if (itemsResponse.data) {
+        setMenuItems(itemsResponse.data.items)
+      }
+    } catch (err) {
+      console.error("Error loading data:", err)
+      setError("Failed to load image matching data")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleTriggerExtraction = async () => {
+    setIsExtracting(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const response = await apiClient.triggerImageExtraction(menuId)
+      if (response.error) {
+        setError(response.error)
+      } else if (response.data) {
+        setSuccess(`${response.data.extracted_count} images extracted successfully!`)
+        // Reload data to show new images
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error triggering extraction:", err)
+      setError("Failed to extract images")
+    } finally {
+      setIsExtracting(false)
+    }
+  }
+
+  const handleAutoMatch = async () => {
+    setIsAutoMatching(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const response = await apiClient.autoMatchImages(menuId)
+      if (response.error) {
+        setError(response.error)
+      } else if (response.data) {
+        setSuccess(response.data.message)
+        // Reload data to show updated assignments
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error auto-matching:", err)
+      setError("Failed to auto-match images")
+    } finally {
+      setIsAutoMatching(false)
+    }
+  }
+
+  const handleAssignImage = (itemId: string) => {
+    setSelectedItemId(itemId)
+    setAssignModalOpen(true)
+  }
+
+  const handleRemoveImage = async (itemId: string) => {
+    setError("")
+    setSuccess("")
+
+    try {
+      const response = await apiClient.removeImageFromItem(menuId, itemId)
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setSuccess("Image removed successfully!")
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error removing image:", err)
+      setError("Failed to remove image")
+    }
+  }
+
+  const handleAssignmentComplete = async () => {
+    setAssignModalOpen(false)
+    setSelectedItemId(null)
+    setSuccess("Image assigned successfully!")
+    await loadData()
+  }
+
+  const getConfidenceBadge = (confidence?: number) => {
+    if (!confidence) return null
+    
+    if (confidence >= 0.8) {
+      return <Badge variant="default" className="bg-green-600">🟢 {Math.round(confidence * 100)}%</Badge>
+    } else if (confidence >= 0.6) {
+      return <Badge variant="outline" className="text-yellow-600 border-yellow-600">🟡 {Math.round(confidence * 100)}%</Badge>
+    } else {
+      return <Badge variant="outline" className="text-red-600 border-red-600">🔴 {Math.round(confidence * 100)}%</Badge>
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading image matching data...</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Image Matching</h3>
+          <p className="text-sm text-gray-600">Extract and assign individual food images to menu items</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleTriggerExtraction}
+            disabled={isExtracting}
+          >
+            {isExtracting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Images className="h-4 w-4 mr-2" />
+            )}
+            Extract Images
+          </Button>
+          <Button 
+            onClick={handleAutoMatch}
+            disabled={isAutoMatching || extractedImages.length === 0}
+          >
+            {isAutoMatching ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Auto-Match
+          </Button>
+          <Button variant="outline" onClick={loadData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Images className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Total Images</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">Assigned</p>
+                <p className="text-2xl font-bold">{stats.assigned}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Unlink className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm text-gray-600">Unassigned</p>
+                <p className="text-2xl font-bold">{stats.unassigned}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Extracted Images */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Images className="h-5 w-5" />
+              Extracted Images
+            </CardTitle>
+            <CardDescription>
+              AI-extracted food item images from your menu
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {extractedImages.length === 0 ? (
+              <div className="text-center py-8">
+                <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-900 mb-2">No images extracted yet</h4>
+                <p className="text-gray-600 mb-4">Click "Extract Images" to identify food items in your menu photos.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {extractedImages.map((image) => (
+                  <div key={image.id} className="border rounded-lg p-3">
+                    <div className="aspect-square relative mb-2 bg-gray-100 rounded overflow-hidden">
+                      <img 
+                        src={image.image_url} 
+                        alt={image.ai_description || "Food item"}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 right-2">
+                        {image.is_assigned ? (
+                          <Badge variant="default" className="bg-green-600">
+                            <Link2 className="h-3 w-3 mr-1" />
+                            Assigned
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            Available
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-2">{image.ai_description}</p>
+                    {getConfidenceBadge(image.extraction_confidence)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Menu Items */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Menu Items
+            </CardTitle>
+            <CardDescription>
+              Assign images to your menu items
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {menuItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium">{item.name}</h4>
+                      {item.category && (
+                        <Badge variant="outline" className="text-xs">
+                          {item.category}
+                        </Badge>
+                      )}
+                    </div>
+                    {item.description && (
+                      <p className="text-sm text-gray-600">{item.description}</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {item.image_url ? (
+                      <>
+                        <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                          <img 
+                            src={item.image_url} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveImage(item.id)}
+                        >
+                          <Unlink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignImage(item.id)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignImage(item.id)}
+                        disabled={stats.unassigned === 0}
+                      >
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Assign Image
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Image Assignment Modal */}
+      {assignModalOpen && selectedItemId && (
+        <ImageAssignmentModal
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          menuId={menuId}
+          itemId={selectedItemId}
+          menuItems={menuItems}
+          extractedImages={extractedImages.filter(img => !img.is_assigned)}
+          onAssignmentComplete={handleAssignmentComplete}
+        />
+      )}
+    </div>
+  )
+}

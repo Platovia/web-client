@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
+import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
 import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
 
@@ -395,6 +396,7 @@ export default function EditMenuPage() {
         <Tabs defaultValue="items" className="space-y-6">
           <TabsList>
             <TabsTrigger value="items">Menu Items</TabsTrigger>
+            <TabsTrigger value="image-matching">Image Matching</TabsTrigger>
             <TabsTrigger value="settings">Menu Settings</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -418,6 +420,17 @@ export default function EditMenuPage() {
                       .filter((item) => item.category === category)
                       .map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          {/* Item Image */}
+                          {item.image_url && (
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden mr-4 flex-shrink-0">
+                              <img 
+                                src={item.image_url} 
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <h4 className="font-medium">{item.name}</h4>
@@ -534,6 +547,10 @@ export default function EditMenuPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="image-matching">
+            <ImageMatchingTabContent menuId={id} />
           </TabsContent>
 
           <TabsContent value="analytics">

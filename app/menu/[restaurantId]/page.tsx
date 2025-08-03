@@ -441,7 +441,18 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {filteredItems.map((item) => (
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+              {/* Item Image */}
+              {item.image_url && (
+                <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                  <img 
+                    src={item.image_url} 
+                    alt={item.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
+              <CardHeader className={item.image_url ? "pb-2" : ""}>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
                   <span className="text-lg font-bold text-orange-600">
