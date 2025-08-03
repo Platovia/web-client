@@ -157,6 +157,38 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
     await loadData()
   }
 
+  const handleUnassignImage = async (imageId: string) => {
+    setError("")
+    setSuccess("")
+
+    try {
+      // Find the assigned item for this image
+      const image = extractedImages.find(img => img.id === imageId)
+      if (!image || !image.assigned_to_item_id) {
+        setError("Image is not assigned to any item")
+        return
+      }
+
+      const response = await apiClient.removeImageFromItem(menuId, image.assigned_to_item_id)
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setSuccess("Image unassigned successfully!")
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error unassigning image:", err)
+      setError("Failed to unassign image")
+    }
+  }
+
+  const getAssignedMenuItem = (imageId: string) => {
+    const image = extractedImages.find(img => img.id === imageId)
+    if (!image || !image.assigned_to_item_id) return null
+    
+    return menuItems.find(item => item.id === image.assigned_to_item_id)
+  }
+
   const getConfidenceBadge = (confidence?: number) => {
     if (!confidence) return null
     
@@ -312,6 +344,29 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{image.ai_description}</p>
                     {getConfidenceBadge(image.extraction_confidence)}
+                    
+                    {/* Show assigned item info */}
+                    {image.is_assigned && (
+                      <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-green-800">Assigned to:</p>
+                            <p className="text-sm font-semibold text-green-900">
+                              {getAssignedMenuItem(image.id)?.name || "Unknown Item"}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUnassignImage(image.id)}
+                            className="text-xs h-7 px-2"
+                          >
+                            <Unlink className="h-3 w-3 mr-1" />
+                            Unassign
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
