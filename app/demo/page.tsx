@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Search, Clock, MapPin, Phone, Globe, Leaf, Heart, Wheat, MessageCircle, X, ArrowLeft, ChevronUp, Minus, Send } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 import { formatPrice } from "@/lib/currency"
 import Link from "next/link"
 
@@ -139,51 +140,21 @@ export default function DemoPage() {
   const categories = ["All", ...Array.from(new Set(demoMenuItems.map((item) => item.category)))]
 
   const formatMessage = (content: string) => {
-    // Split by double newlines for paragraphs
-    const paragraphs = content.split('\n\n')
-    
-    return paragraphs.map((paragraph, index) => {
-      // Handle lists (lines starting with - or numbers)
-      const lines = paragraph.split('\n')
-      if (lines.length > 1 && lines.some(line => line.trim().match(/^[-*•]\s+|^\d+\.\s+/))) {
-        return (
-          <div key={index} className="mb-2">
-            {lines.map((line, lineIndex) => {
-              const trimmed = line.trim()
-              if (trimmed.match(/^[-*•]\s+/)) {
-                return (
-                  <div key={lineIndex} className="ml-2 mb-1">
-                    <span className="text-blue-600 mr-2">•</span>
-                    {trimmed.replace(/^[-*•]\s+/, '')}
-                  </div>
-                )
-              } else if (trimmed.match(/^\d+\.\s+/)) {
-                return (
-                  <div key={lineIndex} className="ml-2 mb-1">
-                    <span className="text-blue-600 mr-2 font-medium">
-                      {trimmed.match(/^\d+/)?.[0]}.
-                    </span>
-                    {trimmed.replace(/^\d+\.\s+/, '')}
-                  </div>
-                )
-              } else if (trimmed) {
-                return <div key={lineIndex} className="mb-1">{trimmed}</div>
-              }
-              return null
-            })}
-          </div>
-        )
-      } else {
-        // Regular paragraph
-        return (
-          <div key={index} className="mb-2">
-            {paragraph.split('\n').map((line, lineIndex) => (
-              line.trim() ? <div key={lineIndex}>{line}</div> : null
-            ))}
-          </div>
-        )
-      }
-    })
+    return (
+      <ReactMarkdown
+        className="prose prose-sm"
+        components={{
+          strong: ({ children }: { children: React.ReactNode }) => (
+          <strong className="font-semibold">{children}</strong>
+        ),
+          li: ({ children }: { children: React.ReactNode }) => (
+            <li className="mb-1">{children}</li>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    )
   }
 
   const sendMessage = async () => {
