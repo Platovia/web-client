@@ -957,6 +957,83 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // AI Image Generation endpoints
+  async generateImageForItem(menuId: string, itemId: string): Promise<ApiResponse<{
+    success: boolean;
+    message: string;
+    image_id?: string;
+    image_url?: string;
+    search_query?: string;
+    match_confidence?: number;
+    match_reasoning?: string;
+    unsplash_credit?: {
+      photographer: string;
+      photographer_url: string;
+      unsplash_url: string;
+    };
+  }>> {
+    return this.makeRequest<{
+      success: boolean;
+      message: string;
+      image_id?: string;
+      image_url?: string;
+      search_query?: string;
+      match_confidence?: number;
+      match_reasoning?: string;
+      unsplash_credit?: {
+        photographer: string;
+        photographer_url: string;
+        unsplash_url: string;
+      };
+    }>(`/menus/${menuId}/items/${itemId}/generate-image`, {
+      method: 'POST',
+    });
+  }
+
+  async regenerateImageForItem(menuId: string, itemId: string): Promise<ApiResponse<{
+    success: boolean;
+    message: string;
+    image_id?: string;
+    image_url?: string;
+    search_query?: string;
+    match_confidence?: number;
+    match_reasoning?: string;
+    unsplash_credit?: {
+      photographer: string;
+      photographer_url: string;
+      unsplash_url: string;
+    };
+  }>> {
+    return this.makeRequest<{
+      success: boolean;
+      message: string;
+      image_id?: string;
+      image_url?: string;
+      search_query?: string;
+      match_confidence?: number;
+      match_reasoning?: string;
+      unsplash_credit?: {
+        photographer: string;
+        photographer_url: string;
+        unsplash_url: string;
+      };
+    }>(`/menus/${menuId}/items/${itemId}/regenerate-image`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteExtractedImage(menuId: string, imageId: string): Promise<ApiResponse<{
+    success: boolean;
+    message: string;
+  }>> {
+    return this.makeRequest<{
+      success: boolean;
+      message: string;
+    }>(`/menus/${menuId}/extracted-images/${imageId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Currency-related interfaces

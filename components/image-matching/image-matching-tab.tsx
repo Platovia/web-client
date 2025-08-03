@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   Images, 
   RefreshCw, 
@@ -16,7 +17,9 @@ import {
   Unlink,
   Loader2,
   ImageIcon,
-  Zap
+  Zap,
+  Trash2,
+  Wand2
 } from "lucide-react"
 import { 
   apiClient, 
@@ -43,6 +46,14 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [stats, setStats] = useState({ total: 0, assigned: 0, unassigned: 0 })
+  
+  // New state for image generation and deletion
+  const [isGeneratingImage, setIsGeneratingImage] = useState<Record<string, boolean>>({})
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [imageToDelete, setImageToDelete] = useState<string | null>(null)
+  const [warningModalOpen, setWarningModalOpen] = useState(false)
+  const [warningMessage, setWarningMessage] = useState("")
+  const [warningAction, setWarningAction] = useState<(() => void) | null>(null)
 
   useEffect(() => {
     if (menuId) {
@@ -187,6 +198,87 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
     if (!image || !image.assigned_to_item_id) return null
     
     return menuItems.find(item => item.id === image.assigned_to_item_id)
+  }
+
+  // New handler functions for AI image generation and deletion
+  const handleGenerateImage = async (itemId: string) => {
+    setError("")
+    setSuccess("")
+    
+    setIsGeneratingImage(prev => ({ ...prev, [itemId]: true }))
+
+    try {
+      const response = await apiClient.generateImageForItem(menuId, itemId)
+      
+      if (response.error) {
+        if (response.error.includes("already has an image assigned")) {
+          setWarningMessage(response.error)
+          setWarningAction(() => () => handleRegenerateImage(itemId))
+          setWarningModalOpen(true)
+        } else {
+          setError(response.error)
+        }
+      } else {
+        setSuccess("Image generated and assigned successfully!")
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error generating image:", err)
+      setError("Failed to generate image")
+    } finally {
+      setIsGeneratingImage(prev => ({ ...prev, [itemId]: false }))
+    }
+  }
+
+  const handleRegenerateImage = async (itemId: string) => {
+    setError("")
+    setSuccess("")
+    setWarningModalOpen(false)
+    setWarningAction(null)
+    
+    setIsGeneratingImage(prev => ({ ...prev, [itemId]: true }))
+
+    try {
+      const response = await apiClient.regenerateImageForItem(menuId, itemId)
+      
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setSuccess("Image regenerated and assigned successfully!")
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error regenerating image:", err)
+      setError("Failed to regenerate image")
+    } finally {
+      setIsGeneratingImage(prev => ({ ...prev, [itemId]: false }))
+    }
+  }
+
+  const handleDeleteImage = async (imageId: string) => {
+    setError("")
+    setSuccess("")
+    setDeleteConfirmOpen(false)
+    setImageToDelete(null)
+
+    try {
+      const response = await apiClient.deleteExtractedImage(menuId, imageId)
+      
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setSuccess("Image deleted successfully!")
+        await loadData()
+      }
+    } catch (err) {
+      console.error("Error deleting image:", err)
+      setError("Failed to delete image")
+    }
+  }
+
+  const openDeleteConfirm = (imageId: string) => {
+    setImageToDelete(imageId)
+    setDeleteConfirmOpen(true)
   }
 
   const getConfidenceBadge = (confidence?: number) => {
@@ -367,6 +459,21 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                         </div>
                       </div>
                     )}
+                    
+                    {/* Delete button for unassigned images */}
+                    {!image.is_assigned && (
+                      <div className="mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteConfirm(image.id)}
+                          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete Image
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -427,17 +534,50 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGenerateImage(item.id)}
+                          disabled={isGeneratingImage[item.id]}
+                        >
+                          {isGeneratingImage[item.id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAssignImage(item.id)}
-                        disabled={stats.unassigned === 0}
-                      >
-                        <Link2 className="h-4 w-4 mr-2" />
-                        Assign Image
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignImage(item.id)}
+                          disabled={stats.unassigned === 0}
+                        >
+                          <Link2 className="h-4 w-4 mr-2" />
+                          Assign Image
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleGenerateImage(item.id)}
+                          disabled={isGeneratingImage[item.id]}
+                          className="bg-purple-600 hover:bg-purple-700"
+                        >
+                          {isGeneratingImage[item.id] ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="h-4 w-4 mr-2" />
+                              Generate Image
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -459,6 +599,52 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
           onAssignmentComplete={handleAssignmentComplete}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Image</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this image? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => imageToDelete && handleDeleteImage(imageToDelete)}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warning Modal for Image Assignment Conflicts */}
+      <Dialog open={warningModalOpen} onOpenChange={setWarningModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate New Image</DialogTitle>
+            <DialogDescription>
+              {warningMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWarningModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => warningAction && warningAction()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Unassign & Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
