@@ -495,10 +495,29 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
           <CardContent>
             <div className="space-y-3">
               {menuItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
+                <div key={item.id} className="flex items-start gap-4 p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                  {/* Thumbnail Section */}
+                  <div className="flex-shrink-0">
+                    {item.image_url ? (
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border">
+                        <img 
+                          src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg border flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium">{item.name}</h4>
+                      <h4 className="font-semibold text-gray-900">{item.name}</h4>
                       {item.category && (
                         <Badge variant="outline" className="text-xs">
                           {item.category}
@@ -510,52 +529,58 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  {/* Action Buttons Section */}
+                  <div className="flex-shrink-0">
                     {item.image_url ? (
-                      <>
-                        <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                          <img 
-                            src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveImage(item.id)}
+                          >
+                            <Unlink className="h-4 w-4 mr-1" />
+                            Unassign
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignImage(item.id)}
+                            title="Reassign image"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveImage(item.id)}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAssignImage(item.id)}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleGenerateImage(item.id)}
                           disabled={isGeneratingImage[item.id]}
+                          className="w-full"
+                          title="Generate new image"
                         >
                           {isGeneratingImage[item.id] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              Generating...
+                            </>
                           ) : (
-                            <Wand2 className="h-4 w-4" />
+                            <>
+                              <Wand2 className="h-4 w-4 mr-1" />
+                              Regenerate
+                            </>
                           )}
                         </Button>
-                      </>
+                      </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleAssignImage(item.id)}
                           disabled={stats.unassigned === 0}
                         >
-                          <Link2 className="h-4 w-4 mr-2" />
+                          <Link2 className="h-4 w-4 mr-1" />
                           Assign Image
                         </Button>
                         <Button
@@ -567,12 +592,12 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                         >
                           {isGeneratingImage[item.id] ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                               Generating...
                             </>
                           ) : (
                             <>
-                              <Wand2 className="h-4 w-4 mr-2" />
+                              <Wand2 className="h-4 w-4 mr-1" />
                               Generate Image
                             </>
                           )}
