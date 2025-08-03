@@ -453,25 +453,30 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {filteredItems.map((item) => (
             <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              {/* Item Image */}
-              {item.image_url && (
-                <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                  <img 
-                    src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
-                    alt={item.name} 
-                    className="w-full h-full object-cover"
-                  />
+              <CardHeader className="pb-2">
+                <div className="flex gap-4">
+                  {/* Item Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <CardTitle className="text-lg">{item.name}</CardTitle>
+                      <span className="text-lg font-bold text-orange-600 whitespace-nowrap ml-2">
+                        {formatPrice(item.price, restaurant?.currency_code, restaurant?.locale)}
+                      </span>
+                    </div>
+                    <CardDescription className="text-sm">{item.description}</CardDescription>
+                  </div>
+                  
+                  {/* Item Image */}
+                  {item.image_url && (
+                    <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                      <img 
+                        src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              <CardHeader className={item.image_url ? "pb-2" : ""}>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <span className="text-lg font-bold text-orange-600">
-                    {formatPrice(item.price, restaurant?.currency_code, restaurant?.locale)}
-                  </span>
-                </div>
-                <CardDescription>{item.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
