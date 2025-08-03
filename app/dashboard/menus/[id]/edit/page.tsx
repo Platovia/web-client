@@ -174,6 +174,31 @@ export default function EditMenuPage() {
     }
   }
 
+  const handleDeleteMenu = async () => {
+    if (!menuData) return
+
+    const confirmMessage = `Are you sure you want to delete "${menuData.menu.name}"? This action cannot be undone and will permanently delete all menu items, images, and related data.`
+    
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      const response = await apiClient.deleteMenu(id)
+      if (response.error) {
+        setError("Failed to delete menu: " + response.error)
+      } else {
+        setSuccess("Menu deleted successfully! Redirecting...")
+        setTimeout(() => {
+          router.push("/dashboard/menus")
+        }, 2000)
+      }
+    } catch (err) {
+      console.error("Error deleting menu:", err)
+      setError("Failed to delete menu")
+    }
+  }
+
   const handleUpdateItem = async (updatedItem: MenuItem) => {
     if (!menuData) return
 
@@ -385,6 +410,10 @@ export default function EditMenuPage() {
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Save className="mr-2 h-4 w-4" />
               Save Changes
+            </Button>
+            <Button onClick={handleDeleteMenu} variant="destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Menu
             </Button>
           </div>
         </div>

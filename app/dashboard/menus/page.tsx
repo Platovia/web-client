@@ -157,7 +157,11 @@ export default function MenusPage() {
   }
 
   const handleDeleteMenu = async (menuId: string) => {
-    if (!confirm("Are you sure you want to delete this menu? This action cannot be undone.")) {
+    const menu = menus.find(m => m.id === menuId)
+    const menuName = menu ? menu.name : "this menu"
+    const confirmMessage = `Are you sure you want to delete "${menuName}"? This action cannot be undone and will permanently delete all menu items, images, and related data.`
+    
+    if (!confirm(confirmMessage)) {
       return
     }
 
