@@ -684,6 +684,17 @@ class ApiClient {
     });
   }
 
+  async uploadCustomImageForItem(menuId: string, itemId: string, formData: FormData): Promise<ApiResponse<any>> {
+    const headers = {
+      ...this.getAuthHeader(),
+    };
+    return this.makeRequest<any>(`/menus/${menuId}/items/${itemId}/upload-custom-image`, {
+      method: 'POST',
+      body: formData,
+      headers: headers, // Let browser set Content-Type for FormData
+    });
+  }
+
   async getMenuImages(menuId: string): Promise<ApiResponse<MenuImageListResponse>> {
     return this.makeRequest<MenuImageListResponse>(`/menus/menus/${menuId}/images`);
   }

@@ -14,7 +14,9 @@ import {
   CheckCircle, 
   AlertTriangle,
   Eye,
-  Loader2
+  Loader2,
+  Upload,
+  ImageIcon
 } from "lucide-react"
 import { 
   apiClient, 
@@ -47,6 +49,8 @@ export default function ImageAssignmentModal({
   const [isAssigning, setIsAssigning] = useState(false)
   const [error, setError] = useState("")
   const [hoveredImageId, setHoveredImageId] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
 
   if (!isOpen) return null
 
@@ -91,6 +95,49 @@ export default function ImageAssignmentModal({
   }
 
   const aiSuggestions = getAISuggestions()
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError("Please upload an image file")
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be less than 5MB")
+      return
+    }
+
+    setIsUploading(true)
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await apiClient.uploadCustomImageForItem(menuId, itemId, formData)
+      
+      if (response.error) {
+        throw new Error(response.error)
+      }
+
+      setUploadSuccess(true)
+      // Close modal and refresh after short delay to show success
+      setTimeout(() => {
+        onAssignmentComplete()
+        onClose()
+      }, 1000)
+
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image")
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleAssignImage = async (imageId: string) => {
     setIsAssigning(true)
@@ -157,6 +204,15 @@ export default function ImageAssignmentModal({
             </Alert>
           )}
 
+          {uploadSuccess && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Image uploaded and assigned successfully! The modal will close automatically.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* AI Suggestions */}
           {aiSuggestions.length > 0 && (
             <div>
@@ -219,6 +275,53 @@ export default function ImageAssignmentModal({
             </div>
           </div>
 
+          {/* Upload Custom Image */}
+          <div className="space-y-2">
+            <Label htmlFor="custom-upload">Upload Custom Image</Label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">Upload your own image for this item</p>
+              <p className="text-xs text-gray-500 mb-3">Supports JPG, PNG, WebP (max 5MB)</p>
+              
+              <Input
+                id="custom-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={isUploading || uploadSuccess}
+                className="hidden"
+              />
+              
+              <Label htmlFor="custom-upload">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isUploading || uploadSuccess}
+                  asChild
+                >
+                  <span>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : uploadSuccess ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                        Uploaded Successfully!
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image File
+                      </>
+                    )}
+                  </span>
+                </Button>
+              </Label>
+            </div>
+          </div>
+
           {/* All Available Images */}
           <div>
             <Label className="text-sm font-medium">All Available Images</Label>
@@ -271,7 +374,7 @@ export default function ImageAssignmentModal({
             </Button>
             <Button 
               onClick={() => selectedImageId && handleAssignImage(selectedImageId)}
-              disabled={!selectedImageId || isAssigning}
+              disabled={!selectedImageId || isAssigning || isUploading || uploadSuccess}
             >
               {isAssigning ? (
                 <>
@@ -288,6 +391,7 @@ export default function ImageAssignmentModal({
             <Button
               variant="outline"
               onClick={onClose}
+              disabled={isUploading}
             >
               Skip - No Image
             </Button>
