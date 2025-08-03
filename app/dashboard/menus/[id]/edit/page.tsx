@@ -18,6 +18,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
 import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
+import { resolveImageUrl } from "@/lib/utils"
 
 interface MenuWithItems {
   menu: Menu
@@ -424,7 +425,7 @@ export default function EditMenuPage() {
                           {item.image_url && (
                             <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden mr-4 flex-shrink-0">
                               <img 
-                                src={item.image_url} 
+                                src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
                                 alt={item.name}
                                 className="w-full h-full object-cover"
                               />

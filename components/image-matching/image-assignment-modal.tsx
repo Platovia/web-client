@@ -21,6 +21,7 @@ import {
   type ExtractedMenuImage, 
   type MenuItem
 } from "@/lib/api"
+import { resolveImageUrl } from "@/lib/utils"
 
 interface ImageAssignmentModalProps {
   isOpen: boolean
@@ -178,7 +179,7 @@ export default function ImageAssignmentModal({
                   >
                     <div className="aspect-square relative mb-2 bg-gray-100 rounded overflow-hidden">
                       <img 
-                        src={image.image_url} 
+                        src={resolveImageUrl(image.image_url) || "/placeholder.jpg"} 
                         alt={image.ai_description || "Food item"}
                         className="w-full h-full object-cover"
                       />
@@ -243,7 +244,7 @@ export default function ImageAssignmentModal({
                   >
                     <div className="aspect-square relative mb-2 bg-gray-100 rounded overflow-hidden">
                       <img 
-                        src={image.image_url} 
+                        src={resolveImageUrl(image.image_url) || "/placeholder.jpg"} 
                         alt={image.ai_description || "Food item"}
                         className="w-full h-full object-cover"
                       />

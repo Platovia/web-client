@@ -26,6 +26,7 @@ import {
   type MenuItem
 } from "@/lib/api"
 import ImageAssignmentModal from "./image-assignment-modal"
+import { resolveImageUrl } from "@/lib/utils"
 
 interface ImageMatchingTabContentProps {
   menuId: string
@@ -292,7 +293,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                   <div key={image.id} className="border rounded-lg p-3">
                     <div className="aspect-square relative mb-2 bg-gray-100 rounded overflow-hidden">
                       <img 
-                        src={image.image_url} 
+                        src={resolveImageUrl(image.image_url) || "/placeholder.jpg"} 
                         alt={image.ai_description || "Food item"}
                         className="w-full h-full object-cover"
                       />
@@ -352,7 +353,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                       <>
                         <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
                           <img 
-                            src={item.image_url} 
+                            src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />

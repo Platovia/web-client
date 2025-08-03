@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw, Store } from "lucide-react"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
+import { resolveImageUrl } from "@/lib/utils"
 
 interface Restaurant {
   id: string
@@ -445,7 +446,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
               {item.image_url && (
                 <div className="aspect-video relative overflow-hidden rounded-t-lg">
                   <img 
-                    src={item.image_url} 
+                    src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
                     alt={item.name} 
                     className="w-full h-full object-cover"
                   />
