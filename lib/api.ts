@@ -838,6 +838,10 @@ class ApiClient {
     return this.makeRequest<OCRResultListResponse>(`/ocr/ocr/jobs/${jobId}/results`);
   }
 
+  async getLatestOCRJobForMenu(menuId: string): Promise<ApiResponse<OCRJobResponse>> {
+    return this.makeRequest<OCRJobResponse>(`/ocr/menus/${menuId}/ocr/jobs/latest`);
+  }
+
   async updateOCRResult(resultId: string, updateData: OCRResultUpdateRequest): Promise<ApiResponse<OCRResultResponse>> {
     return this.makeRequest<OCRResultResponse>(`/ocr/ocr/results/${resultId}`, {
       method: 'PUT',

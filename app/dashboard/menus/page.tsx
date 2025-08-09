@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu, Clock } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -51,6 +52,7 @@ export default function MenusPage() {
   const [menus, setMenus] = useState<MenuWithDetails[]>([])
   const [filteredMenus, setFilteredMenus] = useState<MenuWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [ocrStatuses, setOcrStatuses] = useState<Record<string, { status: string; progress: number; processed: number; total: number }>>({})
   const [error, setError] = useState("")
   const [stats, setStats] = useState({
     totalMenus: 0,
@@ -66,6 +68,38 @@ export default function MenusPage() {
   useEffect(() => {
     handleSearch(searchQuery)
   }, [menus, searchQuery])
+
+  // Poll OCR status for menus
+  useEffect(() => {
+    let timer: any
+    const poll = async () => {
+      try {
+        const updates: Record<string, { status: string; progress: number; processed: number; total: number }> = {}
+        await Promise.all(
+          menus.map(async (m) => {
+            try {
+              const res = await apiClient.getLatestOCRJobForMenu(m.id)
+              if (res.data) {
+                updates[m.id] = {
+                  status: res.data.status,
+                  progress: Math.round(res.data.progress_percentage || 0),
+                  processed: res.data.processed_images || 0,
+                  total: res.data.total_images || 0,
+                }
+              }
+            } catch {}
+          })
+        )
+        if (Object.keys(updates).length) {
+          setOcrStatuses((prev) => ({ ...prev, ...updates }))
+        }
+      } finally {
+        timer = setTimeout(poll, 3000)
+      }
+    }
+    if (menus.length) poll()
+    return () => timer && clearTimeout(timer)
+  }, [menus])
 
   const loadMenus = async () => {
     setIsLoading(true)
@@ -346,7 +380,13 @@ export default function MenusPage() {
                     <Menu className="h-12 w-12 text-gray-400" />
                   </div>
                 )}
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 flex gap-2">
+                  {ocrStatuses[menu.id] && (ocrStatuses[menu.id].status === 'processing' || ocrStatuses[menu.id].status === 'pending') && (
+                    <Badge className="bg-amber-500 hover:bg-amber-600">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Processing {ocrStatuses[menu.id].progress || 0}%
+                    </Badge>
+                  )}
                   <Badge variant={menu.is_active ? "default" : "secondary"}>
                     {menu.is_active ? "active" : "inactive"}
                   </Badge>
@@ -430,6 +470,17 @@ export default function MenusPage() {
                     <p className="text-xs text-gray-600">QR Scans</p>
                   </div>
                 </div>
+
+                {/* Live AI processing status */}
+                {ocrStatuses[menu.id] && (ocrStatuses[menu.id].status === 'processing' || ocrStatuses[menu.id].status === 'pending') && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 text-sm text-amber-700">
+                      <Clock className="h-4 w-4" />
+                      AI processing {ocrStatuses[menu.id].processed}/{ocrStatuses[menu.id].total || 0} pages...
+                    </div>
+                    <Progress value={ocrStatuses[menu.id].progress} className="h-2 mt-2" />
+                  </div>
+                )}
 
                 <div className="flex gap-2 pt-2">
                   <Link 

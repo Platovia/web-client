@@ -12,7 +12,7 @@ import { TagSelector } from "@/components/ui/tag-selector"
 import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
@@ -47,6 +47,7 @@ export default function EditMenuPage() {
     avgMessagesPerSession: 0.0 
   })
   const [success, setSuccess] = useState("")
+  const [processing, setProcessing] = useState<{ status: string; progress: number; processed?: number; total?: number } | null>(null)
   const [error, setError] = useState("")
 
   const loadMenuData = useCallback(async () => {
@@ -61,6 +62,23 @@ export default function EditMenuPage() {
       if (menuResponse.error) {
         setError("Failed to load menu: " + menuResponse.error)
         return
+      }
+
+      // Check processing status first to guard UI during processing
+      try {
+        const latestJob = await apiClient.getLatestOCRJobForMenu(id)
+        if (latestJob.data && (latestJob.data.status === 'processing' || latestJob.data.status === 'pending')) {
+          setProcessing({
+            status: latestJob.data.status,
+            progress: Math.round(latestJob.data.progress_percentage || 0),
+            processed: latestJob.data.processed_images || 0,
+            total: latestJob.data.total_images || 0,
+          })
+        } else {
+          setProcessing(null)
+        }
+      } catch {
+        setProcessing(null)
       }
 
       // Load menu items
@@ -387,6 +405,12 @@ export default function EditMenuPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {processing && (
+              <div className="px-3 py-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-2 mr-4">
+                <Clock className="h-4 w-4" />
+                AI processing {processing.processed || 0}/{processing.total || 0} pages... {processing.progress}%
+              </div>
+            )}
             {!menuData.menu.is_active && (
               <Button onClick={handleActivateMenu} disabled={isActivating} variant="default" className="bg-green-600 hover:bg-green-700">
                 {isActivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -406,12 +430,12 @@ export default function EditMenuPage() {
                 {menuData.menu.qr_code_data ? "Preview" : "Generate QR"}
               </Button>
             </Link>
-            <Button onClick={handleSaveMenu} disabled={isSaving}>
+            <Button onClick={handleSaveMenu} disabled={isSaving || Boolean(processing)}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>
-            <Button onClick={handleDeleteMenu} variant="destructive">
+            <Button onClick={handleDeleteMenu} variant="destructive" disabled={Boolean(processing)}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Menu
             </Button>
@@ -441,13 +465,21 @@ export default function EditMenuPage() {
           </TabsList>
 
           <TabsContent value="items" className="space-y-6">
+            {processing && (
+              <Alert className="mb-4 border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  This menu is currently processing. Editing is temporarily disabled. Please check back shortly.
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Menu Items by Category */}
             {categories.map((category) => (
               <Card key={category}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{category}</CardTitle>
-                    <Button size="sm" onClick={() => setAddingItem(category)}>
+                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={Boolean(processing)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Item
                     </Button>
@@ -516,13 +548,14 @@ export default function EditMenuPage() {
                               variant={item.is_available ? "outline" : "default"}
                               size="sm"
                               onClick={() => toggleItemAvailability(item.id)}
+                              disabled={Boolean(processing)}
                             >
                               {item.is_available ? "Available" : "Unavailable"}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
+                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={Boolean(processing)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)}>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={Boolean(processing)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
