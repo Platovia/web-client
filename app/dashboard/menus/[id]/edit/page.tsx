@@ -424,7 +424,7 @@ export default function EditMenuPage() {
                 QR Code
               </Button>
             </Link>
-            <Link href={menuData.menu.qr_code_data || `/dashboard/menus/${id}/qr`} target={menuData.menu.qr_code_data ? "_blank" : "_self"}>
+            <Link href={menuData.menu.qr_code_data ? `/menu/${menuData.restaurant.id}?token=${menuData.menu.qr_code_data}` : `/dashboard/menus/${id}/qr`} target={menuData.menu.qr_code_data ? "_blank" : "_self"}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
                 {menuData.menu.qr_code_data ? "Preview" : "Generate QR"}

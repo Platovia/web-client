@@ -575,7 +575,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                       <span>Updated {new Date(menu.updated_at).toLocaleDateString()}</span>
                     </div>
                     <div className="flex gap-2">
-                      <Link href={menu.qr_code_data || `/dashboard/menus/${menu.id}/qr`} className="flex-1" target={menu.qr_code_data ? "_blank" : "_self"}>
+                      <Link href={menu.qr_code_data ? `/menu/${restaurant.id}?token=${menu.qr_code_data}` : `/dashboard/menus/${menu.id}/qr`} className="flex-1" target={menu.qr_code_data ? "_blank" : "_self"}>
                         <Button variant="outline" size="sm" className="w-full bg-transparent">
                           <Eye className="h-4 w-4 mr-1" />
                           {menu.qr_code_data ? "View" : "Generate QR"}

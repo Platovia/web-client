@@ -407,7 +407,7 @@ export default function MenusPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <Link href={menu.qr_code_data || `/dashboard/menus/${menu.id}/qr`} target={menu.qr_code_data ? "_blank" : "_self"}>
+                      <Link href={menu.qr_code_data ? `/menu/${menu.restaurant_id}?token=${menu.qr_code_data}` : `/dashboard/menus/${menu.id}/qr`} target={menu.qr_code_data ? "_blank" : "_self"}>
                         <DropdownMenuItem>
                           <Eye className="mr-2 h-4 w-4" />
                           {menu.qr_code_data ? "View Menu" : "Generate QR"}
@@ -484,7 +484,7 @@ export default function MenusPage() {
 
                 <div className="flex gap-2 pt-2">
                   <Link 
-                    href={menu.qr_code_data || `/dashboard/menus/${menu.id}/qr`} 
+                    href={menu.qr_code_data ? `/menu/${menu.restaurant_id}?token=${menu.qr_code_data}` : `/dashboard/menus/${menu.id}/qr`} 
                     className="flex-1"
                     target={menu.qr_code_data ? "_blank" : "_self"}
                   >
