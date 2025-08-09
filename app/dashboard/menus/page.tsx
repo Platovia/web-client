@@ -50,6 +50,7 @@ interface MenuWithDetails {
 export default function MenusPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [menus, setMenus] = useState<MenuWithDetails[]>([])
+  const [validTokens, setValidTokens] = useState<Record<string, string | null>>({}) // menuId -> token or null
   const [filteredMenus, setFilteredMenus] = useState<MenuWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [ocrStatuses, setOcrStatuses] = useState<Record<string, { status: string; progress: number; processed: number; total: number }>>({})
@@ -75,6 +76,7 @@ export default function MenusPage() {
     const poll = async () => {
       try {
         const updates: Record<string, { status: string; progress: number; processed: number; total: number }> = {}
+        const tokenChecks: Record<string, string | null> = {}
         await Promise.all(
           menus.map(async (m) => {
             try {
@@ -87,11 +89,21 @@ export default function MenusPage() {
                   total: res.data.total_images || 0,
                 }
               }
+              // Validate QR token availability for this menu
+              try {
+                const qr = await apiClient.getQRCodeInfo(m.id)
+                tokenChecks[m.id] = qr.data?.token || null
+              } catch {
+                tokenChecks[m.id] = null
+              }
             } catch {}
           })
         )
         if (Object.keys(updates).length) {
           setOcrStatuses((prev) => ({ ...prev, ...updates }))
+        }
+        if (Object.keys(tokenChecks).length) {
+          setValidTokens((prev) => ({ ...prev, ...tokenChecks }))
         }
       } finally {
         timer = setTimeout(poll, 3000)
@@ -407,10 +419,10 @@ export default function MenusPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <Link href={menu.qr_code_data ? `/menu/${menu.restaurant_id}?token=${menu.qr_code_data}` : `/dashboard/menus/${menu.id}/qr`} target={menu.qr_code_data ? "_blank" : "_self"}>
+                      <Link href={validTokens[menu.id] ? `/menu/${menu.restaurant_id}?token=${validTokens[menu.id]}` : `/dashboard/menus/${menu.id}/qr`} target={validTokens[menu.id] ? "_blank" : "_self"}>
                         <DropdownMenuItem>
                           <Eye className="mr-2 h-4 w-4" />
-                          {menu.qr_code_data ? "View Menu" : "Generate QR"}
+                          {validTokens[menu.id] ? "View Menu" : "Generate QR"}
                         </DropdownMenuItem>
                       </Link>
                       <Link href={`/dashboard/menus/${menu.id}/edit`}>
@@ -484,13 +496,13 @@ export default function MenusPage() {
 
                 <div className="flex gap-2 pt-2">
                   <Link 
-                    href={menu.qr_code_data ? `/menu/${menu.restaurant_id}?token=${menu.qr_code_data}` : `/dashboard/menus/${menu.id}/qr`} 
+                    href={validTokens[menu.id] ? `/menu/${menu.restaurant_id}?token=${validTokens[menu.id]}` : `/dashboard/menus/${menu.id}/qr`} 
                     className="flex-1"
-                    target={menu.qr_code_data ? "_blank" : "_self"}
+                    target={validTokens[menu.id] ? "_blank" : "_self"}
                   >
                     <Button variant="outline" size="sm" className="w-full bg-transparent">
                       <Eye className="h-4 w-4 mr-1" />
-                      {menu.qr_code_data ? "View" : "Generate QR"}
+                      {validTokens[menu.id] ? "View" : "Generate QR"}
                     </Button>
                   </Link>
                   <Link href={`/dashboard/menus/${menu.id}/edit`} className="flex-1">

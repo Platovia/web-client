@@ -49,6 +49,7 @@ export default function EditMenuPage() {
   const [success, setSuccess] = useState("")
   const [processing, setProcessing] = useState<{ status: string; progress: number; processed?: number; total?: number } | null>(null)
   const [error, setError] = useState("")
+  const [activeToken, setActiveToken] = useState<string | null>(null)
 
   const loadMenuData = useCallback(async () => {
     if (!id) return
@@ -135,6 +136,24 @@ export default function EditMenuPage() {
       loadMenuData()
     }
   }, [id, loadMenuData])
+
+  // Load/refresh active QR token for Preview
+  useEffect(() => {
+    const fetchToken = async () => {
+      if (!id) return
+      try {
+        const qr = await apiClient.getQRCodeInfo(id)
+        if (qr.data?.token) {
+          setActiveToken(qr.data.token)
+        } else {
+          setActiveToken(null)
+        }
+      } catch {
+        setActiveToken(null)
+      }
+    }
+    fetchToken()
+  }, [id])
 
   const categories = menuData ? Array.from(new Set(menuData.items.map((item) => item.category || "Other").filter(Boolean))) : []
 
@@ -424,10 +443,10 @@ export default function EditMenuPage() {
                 QR Code
               </Button>
             </Link>
-            <Link href={menuData.menu.qr_code_data ? `/menu/${menuData.restaurant.id}?token=${menuData.menu.qr_code_data}` : `/dashboard/menus/${id}/qr`} target={menuData.menu.qr_code_data ? "_blank" : "_self"}>
+            <Link href={activeToken ? `/menu/${menuData.restaurant?.id}?token=${activeToken}` : `/dashboard/menus/${id}/qr`} target={activeToken ? "_blank" : "_self"}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
-                {menuData.menu.qr_code_data ? "Preview" : "Generate QR"}
+                {activeToken ? "Preview" : "Generate QR"}
               </Button>
             </Link>
             <Button onClick={handleSaveMenu} disabled={isSaving || Boolean(processing)}>
