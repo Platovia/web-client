@@ -23,7 +23,10 @@ interface UploadedFile {
   preview: string
   status: "pending" | "uploading" | "processing" | "completed" | "error"
   progress: number
-  extractedItems?: number
+  // Number of items extracted across the whole menu (set at finalizing step)
+  itemsExtracted?: number
+  // For PDFs, number of pages successfully converted/processed
+  pagesProcessed?: number
   imageUrl?: string
   ocrJobId?: string
   fileType: "image" | "pdf"
@@ -133,8 +136,7 @@ export default function UploadMenuPage() {
               return { 
                 ...file, 
                 status: "completed", 
-                progress: 100,
-                extractedItems: undefined // Will be updated after getting actual count
+                progress: 100
               }
             } else if (job.status === "failed") {
               return { ...file, status: "error" }
@@ -253,7 +255,7 @@ export default function UploadMenuPage() {
             status: "processing", 
             progress: 70,
             pdfInfo: uploadResult.pdf_info,
-            extractedItems: uploadResult.file_count
+            pagesProcessed: uploadResult.file_count
           } : f
         ))
 
@@ -384,7 +386,7 @@ export default function UploadMenuPage() {
           // Update all completed files with the total count
           setUploadedFiles(prev => prev.map(file => 
             file.status === "completed" 
-              ? { ...file, extractedItems: totalExtractedItems }
+              ? { ...file, itemsExtracted: totalExtractedItems }
               : file
           ))
           
@@ -597,9 +599,11 @@ export default function UploadMenuPage() {
 
                               {file.status === "completed" && (
                                 <div className="text-sm text-green-600">
-                                  {file.extractedItems !== undefined 
-                                    ? `✓ ${file.fileType === "pdf" ? `${file.extractedItems} pages processed, items extracted` : `Extracted ${file.extractedItems} menu items`}`
-                                    : "✓ Processing completed"
+                                  {file.fileType === "pdf"
+                                    ? `✓ ${file.pagesProcessed ?? file.pdfInfo?.pageCount ?? 0} pages processed${file.itemsExtracted !== undefined ? `, ${file.itemsExtracted} items extracted` : ""}`
+                                    : (file.itemsExtracted !== undefined 
+                                        ? `Extracted ${file.itemsExtracted} menu items`
+                                        : "✓ Processing completed")
                                   }
                                 </div>
                               )}
