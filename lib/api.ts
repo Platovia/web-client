@@ -42,6 +42,11 @@ interface RegisterRequest {
   last_name: string;
 }
 
+interface UserUpdateRequest {
+  first_name?: string;
+  last_name?: string;
+}
+
 interface Company {
   id: string;
   name: string;
@@ -51,6 +56,13 @@ interface Company {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface CompanyUpdateRequest {
+  name?: string;
+  description?: string;
+  contact_info?: any;
+  subscription_tier?: string;
 }
 
 interface Restaurant {
@@ -540,6 +552,13 @@ class ApiClient {
     return this.makeRequest<User>('/auth/me');
   }
 
+  async updateCurrentUser(updateData: UserUpdateRequest): Promise<ApiResponse<User>> {
+    return this.makeRequest<User>('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
   async logout(): Promise<void> {
     this.clearTokens();
   }
@@ -554,6 +573,17 @@ class ApiClient {
 
   async getUserCompanies(): Promise<ApiResponse<{ companies: Company[], total: number }>> {
     return this.makeRequest<{ companies: Company[], total: number }>('/companies');
+  }
+
+  async getCompany(companyId: string): Promise<ApiResponse<Company>> {
+    return this.makeRequest<Company>(`/companies/${companyId}`);
+  }
+
+  async updateCompany(companyId: string, updateData: CompanyUpdateRequest): Promise<ApiResponse<Company>> {
+    return this.makeRequest<Company>(`/companies/${companyId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
   }
 
   // Restaurant endpoints
@@ -1080,6 +1110,7 @@ export const apiClient = new ApiClient();
 export type { 
   User, 
   Company, 
+  CompanyUpdateRequest,
   Restaurant, 
   RestaurantCreateRequest, 
   RestaurantUpdateRequest, 
@@ -1087,6 +1118,7 @@ export type {
   AuthTokens, 
   LoginRequest, 
   RegisterRequest, 
+  UserUpdateRequest,
   ApiResponse,
   MenuItem,
   Menu,
