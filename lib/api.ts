@@ -136,6 +136,10 @@ interface Menu {
   qr_code_url?: string;
   qr_code_data?: string;
   template_id: string;
+  theme_config?: any;
+  layout_config?: any;
+  layout_status?: string;
+  layout_version?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -149,6 +153,10 @@ interface MenuCreateRequest {
 interface MenuUpdateRequest {
   name?: string;
   template_id?: string;
+  theme_config?: any;
+  layout_config?: any;
+  layout_status?: string;
+  layout_version?: number;
   is_active?: boolean;
 }
 
@@ -313,6 +321,10 @@ interface PublicMenuResponse {
       locale?: string;
     } | null;
     template_id?: string;
+    theme_config?: any;
+    layout_config?: any;
+    layout_status?: string;
+    layout_version?: number;
     created_at: string;
     updated_at: string;
   };

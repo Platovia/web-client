@@ -1,6 +1,3 @@
-import { createClient } from "@supabase/supabase-js"
+// Supabase is not used in this project; this file remains as a stub to avoid import errors.
+export {}
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)

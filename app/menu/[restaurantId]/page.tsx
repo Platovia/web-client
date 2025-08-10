@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, ChevronUp, Minus, RotateCcw, Store } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
+import { MenuRenderer } from "@/components/menu-renderer"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -43,6 +44,10 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [error, setError] = useState("")
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [templateId, setTemplateId] = useState<string | undefined>(undefined)
+  const [themeConfig, setThemeConfig] = useState<any | null>(null)
+  const [layoutConfig, setLayoutConfig] = useState<any | null>(null)
+  const [layoutStatus, setLayoutStatus] = useState<string | undefined>(undefined)
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
@@ -104,6 +109,10 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
           const { menu, menu_items } = response.data
           
           setMenuId(menu.id)
+          setTemplateId(menu.template_id)
+          setThemeConfig(menu.theme_config || null)
+          setLayoutConfig(menu.layout_config || null)
+          setLayoutStatus(menu.layout_status)
           setRestaurant({
             id: menu.restaurant?.id || '',
             name: menu.restaurant?.name || 'Unknown Restaurant',
@@ -393,116 +402,26 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search menu items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-                className="whitespace-nowrap"
-              >
-                {category}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Menu Items */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex gap-4">
-                  {/* Item Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <CardTitle className="text-lg">{item.name}</CardTitle>
-                      <span className="text-lg font-bold text-orange-600 whitespace-nowrap ml-2">
-                        {formatPrice(item.price, restaurant?.currency_code, restaurant?.locale)}
-                      </span>
-                    </div>
-                    <CardDescription className="text-sm">{item.description}</CardDescription>
-                  </div>
-                  
-                  {/* Item Image */}
-                  {item.image_url && (
-                    <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {item.category && <Badge variant="secondary">{item.category}</Badge>}
-                  {/* Display tags dynamically if available, otherwise fall back to legacy boolean fields */}
-                  {item.tags && item.tags.length > 0 ? (
-                    <TagList 
-                      tags={item.tags} 
-                      size="sm"
-                      maxTags={5}
-                    />
-                  ) : (
-                    <>
-                      {item.is_vegetarian && (
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <Leaf className="h-3 w-3 mr-1" />
-                          Vegetarian
-                        </Badge>
-                      )}
-                      {item.is_vegan && (
-                        <Badge variant="outline" className="text-green-700 border-green-700">
-                          <Heart className="h-3 w-3 mr-1" />
-                          Vegan
-                        </Badge>
-                      )}
-                      {item.is_gluten_free && (
-                        <Badge variant="outline" className="text-blue-600 border-blue-600">
-                          <Wheat className="h-3 w-3 mr-1" />
-                          Gluten Free
-                        </Badge>
-                      )}
-                    </>
-                  )}
-                </div>
-                {item.allergens && item.allergens.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500">Allergens: {item.allergens.join(", ")}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredItems.length === 0 && menuItems.length > 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No menu items found matching your search.</p>
-          </div>
-        )}
-
-        {menuItems.length === 0 && !error && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No menu items available at this time.</p>
-          </div>
-        )}
+        <MenuRenderer
+          templateId={templateId}
+          restaurant={{
+            id: restaurant?.id || "",
+            name: restaurant?.name || "",
+            description: restaurant?.description,
+            logo_url: restaurant?.logo_url,
+            currency_code: restaurant?.currency_code,
+            locale: restaurant?.locale,
+          }}
+          items={filteredItems}
+          themeConfig={themeConfig}
+          layoutConfig={layoutStatus === "published" ? layoutConfig : null}
+          mode={layoutStatus === "published" && layoutConfig ? "builder" : "template"}
+          categories={categories.filter((c) => c !== "All")}
+          selectedCategory={selectedCategory}
+          searchQuery={searchQuery}
+          onChangeCategory={setSelectedCategory}
+          onChangeSearch={setSearchQuery}
+        />
       </div>
 
       {/* Chat Button - only show if we have a QR token */}

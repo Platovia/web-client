@@ -12,7 +12,7 @@ import { TagSelector } from "@/components/ui/tag-selector"
 import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
@@ -480,6 +480,7 @@ export default function EditMenuPage() {
             <TabsTrigger value="items">Menu Items</TabsTrigger>
             <TabsTrigger value="image-matching">Image Matching</TabsTrigger>
             <TabsTrigger value="settings">Menu Settings</TabsTrigger>
+            <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -676,6 +677,47 @@ export default function EditMenuPage() {
                     <p className="text-2xl font-bold text-indigo-600">{menuAnalytics.avgMessagesPerSession.toFixed(1)}</p>
                     <p className="text-sm text-gray-600">Avg Messages/Session</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="design">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Palette className="h-5 w-5" /> Menu Design</CardTitle>
+                <CardDescription>Choose a template and customize theme. Advanced users can switch to the visual builder.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Template</Label>
+                    <select
+                      value={menuData.menu.template_id}
+                      onChange={(e) => setMenuData(prev => prev ? ({ ...prev, menu: { ...prev.menu, template_id: e.target.value } }) : prev)}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="default">Default</option>
+                      <option value="hero-grid">Hero Grid</option>
+                      <option value="compact-list">Compact List</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Primary Color</Label>
+                    <input type="color" className="w-16 h-10 border rounded" onChange={(e) => setMenuData(prev => prev ? ({ ...prev, menu: { ...prev.menu, theme_config: { ...(prev.menu as any).theme_config, colors: { ...((prev.menu as any).theme_config?.colors || {}), primary: e.target.value } } as any } }) : prev)} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link href={`/dashboard/menus/${id}/design`}>
+                    <Button variant="outline"><LayoutTemplate className="h-4 w-4 mr-2" /> Open Visual Builder</Button>
+                  </Link>
+                  <Button onClick={async () => {
+                    if (!menuData) return
+                    setIsSaving(true)
+                    const resp = await apiClient.updateMenu(id, { template_id: menuData.menu.template_id, theme_config: (menuData.menu as any).theme_config })
+                    setIsSaving(false)
+                    if (resp.error) setError(resp.error); else setSuccess("Design saved")
+                  }}>Save Design</Button>
                 </div>
               </CardContent>
             </Card>
