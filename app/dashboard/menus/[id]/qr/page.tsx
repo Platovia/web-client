@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Download, RefreshCw, QrCode, ExternalLink, Copy, Check, Loader2 } from "lucide-react"
+import { ArrowLeft, Download, RefreshCw, QrCode, ExternalLink, Copy, Check, Loader2, Code } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { apiClient, type Menu, type QRCodeResponse } from "@/lib/api"
@@ -143,12 +143,20 @@ export default function MenuQRPage() {
               Back to Menus
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">QR Code</h1>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-gray-900">QR Code & Embed</h1>
             <p className="text-gray-600">
-              QR code for menu: <span className="font-medium">{menu?.name}</span>
+              QR code and embeddable chatbot for menu: <span className="font-medium">{menu?.name}</span>
             </p>
           </div>
+          {qrInfo?.token && (
+            <Link href={`/dashboard/menus/${menuId}/embed`}>
+              <Button variant="outline">
+                <Code className="h-4 w-4 mr-2" />
+                Get Embed Code
+              </Button>
+            </Link>
+          )}
         </div>
 
         {error && (
@@ -366,4 +374,4 @@ export default function MenuQRPage() {
       </div>
     </DashboardLayout>
   )
-} 
+}
