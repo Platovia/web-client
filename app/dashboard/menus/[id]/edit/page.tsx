@@ -704,7 +704,22 @@ export default function EditMenuPage() {
                   </div>
                   <div>
                     <Label>Primary Color</Label>
-                    <input type="color" className="w-16 h-10 border rounded" onChange={(e) => setMenuData(prev => prev ? ({ ...prev, menu: { ...prev.menu, theme_config: { ...(prev.menu as any).theme_config, colors: { ...((prev.menu as any).theme_config?.colors || {}), primary: e.target.value } } as any } }) : prev)} />
+                    <input
+                      type="color"
+                      className="w-16 h-10 border rounded"
+                      value={(menuData.menu as any)?.theme_config?.colors?.primary || "#ff6600"}
+                      onChange={(e) => setMenuData(prev => prev ? ({
+                        ...prev,
+                        menu: {
+                          ...prev.menu,
+                          theme_config: { ...((prev.menu as any).theme_config || {}), colors: { ...(((prev.menu as any).theme_config?.colors) || {}), primary: e.target.value } }
+                        }
+                      }) : prev)}
+                      onBlur={async (e) => {
+                        const primary = e.currentTarget.value
+                        await apiClient.updateMenu(id, { theme_config: { ...((menuData.menu as any).theme_config || {}), colors: { ...(((menuData.menu as any).theme_config?.colors) || {}), primary } } })
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

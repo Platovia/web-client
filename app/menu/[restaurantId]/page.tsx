@@ -412,7 +412,7 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
             currency_code: restaurant?.currency_code,
             locale: restaurant?.locale,
           }}
-          items={filteredItems}
+          items={filteredItems.length ? filteredItems : menuItems}
           themeConfig={themeConfig}
           layoutConfig={layoutStatus === "published" ? layoutConfig : null}
           mode={layoutStatus === "published" && layoutConfig ? "builder" : "template"}

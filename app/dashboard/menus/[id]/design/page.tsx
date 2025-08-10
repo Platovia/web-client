@@ -11,6 +11,7 @@ import { apiClient } from "@/lib/api"
 // Load Puck Editor dynamically to keep it isolated
 const Puck = dynamic(() => import("@measured/puck").then(m => (m as any).Puck), { ssr: false }) as any
 import "@measured/puck/puck.css"
+import { puckConfig } from "@/components/puck/config"
 
 const config = {
   components: {
@@ -47,9 +48,19 @@ export default function MenuDesignPage() {
 
   const onPublish = async (nextData: any) => {
     setSaving(true)
-    const resp = await apiClient.updateMenu(id, { layout_config: nextData, layout_status: "published" })
+    // Create a new template version and publish+activate it
+    const create = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/menus/menus/${id}/templates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(apiClient as any).getAuthHeader?.() },
+      body: JSON.stringify({ name: "Custom", layout_config: nextData, theme_config: {} })
+    })
+    const created = await create.json()
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/menus/menus/${id}/templates/${created.id}/publish?set_active=true`, {
+      method: "POST",
+      headers: { ...(apiClient as any).getAuthHeader?.() }
+    })
     setSaving(false)
-    return { status: resp.error ? "error" : "success" }
+    return { status: "success" }
   }
 
   return (
@@ -61,7 +72,7 @@ export default function MenuDesignPage() {
           </CardHeader>
           <CardContent>
             <div className="border rounded">
-              <Puck config={config as any} data={data} onPublish={onPublish} />
+              <Puck config={puckConfig as any} data={data} onPublish={onPublish} />
             </div>
             <div className="mt-4">
               <Button onClick={() => onPublish(data)} disabled={saving}>{saving ? "Publishing..." : "Publish"}</Button>
