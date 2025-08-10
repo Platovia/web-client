@@ -694,7 +694,11 @@ export default function EditMenuPage() {
                     <Label>Template</Label>
                     <select
                       value={menuData.menu.template_id}
-                      onChange={(e) => setMenuData(prev => prev ? ({ ...prev, menu: { ...prev.menu, template_id: e.target.value } }) : prev)}
+                      onChange={(e) => {
+                        const templateKey = e.target.value
+                        setMenuData(prev => prev ? ({ ...prev, menu: { ...prev.menu, template_id: templateKey } }) : prev)
+                        // Do not save automatically; wait for Save Design
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="default">Default</option>
@@ -729,6 +733,16 @@ export default function EditMenuPage() {
                   <Button onClick={async () => {
                     if (!menuData) return
                     setIsSaving(true)
+                    // Persist chosen default template by upserting the menu_templates row for that definition
+                    if (menuData.menu.template_id) {
+                      const templateKey = menuData.menu.template_id
+                      // Map key -> definition_id to match backend expectations
+                      const defsResp = await apiClient.listTemplateDefinitions()
+                      const def = defsResp.data?.definitions?.find(d => d.key === templateKey)
+                      const payload = def ? { name: def.name, definition_id: def.id } : { name: templateKey, definition_key: templateKey }
+                      const created = await apiClient.createMenuTemplate(id, payload as any)
+                      if (created.data?.id) await apiClient.publishMenuTemplate(id, created.data.id, true)
+                    }
                     const resp = await apiClient.updateMenu(id, { template_id: menuData.menu.template_id, theme_config: (menuData.menu as any).theme_config })
                     setIsSaving(false)
                     if (resp.error) setError(resp.error); else setSuccess("Design saved")

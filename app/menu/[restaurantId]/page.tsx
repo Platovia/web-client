@@ -27,7 +27,7 @@ interface Restaurant {
   locale?: string
 }
 
-export default function MenuPage({ params }: { params: Promise<{ restaurantId: string }> }) {
+export default function MenuPage({ params }: { params: { restaurantId: string } | Promise<{ restaurantId: string }> }) {
   const searchParams = useSearchParams()
   const qrToken = searchParams?.get('token')
   
@@ -56,14 +56,14 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
 
   useEffect(() => {
     const initParams = async () => {
-      const resolvedParams = await params
-      setRestaurantId(resolvedParams.restaurantId)
+      const resolved = (typeof (params as any)?.then === "function") ? await (params as Promise<{ restaurantId: string }>) : (params as { restaurantId: string })
+      setRestaurantId(resolved.restaurantId)
     }
     initParams()
   }, [params])
 
   useEffect(() => {
-    if (restaurantId) {
+    if (qrToken || restaurantId) {
       loadMenuData()
     }
   }, [restaurantId, qrToken])
@@ -378,29 +378,6 @@ export default function MenuPage({ params }: { params: Promise<{ restaurantId: s
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4">
-            {restaurant?.logo_url ? (
-              <img
-                src={restaurant.logo_url}
-                alt={restaurant.name || "Restaurant"}
-                className="w-16 h-16 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                <Store className="h-8 w-8 text-gray-400" />
-              </div>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{restaurant?.name}</h1>
-                             <p className="text-gray-600">{restaurant?.description || ''}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8">
         <MenuRenderer
           templateId={templateId}

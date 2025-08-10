@@ -8,9 +8,9 @@ import { puckConfig } from "./config"
 const Render = dynamic(() => import("@measured/puck").then(m => (m as any).Render), { ssr: false }) as any
 
 export default function BuilderRenderer({ layout, data }: { layout: any; data: Omit<MenuRendererProps, "themeConfig" | "templateId"> }) {
-  const content = layout?.content ?? layout
-  // Attach __data at the root so blocks can use it
-  return <Render config={puckConfig as any} data={{ content, __data: data }} />
+  // Pass the full layout object (including zones/root) so DropZones render their children
+  const fullLayout = typeof layout === "object" && layout?.content ? layout : { content: layout }
+  return <Render config={puckConfig as any} data={{ ...fullLayout, __data: data }} />
 }
 
 

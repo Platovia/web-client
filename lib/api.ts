@@ -422,6 +422,26 @@ interface MenuWithDetailsListResponse {
   total: number;
 }
 
+// Template types
+interface TemplateDefinition {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  default_theme?: any;
+}
+
+interface MenuTemplate {
+  id: string;
+  name: string;
+  definition_key?: string;
+  theme_config?: any;
+  layout_config?: any;
+  is_active: boolean;
+  is_draft: boolean;
+  created_at: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -640,7 +660,11 @@ class ApiClient {
   }
 
   // Public menu endpoints (no authentication required)
-  async getPublicMenu(token: string): Promise<ApiResponse<PublicMenuResponse>> {
+  async getPublicMenu(token: string, menuId?: string): Promise<ApiResponse<PublicMenuResponse>> {
+    if (menuId) {
+      // For design editor, get menu data by menu ID (requires auth)
+      return this.makeRequest<PublicMenuResponse>(`/menus/${menuId}/public-data`);
+    }
     return this.makeRequest<PublicMenuResponse>(`/public/menu/${token}`);
   }
 
@@ -936,6 +960,30 @@ class ApiClient {
     
     const firstCompany = companiesResponse.data.companies[0];
     return this.makeRequest<MenuWithDetailsListResponse>(`/companies/${firstCompany.id}/menus`);
+  }
+
+  // Template definition endpoints
+  async listTemplateDefinitions(): Promise<ApiResponse<{ definitions: TemplateDefinition[] }>> {
+    return this.makeRequest<{ definitions: TemplateDefinition[] }>(`/menus/templates/definitions`)
+  }
+
+  // Menu template endpoints
+  async listMenuTemplates(menuId: string): Promise<ApiResponse<{ templates: MenuTemplate[] }>> {
+    return this.makeRequest<{ templates: MenuTemplate[] }>(`/menus/${menuId}/templates`)
+  }
+
+  async createMenuTemplate(menuId: string, payload: { name?: string; definition_key?: string; theme_config?: any; layout_config?: any }): Promise<ApiResponse<{ id: string }>> {
+    return this.makeRequest<{ id: string }>(`/menus/${menuId}/templates`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async publishMenuTemplate(menuId: string, templateId: string, setActive: boolean): Promise<ApiResponse<{ success: boolean }>> {
+    const qs = setActive ? '?set_active=true' : '?set_active=false'
+    return this.makeRequest<{ success: boolean }>(`/menus/${menuId}/templates/${templateId}/publish${qs}`, {
+      method: 'POST',
+    })
   }
 
   async getRestaurantMenusWithDetails(restaurantId: string): Promise<ApiResponse<MenuWithDetailsListResponse>> {
