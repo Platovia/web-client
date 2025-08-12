@@ -92,20 +92,31 @@ export default function EmbeddedChatPage() {
           if (done) break
           const chunk = decoder.decode(value, { stream: true })
           if (!chunk) continue
-          console.log('Frontend received chunk:', JSON.stringify(chunk), 'length:', chunk.length)
-          accumulated += chunk
-          // Update last assistant message
-          setChatMessages(prev => {
-            const copy = [...prev]
-            for (let i = copy.length - 1; i >= 0; i--) {
-              if (copy[i].role === 'assistant') { 
-                copy[i] = { role: 'assistant', content: accumulated }
-                hasAppended = true
-                break
+          console.log('Frontend received raw chunk:', JSON.stringify(chunk), 'length:', chunk.length)
+          
+          // Parse SSE format: "data: {content}\n\n"
+          const lines = chunk.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const content = line.slice(6) // Remove "data: " prefix
+              if (content) {
+                console.log('SSE parsed content:', JSON.stringify(content), 'length:', content.length)
+                accumulated += content
+                // Update last assistant message
+                setChatMessages(prev => {
+                  const copy = [...prev]
+                  for (let i = copy.length - 1; i >= 0; i--) {
+                    if (copy[i].role === 'assistant') { 
+                      copy[i] = { role: 'assistant', content: accumulated }
+                      hasAppended = true
+                      break
+                    }
+                  }
+                  return copy
+                })
               }
             }
-            return copy
-          })
+          }
         }
         if (!hasAppended && accumulated) {
           setChatMessages(prev => [...prev, { role: 'assistant', content: accumulated }])

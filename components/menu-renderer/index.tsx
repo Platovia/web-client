@@ -8,7 +8,6 @@ import type { MenuRendererProps } from "./types"
 const DefaultTemplate = dynamic(() => import("./templates/default"), { ssr: true })
 
 export function MenuRenderer(props: MenuRendererProps & { layoutConfig?: any | null; mode?: "template" | "builder" }) {
-  console.log('layoutConfig props', props)
   const { themeConfig, layoutConfig, mode = "template", templateId, ...rest } = props
 
   // Builder mode (Puck) will be handled by a separate renderer to keep concerns isolated.
