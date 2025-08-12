@@ -269,11 +269,16 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
           if (done) break
           const chunk = decoder.decode(value, { stream: true })
           if (!chunk) continue
+          console.log('Frontend received chunk:', JSON.stringify(chunk), 'length:', chunk.length)
           accumulated += chunk
           setChatMessages((prev) => {
             const copy = [...prev]
             for (let i = copy.length - 1; i >= 0; i--) {
-              if (copy[i].role === 'assistant') { copy[i] = { role: 'assistant', content: accumulated }; hasAppended = true; break }
+              if (copy[i].role === 'assistant') { 
+                copy[i] = { role: 'assistant', content: accumulated }
+                hasAppended = true
+                break
+              }
             }
             return copy
           })
