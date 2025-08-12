@@ -250,45 +250,55 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
 
     const userMessage: ChatMessage = { role: "user", content: chatInput }
     setChatMessages((prev) => [...prev, userMessage])
+    const toSend = chatInput
     setChatInput("")
     setIsChatLoading(true)
-    
-    // Scroll to bottom after adding user message
     setTimeout(() => scrollToBottom(), 50)
 
     try {
-      const response = await apiClient.sendChatMessage(qrToken, chatSession.id, chatInput)
-      
-      if (response.error) {
-        // Check if it's a session expiration error
-        if (response.error.includes("expired") || response.error.includes("inactivity")) {
-          const expirationMessage: ChatMessage = { 
-            role: "assistant", 
-            content: "Your chat session has expired due to inactivity. Please reset the chat to continue our conversation!" 
-          }
-          setChatMessages((prev) => [...prev, expirationMessage])
-          setTimeout(() => scrollToBottom(), 100)
-        } else {
-          // Fallback to a generic response if AI chat fails
-          const fallbackMessage: ChatMessage = { 
-            role: "assistant", 
-            content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" 
-          }
-          setChatMessages((prev) => [...prev, fallbackMessage])
-          setTimeout(() => scrollToBottom(), 100)
+      // Prefer streaming for instant feedback
+      const { response, reader } = await apiClient.streamChatMessage(qrToken, chatSession.id, toSend)
+      if (response.ok && reader) {
+        const decoder = new TextDecoder()
+        let accumulated = ""
+        let hasAppended = false
+        // Add empty assistant message to update incrementally
+        setChatMessages((prev) => [...prev, { role: "assistant", content: "" }])
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          if (!chunk) continue
+          accumulated += chunk
+          setChatMessages((prev) => {
+            const copy = [...prev]
+            for (let i = copy.length - 1; i >= 0; i--) {
+              if (copy[i].role === 'assistant') { copy[i] = { role: 'assistant', content: accumulated }; hasAppended = true; break }
+            }
+            return copy
+          })
         }
-              } else if (response.data) {
-          const assistantMessage: ChatMessage = { role: "assistant", content: response.data.bot_response }
-          setChatMessages((prev) => [...prev, assistantMessage])
-          setTimeout(() => scrollToBottom(), 100)
+        if (!hasAppended && accumulated) {
+          setChatMessages((prev) => [...prev, { role: 'assistant', content: accumulated }])
         }
+        setTimeout(() => scrollToBottom(), 100)
+      } else {
+        // Fallback to non-streaming JSON API
+        const resp = await apiClient.sendChatMessage(qrToken, chatSession.id, toSend)
+        if (resp.error) {
+          if (resp.error.includes("expired") || resp.error.includes("inactivity")) {
+            setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Your chat session has expired due to inactivity. Please reset the chat to continue our conversation!' }])
+          } else {
+            setChatMessages((prev) => [...prev, { role: 'assistant', content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" }])
+          }
+        } else if (resp.data) {
+          setChatMessages((prev) => [...prev, { role: 'assistant', content: resp.data.bot_response }])
+        }
+        setTimeout(() => scrollToBottom(), 100)
+      }
     } catch (err) {
       console.error("Chat error:", err)
-      const errorMessage: ChatMessage = { 
-        role: "assistant", 
-        content: "I'm sorry, there was an error processing your message. Please try again." 
-      }
-      setChatMessages((prev) => [...prev, errorMessage])
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: "I'm sorry, there was an error processing your message. Please try again." }])
       setTimeout(() => scrollToBottom(), 100)
     } finally {
       setIsChatLoading(false)

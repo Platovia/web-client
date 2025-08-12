@@ -79,12 +79,40 @@ export default function EmbeddedChatPage() {
     setTimeout(() => scrollToBottom(), 50)
 
     try {
-      const resp = await apiClient.sendChatMessage(token, chatSession.id, userMessage.content)
-      if (resp.data) {
-        const assistantMessage: ChatMessage = { role: "assistant", content: resp.data.bot_response }
-        setChatMessages(prev => [...prev, assistantMessage])
-      } else if (resp.error) {
-        setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't process that. Please try again." }])
+      // Try streaming first for instant feedback
+      const { response, reader } = await apiClient.streamChatMessage(token, chatSession.id, userMessage.content)
+      if (response.ok && reader) {
+        let accumulated = ""
+        const decoder = new TextDecoder()
+        // Optimistically add an empty assistant message that we mutate as chunks arrive
+        setChatMessages(prev => [...prev, { role: "assistant", content: "" }])
+        let hasAppended = false
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          accumulated += chunk
+          // Update last assistant message
+          setChatMessages(prev => {
+            const copy = [...prev]
+            for (let i = copy.length - 1; i >= 0; i--) {
+              if (copy[i].role === 'assistant') { copy[i] = { role: 'assistant', content: accumulated }; hasAppended = true; break }
+            }
+            return copy
+          })
+        }
+        if (!hasAppended && accumulated) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: accumulated }])
+        }
+      } else {
+        // Fallback to non-streaming JSON API
+        const resp = await apiClient.sendChatMessage(token, chatSession.id, userMessage.content)
+        if (resp.data) {
+          const assistantMessage: ChatMessage = { role: "assistant", content: resp.data.bot_response }
+          setChatMessages(prev => [...prev, assistantMessage])
+        } else if (resp.error) {
+          setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't process that. Please try again." }])
+        }
       }
     } catch {
       setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, there was an error." }])
