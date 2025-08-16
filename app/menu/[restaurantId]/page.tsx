@@ -13,6 +13,7 @@ import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, Chevro
 import ReactMarkdown from "react-markdown"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
 import { MenuRenderer } from "@/components/menu-renderer"
+import ChatStatus from "@/components/ui/chat-status"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -550,17 +551,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className="bg-gray-100 p-3 rounded-lg rounded-bl-sm">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.1s" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                        </div>
+                        <ChatStatus isVisible={true} />
                       </div>
                     </div>
                   )}

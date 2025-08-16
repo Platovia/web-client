@@ -952,6 +952,25 @@ class ApiClient {
     return { response, reader };
   }
 
+  async streamChatMessageWithStatus(
+    qrToken: string,
+    sessionId: string,
+    message: string
+  ): Promise<{ response: Response; reader: ReadableStreamDefaultReader<Uint8Array> | null }> {
+    const url = `${this.baseUrl}/chat/public/${qrToken}/sessions/${sessionId}/stream-with-status`;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...this.getAuthHeader(),
+    };
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message, use_cache: true }),
+    });
+    const reader = response.body ? response.body.getReader() : null;
+    return { response, reader };
+  }
+
   async resetChatSession(sessionId: string, resetData: ChatSessionResetRequest = {}): Promise<ApiResponse<ChatSessionResetResponse>> {
     return this.makeRequest<ChatSessionResetResponse>(`/chat/sessions/${sessionId}/reset`, {
       method: 'POST',

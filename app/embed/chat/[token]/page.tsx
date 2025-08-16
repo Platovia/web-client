@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, ChevronUp, Minus, RotateCcw, X, Send } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import ChatStatus from "@/components/ui/chat-status"
 import { apiClient, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
 
 // Minimal chat widget optimized for embedding inside an iframe. It reuses the
@@ -208,7 +209,7 @@ export default function EmbeddedChatPage() {
                   </div>
                 ))}
                 {isChatLoading && (
-                  <div className="text-gray-400 text-sm">Assistant is typing…</div>
+                  <ChatStatus isVisible={true} className="px-3 py-2" />
                 )}
               </div>
               <div className="p-3 border-t bg-gray-50 rounded-b-lg">
