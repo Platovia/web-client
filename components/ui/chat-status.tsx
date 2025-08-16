@@ -90,43 +90,19 @@ export default function ChatStatus({ isVisible, className = "" }: ChatStatusProp
   const [currentStatus, setCurrentStatus] = useState<StatusUpdate | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Simulate status updates for demo purposes
+  // Show generic thinking status when visible but no specific status available
   useEffect(() => {
     if (!isVisible) {
       setCurrentStatus(null)
       return
     }
 
-    // Demo status sequence
-    const statusSequence = [
-      { status: "checking_cache", message: "Checking cached responses...", delay: 500 },
-      { status: "searching_menu", message: "Searching menu items...", delay: 1500 },
-      { status: "analyzing", message: "Analyzing information...", delay: 2000 },
-      { status: "generating_response", message: "Generating response...", delay: 1000 }
-    ]
-
-    let timeouts: NodeJS.Timeout[] = []
-    let currentTime = 0
-
-    statusSequence.forEach((statusItem, index) => {
-      const timeout = setTimeout(() => {
-        setIsAnimating(true)
-        setCurrentStatus({
-          ...statusItem,
-          timestamp: new Date().toISOString()
-        })
-        
-        // Reset animation after a brief moment
-        setTimeout(() => setIsAnimating(false), 200)
-      }, currentTime)
-      
-      timeouts.push(timeout)
-      currentTime += statusItem.delay
+    // Show default thinking status
+    setCurrentStatus({
+      status: "thinking",
+      message: "Processing your request...",
+      timestamp: new Date().toISOString()
     })
-
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout))
-    }
   }, [isVisible])
 
   if (!isVisible || !currentStatus) {
@@ -164,13 +140,14 @@ export default function ChatStatus({ isVisible, className = "" }: ChatStatusProp
   )
 }
 
-// Enhanced version that connects to real backend status stream
+// Enhanced version that updates based on external status updates
 interface ChatStatusStreamProps {
   sessionId: string
   qrToken: string
   isVisible: boolean
   className?: string
   onStatusChange?: (status: StatusUpdate | null) => void
+  currentStatus?: StatusUpdate | null
 }
 
 export function ChatStatusStream({ 
@@ -178,54 +155,32 @@ export function ChatStatusStream({
   qrToken, 
   isVisible, 
   className = "",
-  onStatusChange 
+  onStatusChange,
+  currentStatus: externalStatus
 }: ChatStatusStreamProps) {
   const [currentStatus, setCurrentStatus] = useState<StatusUpdate | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
 
+  // Update internal status when external status changes
   useEffect(() => {
-    if (!isVisible || !sessionId) {
+    if (externalStatus) {
+      setIsAnimating(true)
+      setCurrentStatus(externalStatus)
+      onStatusChange?.(externalStatus)
+      
+      // Reset animation
+      setTimeout(() => setIsAnimating(false), 200)
+    } else if (!isVisible) {
       setCurrentStatus(null)
-      return
+    } else {
+      // Default status when visible but no specific status
+      setCurrentStatus({
+        status: "thinking",
+        message: "Processing your request...",
+        timestamp: new Date().toISOString()
+      })
     }
-
-    // Connect to status stream
-    const url = `/api/v1/chat/public/${qrToken}/sessions/${sessionId}/status-stream`
-    const es = new EventSource(url)
-    
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        
-        if (data.status === 'heartbeat') {
-          return // Ignore heartbeat messages
-        }
-        
-        setIsAnimating(true)
-        setCurrentStatus(data)
-        onStatusChange?.(data)
-        
-        // Reset animation
-        setTimeout(() => setIsAnimating(false), 200)
-        
-      } catch (error) {
-        console.error('Error parsing status event:', error)
-      }
-    }
-    
-    es.onerror = (error) => {
-      console.error('Status stream error:', error)
-      es.close()
-    }
-    
-    setEventSource(es)
-
-    return () => {
-      es.close()
-      setEventSource(null)
-    }
-  }, [isVisible, sessionId, qrToken, onStatusChange])
+  }, [externalStatus, isVisible, onStatusChange])
 
   if (!isVisible || !currentStatus) {
     return null

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, ChevronUp, Minus, RotateCcw, X, Send } from "lucide-react"
 import ReactMarkdown from "react-markdown"
-import ChatStatus from "@/components/ui/chat-status"
+import ChatStatus, { ChatStatusStream } from "@/components/ui/chat-status"
 import { apiClient, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
 
 // Minimal chat widget optimized for embedding inside an iframe. It reuses the
@@ -29,6 +29,7 @@ export default function EmbeddedChatPage() {
   const [chatInput, setChatInput] = useState("")
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState<any>(null)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -80,8 +81,8 @@ export default function EmbeddedChatPage() {
     setTimeout(() => scrollToBottom(), 50)
 
     try {
-      // Try streaming first for instant feedback
-      const { response, reader } = await apiClient.streamChatMessage(token, chatSession.id, userMessage.content)
+      // Use new status streaming endpoint for enhanced user experience  
+      const { response, reader } = await apiClient.streamChatMessageWithStatus(token, chatSession.id, userMessage.content)
       if (response.ok && reader) {
         let accumulated = ""
         const decoder = new TextDecoder()
@@ -101,20 +102,49 @@ export default function EmbeddedChatPage() {
             if (line.startsWith('data: ')) {
               const content = line.slice(6) // Remove "data: " prefix
               if (content) {
-                console.log('SSE parsed content:', JSON.stringify(content), 'length:', content.length)
-                accumulated += content
-                // Update last assistant message
-                setChatMessages(prev => {
-                  const copy = [...prev]
-                  for (let i = copy.length - 1; i >= 0; i--) {
-                    if (copy[i].role === 'assistant') { 
-                      copy[i] = { role: 'assistant', content: accumulated }
-                      hasAppended = true
-                      break
-                    }
+                try {
+                  const data = JSON.parse(content)
+                  console.log('SSE parsed data:', data)
+                  
+                  // Handle status updates
+                  if (data.status && data.status !== 'heartbeat') {
+                    console.log('Status update:', data.message)
+                    setCurrentStatus(data)
+                    continue
                   }
-                  return copy
-                })
+                  
+                  // Handle final response
+                  if (data.type === 'response' && data.data) {
+                    const finalResponse = data.data.bot_response || ''
+                    setChatMessages(prev => {
+                      const copy = [...prev]
+                      for (let i = copy.length - 1; i >= 0; i--) {
+                        if (copy[i].role === 'assistant') { 
+                          copy[i] = { role: 'assistant', content: finalResponse }
+                          hasAppended = true
+                          break
+                        }
+                      }
+                      return copy
+                    })
+                    break
+                  }
+                } catch (e) {
+                  // Fallback: treat as plain text content for compatibility
+                  console.log('Fallback parsing as plain text:', content)
+                  accumulated += content
+                  setChatMessages(prev => {
+                    const copy = [...prev]
+                    for (let i = copy.length - 1; i >= 0; i--) {
+                      if (copy[i].role === 'assistant') { 
+                        copy[i] = { role: 'assistant', content: accumulated }
+                        hasAppended = true
+                        break
+                      }
+                    }
+                    return copy
+                  })
+                }
               }
             }
           }
@@ -136,6 +166,7 @@ export default function EmbeddedChatPage() {
       setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, there was an error." }])
     } finally {
       setIsChatLoading(false)
+      setCurrentStatus(null)
       setTimeout(() => scrollToBottom(), 100)
     }
   }
@@ -208,8 +239,14 @@ export default function EmbeddedChatPage() {
                     </div>
                   </div>
                 ))}
-                {isChatLoading && (
-                  <ChatStatus isVisible={true} className="px-3 py-2" />
+                {isChatLoading && chatSession && token && (
+                  <ChatStatusStream 
+                    sessionId={chatSession.id} 
+                    qrToken={token}
+                    isVisible={true} 
+                    className="px-3 py-2"
+                    currentStatus={currentStatus}
+                  />
                 )}
               </div>
               <div className="p-3 border-t bg-gray-50 rounded-b-lg">

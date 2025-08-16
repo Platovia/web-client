@@ -13,7 +13,7 @@ import { MessageCircle, Search, Leaf, Wheat, Heart, Send, X, AlertCircle, Chevro
 import ReactMarkdown from "react-markdown"
 import { apiClient, type MenuItem, type ChatMessage, type ChatSession, type ChatMessageResponse, type ChatSessionResetResponse } from "@/lib/api"
 import { MenuRenderer } from "@/components/menu-renderer"
-import ChatStatus from "@/components/ui/chat-status"
+import ChatStatus, { ChatStatusStream } from "@/components/ui/chat-status"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -53,6 +53,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
   const [restaurantId, setRestaurantId] = useState<string>("")
+  const [currentStatus, setCurrentStatus] = useState<any>(null)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -258,7 +259,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
 
     try {
       // Prefer streaming for instant feedback
-      const { response, reader } = await apiClient.streamChatMessage(qrToken, chatSession.id, toSend)
+      const { response, reader } = await apiClient.streamChatMessageWithStatus(qrToken, chatSession.id, toSend)
       if (response.ok && reader) {
         const decoder = new TextDecoder()
         let accumulated = ""
@@ -278,19 +279,49 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             if (line.startsWith('data: ')) {
               const content = line.slice(6) // Remove "data: " prefix
               if (content) {
-                console.log('SSE parsed content:', JSON.stringify(content), 'length:', content.length)
-                accumulated += content
-                setChatMessages((prev) => {
-                  const copy = [...prev]
-                  for (let i = copy.length - 1; i >= 0; i--) {
-                    if (copy[i].role === 'assistant') { 
-                      copy[i] = { role: 'assistant', content: accumulated }
-                      hasAppended = true
-                      break
-                    }
+                try {
+                  const data = JSON.parse(content)
+                  console.log('SSE parsed data:', data)
+                  
+                  // Handle status updates
+                  if (data.status && data.status !== 'heartbeat') {
+                    console.log('Status update:', data.message)
+                    setCurrentStatus(data)
+                    continue
                   }
-                  return copy
-                })
+                  
+                  // Handle final response
+                  if (data.type === 'response' && data.data) {
+                    const finalResponse = data.data.bot_response || ''
+                    setChatMessages((prev) => {
+                      const copy = [...prev]
+                      for (let i = copy.length - 1; i >= 0; i--) {
+                        if (copy[i].role === 'assistant') { 
+                          copy[i] = { role: 'assistant', content: finalResponse }
+                          hasAppended = true
+                          break
+                        }
+                      }
+                      return copy
+                    })
+                    break
+                  }
+                } catch (e) {
+                  // Fallback: treat as plain text content for compatibility
+                  console.log('Fallback parsing as plain text:', content)
+                  accumulated += content
+                  setChatMessages((prev) => {
+                    const copy = [...prev]
+                    for (let i = copy.length - 1; i >= 0; i--) {
+                      if (copy[i].role === 'assistant') { 
+                        copy[i] = { role: 'assistant', content: accumulated }
+                        hasAppended = true
+                        break
+                      }
+                    }
+                    return copy
+                  })
+                }
               }
             }
           }
@@ -319,6 +350,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
       setTimeout(() => scrollToBottom(), 100)
     } finally {
       setIsChatLoading(false)
+      setCurrentStatus(null)
     }
   }
 
@@ -548,10 +580,15 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                     </div>
                   ))}
 
-                  {isChatLoading && (
+                  {isChatLoading && chatSession && qrToken && (
                     <div className="flex justify-start">
                       <div className="bg-gray-100 p-3 rounded-lg rounded-bl-sm">
-                        <ChatStatus isVisible={true} />
+                        <ChatStatusStream 
+                          sessionId={chatSession.id} 
+                          qrToken={qrToken}
+                          isVisible={true}
+                          currentStatus={currentStatus}
+                        />
                       </div>
                     </div>
                   )}
