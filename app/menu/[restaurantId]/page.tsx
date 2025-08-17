@@ -293,11 +293,16 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                   // Handle final response
                   if (data.type === 'response' && data.data) {
                     const finalResponse = data.data.bot_response || ''
+                    const responseTime = data.data.response_time_ms
                     setChatMessages((prev) => {
                       const copy = [...prev]
                       for (let i = copy.length - 1; i >= 0; i--) {
                         if (copy[i].role === 'assistant') { 
-                          copy[i] = { role: 'assistant', content: finalResponse }
+                          copy[i] = { 
+                            role: 'assistant', 
+                            content: finalResponse,
+                            responseTime: responseTime
+                          }
                           hasAppended = true
                           break
                         }
@@ -340,7 +345,11 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             setChatMessages((prev) => [...prev, { role: 'assistant', content: "I'm sorry, I'm having trouble connecting to our menu assistant right now. Please feel free to browse our menu or ask our staff for help!" }])
           }
         } else if (resp.data) {
-          setChatMessages((prev) => [...prev, { role: 'assistant', content: resp.data.bot_response }])
+          setChatMessages((prev) => [...prev, { 
+            role: 'assistant', 
+            content: resp.data.bot_response,
+            responseTime: resp.data.response_time_ms
+          }])
         }
         setTimeout(() => scrollToBottom(), 100)
       }
@@ -576,6 +585,11 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                         }`}
                       >
                         {message.role === "assistant" ? formatMessage(message.content) : message.content}
+                        {message.role === "assistant" && message.responseTime && (
+                          <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-200">
+                            Response time: {(message.responseTime / 1000).toFixed(2)}s
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

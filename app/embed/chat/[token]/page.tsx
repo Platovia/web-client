@@ -116,11 +116,16 @@ export default function EmbeddedChatPage() {
                   // Handle final response
                   if (data.type === 'response' && data.data) {
                     const finalResponse = data.data.bot_response || ''
+                    const responseTime = data.data.response_time_ms
                     setChatMessages(prev => {
                       const copy = [...prev]
                       for (let i = copy.length - 1; i >= 0; i--) {
                         if (copy[i].role === 'assistant') { 
-                          copy[i] = { role: 'assistant', content: finalResponse }
+                          copy[i] = { 
+                            role: 'assistant', 
+                            content: finalResponse,
+                            responseTime: responseTime
+                          }
                           hasAppended = true
                           break
                         }
@@ -156,7 +161,11 @@ export default function EmbeddedChatPage() {
         // Fallback to non-streaming JSON API
         const resp = await apiClient.sendChatMessage(token, chatSession.id, userMessage.content)
         if (resp.data) {
-          const assistantMessage: ChatMessage = { role: "assistant", content: resp.data.bot_response }
+          const assistantMessage: ChatMessage = { 
+            role: "assistant", 
+            content: resp.data.bot_response,
+            responseTime: resp.data.response_time_ms
+          }
           setChatMessages(prev => [...prev, assistantMessage])
         } else if (resp.error) {
           setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, I couldn't process that. Please try again." }])
@@ -236,6 +245,11 @@ export default function EmbeddedChatPage() {
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] p-3 rounded-lg text-sm ${m.role === 'user' ? 'text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm'}`} style={m.role === 'user' ? { backgroundColor: accent } : {}}>
                       {m.role === 'assistant' ? formatMessage(m.content) : m.content}
+                      {m.role === 'assistant' && m.responseTime && (
+                        <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-200">
+                          Response time: {(m.responseTime / 1000).toFixed(2)}s
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

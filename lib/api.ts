@@ -339,6 +339,7 @@ interface PublicMenuResponse {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  responseTime?: number;
 }
 
 interface ChatResponse {
@@ -371,6 +372,7 @@ interface ChatMessageResponse {
   response_source: string;
   session_id: string;
   timestamp: string;
+  response_time_ms?: number;
 }
 
 interface ChatHistoryMessage {

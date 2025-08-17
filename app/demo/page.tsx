@@ -26,6 +26,7 @@ interface MenuItem {
 interface ChatMessage {
   role: "user" | "assistant"
   content: string
+  responseTime?: number
 }
 
 // Demo data
@@ -176,7 +177,11 @@ export default function DemoPage() {
       ]
       const randomResponse = responses[Math.floor(Math.random() * responses.length)]
 
-      const assistantMessage: ChatMessage = { role: "assistant", content: randomResponse }
+      const assistantMessage: ChatMessage = { 
+        role: "assistant", 
+        content: randomResponse,
+        responseTime: 1000 // Simulated 1 second response time (in ms, will be converted to 1.00s)
+      }
       setChatMessages((prev) => [...prev, assistantMessage])
       setIsLoading(false)
     }, 1000)
@@ -371,6 +376,11 @@ export default function DemoPage() {
                         }`}
                       >
                         {message.role === "assistant" ? formatMessage(message.content) : message.content}
+                        {message.role === "assistant" && message.responseTime && (
+                          <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-200">
+                            Response time: {(message.responseTime / 1000).toFixed(2)}s
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
