@@ -25,7 +25,21 @@ const initialAnalyticsData = {
 }
 
 export default function AnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState(initialAnalyticsData)
+  const [analyticsData, setAnalyticsData] = useState({
+    overview: {
+      totalViews: 0,
+      totalScans: 0,
+      totalChats: 0,
+      avgSessionTime: "0m 0s",
+      conversionRate: 0,
+      customerSatisfaction: 0,
+      avgMessagesPerSession: 0,
+    },
+    topRestaurants: [],
+    chatInsights: [],
+    weeklyStats: [],
+    peakHours: "No data available",
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -55,7 +69,6 @@ export default function AnalyticsPage() {
           }
           
           setAnalyticsData({
-            ...initialAnalyticsData,
             overview: {
               totalViews: overviewResponse.data.data.total_views,
               totalScans: overviewResponse.data.data.total_qr_scans,
@@ -63,8 +76,12 @@ export default function AnalyticsPage() {
               avgSessionTime: formatSessionTime(avgSessionDuration),
               conversionRate: 0, // TODO: Add conversion rate analytics
               customerSatisfaction: 0, // TODO: Add satisfaction analytics
+              avgMessagesPerSession: chatData.avg_messages_per_session || 0,
             },
-            chatInsights: chatData.top_queries || []
+            topRestaurants: overviewResponse.data.data.top_menus || [],
+            chatInsights: chatData.top_queries || [],
+            weeklyStats: overviewResponse.data.data.weekly_stats || [],
+            peakHours: overviewResponse.data.data.peak_hours || "No data available",
           })
         }
       } catch (err) {
@@ -78,6 +95,10 @@ export default function AnalyticsPage() {
     loadAnalytics()
   }, [])
 
+  // Calculate max values for progress bars
+  const maxWeeklyViews = Math.max(...analyticsData.weeklyStats.map((d: any) => d.views), 1)
+  const maxChatFrequency = Math.max(...analyticsData.chatInsights.map((d: any) => d.frequency), 1)
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -88,7 +109,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Views</CardTitle>
@@ -96,7 +117,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analyticsData.overview.totalViews.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <p className="text-xs text-muted-foreground">Total menu views</p>
             </CardContent>
           </Card>
 
@@ -107,7 +128,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analyticsData.overview.totalScans.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <p className="text-xs text-muted-foreground">Total QR code scans</p>
             </CardContent>
           </Card>
 
@@ -118,7 +139,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analyticsData.overview.totalChats.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+15% from last month</p>
+              <p className="text-xs text-muted-foreground">Total chat interactions</p>
             </CardContent>
           </Card>
 
@@ -129,110 +150,46 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analyticsData.overview.avgSessionTime}</div>
-              <p className="text-xs text-muted-foreground">+5% from last month</p>
+              <p className="text-xs text-muted-foreground">Average time on menu</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversion</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData.overview.conversionRate}%</div>
-              <p className="text-xs text-muted-foreground">+2.1% from last month</p>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Satisfaction</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData.overview.customerSatisfaction}/5</div>
-              <p className="text-xs text-muted-foreground">+0.2 from last month</p>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Performing Restaurants */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Performing Restaurants</CardTitle>
+              <CardTitle>Top Performing Menus</CardTitle>
               <CardDescription>Based on views, scans, and customer engagement</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {analyticsData.topRestaurants.map((restaurant, index) => (
-                <div key={restaurant.name} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{restaurant.name}</h4>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>{restaurant.views} views</span>
-                        <span>{restaurant.scans} scans</span>
-                        <span>{restaurant.chats} chats</span>
+              {analyticsData.topRestaurants.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No data available yet</div>
+              ) : (
+                analyticsData.topRestaurants.map((restaurant: any, index: number) => (
+                  <div key={restaurant.name} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{restaurant.name}</h4>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span>{restaurant.views} views</span>
+                          <span>{restaurant.scans} scans</span>
+                          <span>{restaurant.chats} chats</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium">{restaurant.rating}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Popular Menu Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Popular Menu Items</CardTitle>
-              <CardDescription>Most viewed items across all restaurants</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {analyticsData.popularMenuItems.map((item, index) => (
-                <div key={item.name} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-green-600">#{index + 1}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{item.name}</h4>
-                      <p className="text-sm text-gray-600">{item.restaurant}</p>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="text-sm font-medium">{restaurant.rating || "-"}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{item.views} views</p>
-                    <p className="text-xs text-gray-600">{item.orders} orders</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Chat Insights */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Common Customer Questions</CardTitle>
-              <CardDescription>Most frequently asked questions in chat</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {analyticsData.chatInsights.map((insight, index) => (
-                <div key={insight.question} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{insight.question}</p>
-                    <Badge variant="secondary">{insight.frequency}</Badge>
-                  </div>
-                  <Progress value={(insight.frequency / 234) * 100} className="h-2" />
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
 
@@ -244,28 +201,32 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analyticsData.weeklyStats.map((day) => (
-                  <div key={day.day} className="flex items-center justify-between">
-                    <span className="text-sm font-medium w-12">{day.day}</span>
-                    <div className="flex-1 mx-4">
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <span>{day.views}</span>
+                {analyticsData.weeklyStats.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No data available yet</div>
+                ) : (
+                  analyticsData.weeklyStats.map((day: any) => (
+                    <div key={day.day} className="flex items-center justify-between">
+                      <span className="text-sm font-medium w-12">{day.day}</span>
+                      <div className="flex-1 mx-4">
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span>{day.views}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>{day.scans}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span>{day.chats}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span>{day.scans}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          <span>{day.chats}</span>
-                        </div>
+                        <Progress value={(day.views / maxWeeklyViews) * 100} className="h-2 mt-1" />
                       </div>
-                      <Progress value={(day.views / 2678) * 100} className="h-2 mt-1" />
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t text-xs">
                 <div className="flex items-center gap-1">
@@ -285,38 +246,62 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {/* Performance Insights */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance Insights</CardTitle>
-            <CardDescription>Key insights and recommendations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <h4 className="font-medium text-blue-900">Peak Hours</h4>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Chat Insights */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Common Customer Questions</CardTitle>
+              <CardDescription>Most frequently asked questions in chat</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {analyticsData.chatInsights.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No questions asked yet</div>
+              ) : (
+                analyticsData.chatInsights.map((insight: any, index: number) => (
+                  <div key={insight.question} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium truncate max-w-[300px]" title={insight.question}>{insight.question}</p>
+                      <Badge variant="secondary">{insight.frequency}</Badge>
+                    </div>
+                    <Progress value={(insight.frequency / maxChatFrequency) * 100} className="h-2" />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Performance Insights */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Insights</CardTitle>
+              <CardDescription>Key insights and recommendations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-medium text-blue-900">Peak Hours</h4>
+                  </div>
+                  <p className="text-sm text-blue-800">
+                    {analyticsData.peakHours === "No data available" 
+                      ? "Not enough data to determine peak hours" 
+                      : `Most activity between ${analyticsData.peakHours}`}
+                  </p>
                 </div>
-                <p className="text-sm text-blue-800">Most activity between 6-8 PM on weekends</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-5 w-5 text-green-600" />
-                  <h4 className="font-medium text-green-900">Customer Behavior</h4>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-medium text-purple-900">Chat Engagement</h4>
+                  </div>
+                  <p className="text-sm text-purple-800">
+                    Average {analyticsData.overview.avgMessagesPerSession} questions per chat session
+                  </p>
                 </div>
-                <p className="text-sm text-green-800">65% of users browse multiple menu sections</p>
               </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageCircle className="h-5 w-5 text-purple-600" />
-                  <h4 className="font-medium text-purple-900">Chat Engagement</h4>
-                </div>
-                <p className="text-sm text-purple-800">Average 3.2 questions per chat session</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   )

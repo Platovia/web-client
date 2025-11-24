@@ -16,7 +16,6 @@ const initialDashboardStats = {
   totalMenus: 0,
   totalQRScans: 0,
   totalChatInteractions: 0,
-  monthlyGrowth: 0,
 }
 
 const recentActivity: { action: string; restaurant: string; time: string }[] = []
@@ -64,7 +63,6 @@ export default function DashboardPage() {
                 totalMenus: analyticsResponse.data.data.total_menus,
                 totalQRScans: analyticsResponse.data.data.total_qr_scans,
                 totalChatInteractions: chatData.total_sessions || 0,
-                monthlyGrowth: 0, // TODO: Calculate growth
               })
             }
           } catch (analyticsError) {
@@ -75,7 +73,6 @@ export default function DashboardPage() {
               totalMenus: 0,
               totalQRScans: 0,
               totalChatInteractions: 0,
-              monthlyGrowth: 0,
             })
           }
         }
@@ -163,7 +160,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{dashboardStats.totalMenus}</div>
-              <p className="text-xs text-muted-foreground">+2 from last month</p>
+              <p className="text-xs text-muted-foreground">Total active menus</p>
             </CardContent>
           </Card>
 
@@ -174,7 +171,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{dashboardStats.totalQRScans.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+{dashboardStats.monthlyGrowth}% from last month</p>
+              <p className="text-xs text-muted-foreground">Total QR scans</p>
             </CardContent>
           </Card>
 
@@ -190,9 +187,8 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Restaurants */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Recent Restaurants</CardTitle>
@@ -254,25 +250,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-xs text-gray-600">{activity.restaurant}</p>
-                  </div>
-                  <span className="text-xs text-gray-500">{activity.time}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Quick Actions */}
         <Card>
