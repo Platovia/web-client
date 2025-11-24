@@ -68,7 +68,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menus, setMenus] = useState<MenuWithDetails[]>([])
-  const [analytics, setAnalytics] = useState({ qrScans: 0, totalViews: 0 })
+  const [analytics, setAnalytics] = useState({ qrScans: 0, totalViews: 0, chatSessions: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMenus, setIsLoadingMenus] = useState(false)
   const [error, setError] = useState("")
@@ -111,11 +111,17 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
         
         // Load analytics for this restaurant
         try {
-          const analyticsResponse = await apiClient.getAnalyticsOverview(restaurantId)
+          const [analyticsResponse, chatResponse] = await Promise.all([
+            apiClient.getAnalyticsOverview(restaurantId),
+            apiClient.getChatAnalytics()
+          ])
+          
           if (analyticsResponse.data?.data) {
+            const chatData = chatResponse.data?.data || {}
             setAnalytics({
               qrScans: analyticsResponse.data.data.total_qr_scans,
-              totalViews: analyticsResponse.data.data.total_views
+              totalViews: analyticsResponse.data.data.total_views,
+              chatSessions: chatData.total_sessions || 0
             })
           }
         } catch (analyticsError) {
@@ -403,7 +409,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     <MessageCircle className="h-5 w-5 text-purple-600" />
                     <div>
                       <p className="text-sm text-gray-600">Chat Sessions</p>
-                      <p className="text-2xl font-bold">456</p>
+                      <p className="text-2xl font-bold">{analytics.chatSessions.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -411,10 +417,10 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-orange-600" />
+                    <Eye className="h-5 w-5 text-orange-600" />
                     <div>
-                      <p className="text-sm text-gray-600">Avg Rating</p>
-                      <p className="text-2xl font-bold">4.8</p>
+                      <p className="text-sm text-gray-600">Total Views</p>
+                      <p className="text-2xl font-bold">{analytics.totalViews.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -595,14 +601,64 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics">
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{analytics.totalViews.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Menu views for this restaurant</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">QR Scans</CardTitle>
+                  <QrCode className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{analytics.qrScans.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Total QR code scans</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Chat Sessions</CardTitle>
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{analytics.chatSessions.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Customer chat interactions</p>
+                </CardContent>
+              </Card>
+            </div>
+            
             <Card>
               <CardHeader>
-                <CardTitle>Restaurant Analytics</CardTitle>
-                <CardDescription>Performance metrics for {restaurant.name}</CardDescription>
+                <CardTitle>Performance Overview</CardTitle>
+                <CardDescription>Analytics for {restaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Analytics dashboard coming soon...</p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Active Menus</span>
+                    <span className="text-sm text-gray-600">{menus.filter(m => m.is_active).length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Total Menus</span>
+                    <span className="text-sm text-gray-600">{menus.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Average Views per Menu</span>
+                    <span className="text-sm text-gray-600">
+                      {menus.length > 0 ? Math.round(analytics.totalViews / menus.length).toLocaleString() : 0}
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
