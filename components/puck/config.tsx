@@ -785,9 +785,15 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       },
       Flex: {
         render: ({ puck, direction, gap }) => (
-          <div className="flex" style={{ flexDirection: direction, gap: `${gap}px` }}>
-            <DropZone zone="flex-items" />
-          </div>
+          <DropZone
+            zone="flex-items"
+            style={{
+              display: "flex",
+              flexDirection: direction as any,
+              gap: `${gap}px`,
+              minHeight: "100px"
+            }}
+          />
         ),
         fields: {
           direction: {
@@ -804,15 +810,15 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       },
       Grid: {
         render: ({ puck, columns, gap }) => (
-          <div
-            className="grid"
+          <DropZone
+            zone="grid-items"
             style={{
+              display: "grid",
               gridTemplateColumns: `repeat(${columns}, 1fr)`,
-              gap: `${gap}px`
+              gap: `${gap}px`,
+              minHeight: "100px"
             }}
-          >
-            <DropZone zone="grid-items" />
-          </div>
+          />
         ),
         fields: {
           columns: { type: "number", min: 1, max: 12, defaultValue: 3 },
@@ -1036,10 +1042,13 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             return "object-cover"
           }
 
+          // Handle both URL strings and file objects
+          const imageUrl = typeof src === 'string' ? src : (src as any)?.url || "/placeholder.svg"
+
           return (
             <div className="flex justify-center">
               <img
-                src={src || "/placeholder.svg"}
+                src={imageUrl}
                 alt={alt}
                 className={`${getWidthClass()} ${getRoundedClass()} ${getObjectFitClass()}`}
                 style={{ height: height ? `${height}px` : "auto" }}
@@ -1048,7 +1057,61 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
-          src: { type: "text", label: "Image URL" },
+          src: {
+            type: "custom",
+            label: "Image",
+            render: ({ value, onChange }: any) => {
+              const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  // Convert to base64 for preview
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    onChange(reader.result as string)
+                  }
+                  reader.readAsDataURL(file)
+                }
+              }
+
+              const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                onChange(e.target.value)
+              }
+
+              return (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Image URL</label>
+                    <input
+                      type="text"
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={handleUrlChange}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    />
+                  </div>
+                  <div className="text-center text-xs text-gray-500">or</div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Upload Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="w-full text-sm"
+                    />
+                  </div>
+                  {value && (
+                    <div className="mt-2">
+                      <img
+                        src={typeof value === 'string' ? value : (value as any)?.url}
+                        alt="Preview"
+                        className="w-full h-32 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            }
+          },
           alt: { type: "text", label: "Alt Text" },
           width: {
             type: "select",
@@ -1113,10 +1176,13 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             return "text-center items-center"
           }
 
+          // Handle both URL strings and file objects
+          const imageUrl = typeof src === 'string' ? src : (src as any)?.url || "/placeholder.svg"
+
           return (
             <div className="relative rounded-xl overflow-hidden" style={{ height: `${height}px` }}>
               <img
-                src={src || "/placeholder.svg"}
+                src={imageUrl}
                 alt={alt}
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -1144,7 +1210,61 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
-          src: { type: "text", label: "Image URL" },
+          src: {
+            type: "custom",
+            label: "Image",
+            render: ({ value, onChange }: any) => {
+              const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  // Convert to base64 for preview
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    onChange(reader.result as string)
+                  }
+                  reader.readAsDataURL(file)
+                }
+              }
+
+              const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                onChange(e.target.value)
+              }
+
+              return (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Image URL</label>
+                    <input
+                      type="text"
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={handleUrlChange}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    />
+                  </div>
+                  <div className="text-center text-xs text-gray-500">or</div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Upload Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="w-full text-sm"
+                    />
+                  </div>
+                  {value && (
+                    <div className="mt-2">
+                      <img
+                        src={typeof value === 'string' ? value : (value as any)?.url}
+                        alt="Preview"
+                        className="w-full h-32 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            }
+          },
           alt: { type: "text", label: "Alt Text" },
           title: { type: "text", label: "Title (optional)" },
           description: { type: "textarea", label: "Description (optional)" },
