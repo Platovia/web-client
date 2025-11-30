@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 import { apiClient } from "@/lib/api"
+import { resolveImageUrl as resolveImageUrlUtil } from "@/lib/utils"
 import { MenuDataProvider } from "@/components/menu-renderer/data-context"
 import { getPuckConfig } from "@/components/puck/config"
 
@@ -83,25 +84,7 @@ export default function MenuDesignPage() {
           onSelectCategory: () => {},
           onSearch: () => {},
           formatPrice: (price: number) => `$${price.toFixed(2)}`,
-          resolveImageUrl: (url: string) => {
-            console.log('[Editor] Resolving image URL:', url)
-            if (!url) return "/placeholder.svg"
-            // If URL is already absolute, return it
-            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-              return url
-            }
-            // If URL starts with /, it's an absolute path on the current domain
-            if (url.startsWith('/')) {
-              return url
-            }
-            // Handle relative URLs - check if it's a path like "uploads/image.jpg"
-            // Try to construct a proper path
-            const resolved = url.startsWith('uploads/') || url.startsWith('images/')
-              ? `/${url}`
-              : `/uploads/${url}`
-            console.log('[Editor] Resolved relative URL to:', resolved)
-            return resolved
-          }
+          resolveImageUrl: (url?: string | null) => resolveImageUrlUtil(url) || "/placeholder.svg"
         })
       }
       
