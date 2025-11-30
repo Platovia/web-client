@@ -122,18 +122,18 @@ export default function MenuDesignPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 w-full">
         <Card>
           <CardHeader>
             <CardTitle>Visual Builder</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="border rounded min-h-[600px]">
+          <CardContent className="p-0">
+            <div className="border rounded min-h-[800px]">
               {menuData ? (
                 <MenuDataProvider value={menuData}>
-                  <Puck 
-                    config={config as any} 
-                    data={migratePuckData(data)} 
+                  <Puck
+                    config={config as any}
+                    data={migratePuckData(data)}
                     onPublish={onPublish}
                     onChange={(next: any) => setData(migratePuckData(next))}
                   />
@@ -144,7 +144,7 @@ export default function MenuDesignPage() {
                 </div>
               )}
             </div>
-            <div className="mt-4">
+            <div className="mt-4 px-6 pb-6">
               <Button onClick={() => onPublish(data)} disabled={saving}>{saving ? "Publishing..." : "Publish"}</Button>
             </div>
           </CardContent>

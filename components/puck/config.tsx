@@ -84,6 +84,24 @@ export type MenuProps = {
     lineHeight?: "tight" | "normal" | "relaxed" | "loose"
     letterSpacing?: "tight" | "normal" | "wide" | "wider"
   }
+  Image: {
+    src: string
+    alt: string
+    width?: "full" | "auto" | "small" | "medium" | "large"
+    height?: number
+    objectFit?: "cover" | "contain" | "fill" | "none"
+    rounded?: "none" | "sm" | "md" | "lg" | "xl" | "full"
+  }
+  ImageCard: {
+    src: string
+    alt: string
+    title?: string
+    description?: string
+    overlay?: boolean
+    overlayColor?: string
+    textAlign?: "left" | "center" | "right"
+    height?: number
+  }
 }
 
 // We export a function that generates the config based on available data
@@ -103,7 +121,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
   categories: {
       layout: { title: "Layout", components: ["Section", "Flex", "Grid", "Space"] },
       menu: { title: "Menu Data", components: ["MenuSection", "FeaturedItem"] },
-      basic: { title: "Basic", components: ["Hero", "Text"] },
+      basic: { title: "Basic", components: ["Hero", "Text", "Image", "ImageCard"] },
   },
   components: {
       MenuSection: {
@@ -749,28 +767,26 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         }
       },
       Section: {
-        render: ({ children, backgroundColor, padding }) => (
+        render: ({ puck, backgroundColor, padding }) => (
           <section style={{ backgroundColor, padding: `${padding}px 0` }}>
             <div className="max-w-4xl mx-auto px-4">
-              {children}
+              <DropZone zone="section-content" />
             </div>
           </section>
         ),
       fields: {
           backgroundColor: { type: "text" },
-          padding: { type: "number", min: 0, max: 100, defaultValue: 40 },
-          children: { type: "number" } // Puck handles children specially, but we define it for TS
+          padding: { type: "number", min: 0, max: 100, defaultValue: 40 }
         },
         defaultProps: {
           backgroundColor: "transparent",
-          padding: 40,
-          children: null
+          padding: 40
         }
       },
       Flex: {
-        render: ({ children, direction, gap }) => (
+        render: ({ puck, direction, gap }) => (
           <div className="flex" style={{ flexDirection: direction, gap: `${gap}px` }}>
-            {children}
+            <DropZone zone="flex-items" />
           </div>
         ),
         fields: {
@@ -779,36 +795,32 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             options: [{ label: "Row", value: "row" }, { label: "Column", value: "column" }],
             defaultValue: "row"
           },
-          gap: { type: "number", defaultValue: 16 },
-          children: { type: "number" } // Puck handles children specially
+          gap: { type: "number", defaultValue: 16 }
       },
       defaultProps: {
           direction: "row",
-          gap: 16,
-          children: null
+          gap: 16
         }
       },
       Grid: {
-        render: ({ children, columns, gap }) => (
-          <div 
-            className="grid" 
+        render: ({ puck, columns, gap }) => (
+          <div
+            className="grid"
             style={{
-              gridTemplateColumns: `repeat(${columns}, 1fr)`, 
-              gap: `${gap}px` 
+              gridTemplateColumns: `repeat(${columns}, 1fr)`,
+              gap: `${gap}px`
             }}
           >
-            {children}
+            <DropZone zone="grid-items" />
           </div>
         ),
         fields: {
           columns: { type: "number", min: 1, max: 12, defaultValue: 3 },
-          gap: { type: "number", defaultValue: 16 },
-          children: { type: "number" } // Puck handles children specially
+          gap: { type: "number", defaultValue: 16 }
         },
         defaultProps: {
           columns: 3,
-          gap: 16,
-          children: null
+          gap: 16
         }
       },
       Space: {
@@ -984,6 +996,185 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           textTransform: "none",
           lineHeight: "normal",
           letterSpacing: "normal"
+        }
+      },
+      Image: {
+        render: (props) => {
+          const {
+            src,
+            alt = "",
+            width = "full",
+            height,
+            objectFit = "cover",
+            rounded = "md"
+          } = props
+
+          const getWidthClass = () => {
+            if (width === "full") return "w-full"
+            if (width === "auto") return "w-auto"
+            if (width === "small") return "w-48"
+            if (width === "medium") return "w-64"
+            if (width === "large") return "w-96"
+            return "w-full"
+          }
+
+          const getRoundedClass = () => {
+            if (rounded === "none") return ""
+            if (rounded === "sm") return "rounded-sm"
+            if (rounded === "md") return "rounded-md"
+            if (rounded === "lg") return "rounded-lg"
+            if (rounded === "xl") return "rounded-xl"
+            if (rounded === "full") return "rounded-full"
+            return "rounded-md"
+          }
+
+          const getObjectFitClass = () => {
+            if (objectFit === "cover") return "object-cover"
+            if (objectFit === "contain") return "object-contain"
+            if (objectFit === "fill") return "object-fill"
+            if (objectFit === "none") return "object-none"
+            return "object-cover"
+          }
+
+          return (
+            <div className="flex justify-center">
+              <img
+                src={src || "/placeholder.svg"}
+                alt={alt}
+                className={`${getWidthClass()} ${getRoundedClass()} ${getObjectFitClass()}`}
+                style={{ height: height ? `${height}px` : "auto" }}
+              />
+            </div>
+          )
+        },
+        fields: {
+          src: { type: "text", label: "Image URL" },
+          alt: { type: "text", label: "Alt Text" },
+          width: {
+            type: "select",
+            label: "Width",
+            options: [
+              { label: "Full Width", value: "full" },
+              { label: "Auto", value: "auto" },
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" }
+            ]
+          },
+          height: { type: "number", label: "Height (px, optional)" },
+          objectFit: {
+            type: "select",
+            label: "Object Fit",
+            options: [
+              { label: "Cover", value: "cover" },
+              { label: "Contain", value: "contain" },
+              { label: "Fill", value: "fill" },
+              { label: "None", value: "none" }
+            ]
+          },
+          rounded: {
+            type: "select",
+            label: "Border Radius",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Small", value: "sm" },
+              { label: "Medium", value: "md" },
+              { label: "Large", value: "lg" },
+              { label: "Extra Large", value: "xl" },
+              { label: "Full", value: "full" }
+            ]
+          }
+        },
+        defaultProps: {
+          src: "/placeholder.svg",
+          alt: "Image",
+          width: "full",
+          objectFit: "cover",
+          rounded: "md"
+        }
+      },
+      ImageCard: {
+        render: (props) => {
+          const {
+            src,
+            alt = "",
+            title,
+            description,
+            overlay = false,
+            overlayColor = "rgba(0, 0, 0, 0.5)",
+            textAlign = "center",
+            height = 400
+          } = props
+
+          const getAlignClass = () => {
+            if (textAlign === "left") return "text-left items-start"
+            if (textAlign === "center") return "text-center items-center"
+            if (textAlign === "right") return "text-right items-end"
+            return "text-center items-center"
+          }
+
+          return (
+            <div className="relative rounded-xl overflow-hidden" style={{ height: `${height}px` }}>
+              <img
+                src={src || "/placeholder.svg"}
+                alt={alt}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {overlay && (
+                <div
+                  className="absolute inset-0"
+                  style={{ backgroundColor: overlayColor }}
+                />
+              )}
+              {(title || description) && (
+                <div className={`relative z-10 h-full flex flex-col justify-center p-8 ${getAlignClass()}`}>
+                  {title && (
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                      {title}
+                    </h2>
+                  )}
+                  {description && (
+                    <p className="text-lg text-white/90 max-w-2xl">
+                      {description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        },
+        fields: {
+          src: { type: "text", label: "Image URL" },
+          alt: { type: "text", label: "Alt Text" },
+          title: { type: "text", label: "Title (optional)" },
+          description: { type: "textarea", label: "Description (optional)" },
+          overlay: {
+            type: "radio",
+            label: "Show Overlay",
+            options: [
+              { label: "Yes", value: true },
+              { label: "No", value: false }
+            ]
+          },
+          overlayColor: { type: "text", label: "Overlay Color (CSS)" },
+          textAlign: {
+            type: "radio",
+            label: "Text Alignment",
+            options: [
+              { label: "Left", value: "left" },
+              { label: "Center", value: "center" },
+              { label: "Right", value: "right" }
+            ]
+          },
+          height: { type: "number", label: "Height (px)", min: 200, max: 800 }
+        },
+        defaultProps: {
+          src: "/placeholder.svg",
+          alt: "Image Card",
+          overlay: true,
+          overlayColor: "rgba(0, 0, 0, 0.5)",
+          textAlign: "center",
+          height: 400
         }
       }
     }
