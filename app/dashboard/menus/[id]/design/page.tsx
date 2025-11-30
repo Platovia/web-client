@@ -7,12 +7,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 import { apiClient } from "@/lib/api"
+import { MenuDataProvider } from "@/components/menu-renderer/data-context"
+import { getPuckConfig } from "@/components/puck/config"
 
 // Load Puck Editor dynamically to keep it isolated
 const Puck = dynamic(() => import("@measured/puck").then(m => (m as any).Puck), { ssr: false }) as any
 import "@measured/puck/puck.css"
-import { puckConfig } from "@/components/puck/config"
-import { MenuDataProvider } from "@/components/menu-renderer/data-context"
 
 export default function MenuDesignPage() {
   const { id } = useParams<{ id: string }>()
@@ -78,7 +78,7 @@ export default function MenuDesignPage() {
         setMenuData({
           restaurant: menuResp.data.menu.restaurant,
           items: menuResp.data.menu_items || [],
-          categories: [...new Set((menuResp.data.menu_items || []).map((item: any) => item.category))],
+          categories: [...new Set((menuResp.data.menu_items || []).map((item: any) => item.category))].filter(Boolean),
           selectedCategory: "All",
           onSelectCategory: () => {},
           onSearch: () => {},
@@ -105,44 +105,20 @@ export default function MenuDesignPage() {
     return { status: "success" }
   }
 
-  // const config = {
-  //   components: {},
-  // };
-  const config = {
-    components: {
-      Hero: {
-        fields: { title: { type: "text" }, subtitle: { type: "text" } },
-        render: ({ title = "Our Menu", subtitle = "Fresh and delicious", __key }: any) => {
-          const key = __key || `hero-${title}`
-          return (
-            <div key={key} className="py-8">
-              <h1 className="text-3xl font-bold">{title}</h1>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-          )
-        },
-        defaultProps: { title: "Our Menu", subtitle: "Fresh and delicious" },
-      },
+  // Memoize config to avoid re-renders unless data changes
+  const config = React.useMemo(() => {
+    if (!menuData) return { components: {} } // Fallback while loading
+    return getPuckConfig({
+      categories: menuData.categories || [],
+      items: menuData.items || []
+    })
+  }, [menuData])
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      ;(window as any).__PUCK_CONFIG__ = config
     }
-  };
-   
-  // const initialData = {
-  //   content: [],
-  //   root: {},
-  // };
-  const initialData = {
-    content: [
-      {
-        type: "HeadingBlock",
-        props: {
-          // id: "HeadingBlock-1234",
-          title: "Hello, world"
-        }
-      }
-    ],
-    root: { props: { title: "Puck Example" } },
-    zones: {}
-  };
+  }, [config])
 
   return (
     <DashboardLayout>
@@ -153,14 +129,10 @@ export default function MenuDesignPage() {
           </CardHeader>
           <CardContent>
             <div className="border rounded min-h-[600px]">
-              {console.log("Menu Data:", menuData)}
-              {console.log("Layout Data:", data)}
-              {console.log("Layout config:", puckConfig)}
               {menuData ? (
                 <MenuDataProvider value={menuData}>
-                  {/* <Puck config={puckConfig as any} data={initialData} /> */}
                   <Puck 
-                    config={puckConfig as any} 
+                    config={config as any} 
                     data={migratePuckData(data)} 
                     onPublish={onPublish}
                     onChange={(next: any) => setData(migratePuckData(next))}
@@ -181,5 +153,3 @@ export default function MenuDesignPage() {
     </DashboardLayout>
   )
 }
-
-
