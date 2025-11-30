@@ -91,6 +91,14 @@ export type MenuProps = {
     height?: number
     objectFit?: "cover" | "contain" | "fill" | "none"
     rounded?: "none" | "sm" | "md" | "lg" | "xl" | "full"
+    // Advanced controls
+    scale?: number
+    rotate?: number
+    opacity?: number
+    brightness?: number
+    contrast?: number
+    saturate?: number
+    blur?: number
   }
   ImageCard: {
     src: string
@@ -101,6 +109,14 @@ export type MenuProps = {
     overlayColor?: string
     textAlign?: "left" | "center" | "right"
     height?: number
+    // Advanced controls
+    scale?: number
+    rotate?: number
+    opacity?: number
+    brightness?: number
+    contrast?: number
+    saturate?: number
+    blur?: number
   }
 }
 
@@ -348,12 +364,27 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                           {formatPrice(item.price)}
                         </span>
                       )}
-                      {showImages && item.image_url && (
-                        <img
-                          src={resolveImageUrl(item.image_url)}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-md"
-                        />
+                      {showImages && (
+                        item.image_url ? (
+                          <img
+                            src={resolveImageUrl(item.image_url)}
+                            alt={item.name}
+                            className="w-16 h-16 object-cover rounded-md"
+                            onError={(e) => {
+                              console.error('[Editor] Failed to load image:', item.image_url, 'resolved to:', resolveImageUrl(item.image_url))
+                              ;(e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                            onLoad={() => {
+                              console.log('[Editor] Successfully loaded image:', item.image_url)
+                            }}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )
                       )}
                     </div>
                   </div>
@@ -395,18 +426,50 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                     borderRadius: layout === "Card" ? `${cardRadius}px` : undefined
                   }}
                 >
-                  {showImages && item.image_url && (
+                  {showImages && (
                     <div
                       className={layout === "Card" ? "aspect-video w-full overflow-hidden" : "aspect-square overflow-hidden mb-3"}
                       style={{
                         borderRadius: layout === "Card" ? `${cardRadius}px ${cardRadius}px 0 0` : `${cardRadius}px`
                       }}
                     >
-                      <img
-                        src={resolveImageUrl(item.image_url)}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+                      {item.image_url ? (
+                        <img
+                          src={resolveImageUrl(item.image_url)}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('[Editor] Failed to load image:', item.image_url, 'resolved to:', resolveImageUrl(item.image_url))
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent) {
+                              parent.innerHTML = `
+                                <div class="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <div class="text-center text-gray-400 p-2">
+                                    <svg class="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-xs">Image Failed</span>
+                                  </div>
+                                </div>
+                              `
+                            }
+                          }}
+                          onLoad={() => {
+                            console.log('[Editor] Successfully loaded image:', item.image_url)
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <div className="text-center text-gray-400 p-2">
+                            <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs">No Image</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div style={{ padding: layout === "Card" ? `${cardPadding}px` : undefined }}>
@@ -1012,7 +1075,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             width = "full",
             height,
             objectFit = "cover",
-            rounded = "md"
+            rounded = "md",
+            scale = 1,
+            rotate = 0,
+            opacity = 1,
+            brightness = 1,
+            contrast = 1,
+            saturate = 1,
+            blur = 0
           } = props
 
           const getWidthClass = () => {
@@ -1045,13 +1115,23 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           // Handle both URL strings and file objects
           const imageUrl = typeof src === 'string' ? src : (src as any)?.url || "/placeholder.svg"
 
+          // Build filter and transform string
+          const filterStyle = `brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) blur(${blur}px)`
+          const transformStyle = `scale(${scale}) rotate(${rotate}deg)`
+
           return (
-            <div className="flex justify-center">
+            <div className="flex justify-center overflow-hidden">
               <img
                 src={imageUrl}
                 alt={alt}
                 className={`${getWidthClass()} ${getRoundedClass()} ${getObjectFitClass()}`}
-                style={{ height: height ? `${height}px` : "auto" }}
+                style={{
+                  height: height ? `${height}px` : "auto",
+                  opacity,
+                  filter: filterStyle,
+                  transform: transformStyle,
+                  transition: "all 0.3s ease"
+                }}
               />
             </div>
           )
@@ -1077,6 +1157,10 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                 onChange(e.target.value)
               }
 
+              const handleRemove = () => {
+                onChange("")
+              }
+
               return (
                 <div className="space-y-2">
                   <div>
@@ -1100,12 +1184,19 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                     />
                   </div>
                   {value && (
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-2">
                       <img
                         src={typeof value === 'string' ? value : (value as any)?.url}
                         alt="Preview"
                         className="w-full h-32 object-cover rounded border"
                       />
+                      <button
+                        type="button"
+                        onClick={handleRemove}
+                        className="w-full px-3 py-2 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                      >
+                        Remove Image
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1146,14 +1237,29 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
               { label: "Extra Large", value: "xl" },
               { label: "Full", value: "full" }
             ]
-          }
+          },
+          // Advanced Controls
+          scale: { type: "number", label: "Zoom/Scale", min: 0.1, max: 3, defaultValue: 1 },
+          rotate: { type: "number", label: "Rotate (degrees)", min: -180, max: 180, defaultValue: 0 },
+          opacity: { type: "number", label: "Opacity", min: 0, max: 1, defaultValue: 1 },
+          brightness: { type: "number", label: "Brightness", min: 0, max: 2, defaultValue: 1 },
+          contrast: { type: "number", label: "Contrast", min: 0, max: 2, defaultValue: 1 },
+          saturate: { type: "number", label: "Saturation", min: 0, max: 2, defaultValue: 1 },
+          blur: { type: "number", label: "Blur (px)", min: 0, max: 20, defaultValue: 0 }
         },
         defaultProps: {
           src: "/placeholder.svg",
           alt: "Image",
           width: "full",
           objectFit: "cover",
-          rounded: "md"
+          rounded: "md",
+          scale: 1,
+          rotate: 0,
+          opacity: 1,
+          brightness: 1,
+          contrast: 1,
+          saturate: 1,
+          blur: 0
         }
       },
       ImageCard: {
@@ -1166,7 +1272,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             overlay = false,
             overlayColor = "rgba(0, 0, 0, 0.5)",
             textAlign = "center",
-            height = 400
+            height = 400,
+            scale = 1,
+            rotate = 0,
+            opacity = 1,
+            brightness = 1,
+            contrast = 1,
+            saturate = 1,
+            blur = 0
           } = props
 
           const getAlignClass = () => {
@@ -1179,12 +1292,22 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           // Handle both URL strings and file objects
           const imageUrl = typeof src === 'string' ? src : (src as any)?.url || "/placeholder.svg"
 
+          // Build filter and transform string
+          const filterStyle = `brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) blur(${blur}px)`
+          const transformStyle = `scale(${scale}) rotate(${rotate}deg)`
+
           return (
             <div className="relative rounded-xl overflow-hidden" style={{ height: `${height}px` }}>
               <img
                 src={imageUrl}
                 alt={alt}
                 className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  opacity,
+                  filter: filterStyle,
+                  transform: transformStyle,
+                  transition: "all 0.3s ease"
+                }}
               />
               {overlay && (
                 <div
@@ -1230,6 +1353,10 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                 onChange(e.target.value)
               }
 
+              const handleRemove = () => {
+                onChange("")
+              }
+
               return (
                 <div className="space-y-2">
                   <div>
@@ -1253,12 +1380,19 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                     />
                   </div>
                   {value && (
-                    <div className="mt-2">
+                    <div className="mt-2 space-y-2">
                       <img
                         src={typeof value === 'string' ? value : (value as any)?.url}
                         alt="Preview"
                         className="w-full h-32 object-cover rounded border"
                       />
+                      <button
+                        type="button"
+                        onClick={handleRemove}
+                        className="w-full px-3 py-2 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                      >
+                        Remove Image
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1286,7 +1420,15 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
               { label: "Right", value: "right" }
             ]
           },
-          height: { type: "number", label: "Height (px)", min: 200, max: 800 }
+          height: { type: "number", label: "Height (px)", min: 200, max: 800 },
+          // Advanced Controls
+          scale: { type: "number", label: "Zoom/Scale", min: 0.1, max: 3, defaultValue: 1 },
+          rotate: { type: "number", label: "Rotate (degrees)", min: -180, max: 180, defaultValue: 0 },
+          opacity: { type: "number", label: "Image Opacity", min: 0, max: 1, defaultValue: 1 },
+          brightness: { type: "number", label: "Brightness", min: 0, max: 2, defaultValue: 1 },
+          contrast: { type: "number", label: "Contrast", min: 0, max: 2, defaultValue: 1 },
+          saturate: { type: "number", label: "Saturation", min: 0, max: 2, defaultValue: 1 },
+          blur: { type: "number", label: "Blur (px)", min: 0, max: 20, defaultValue: 0 }
         },
         defaultProps: {
           src: "/placeholder.svg",
@@ -1294,7 +1436,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           overlay: true,
           overlayColor: "rgba(0, 0, 0, 0.5)",
           textAlign: "center",
-          height: 400
+          height: 400,
+          scale: 1,
+          rotate: 0,
+          opacity: 1,
+          brightness: 1,
+          contrast: 1,
+          saturate: 1,
+          blur: 0
         }
       }
     }
