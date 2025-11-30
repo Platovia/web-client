@@ -61,15 +61,15 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
   }))
 
   return {
-    categories: {
+  categories: {
       layout: { title: "Layout", components: ["Section", "Flex", "Grid", "Space"] },
       menu: { title: "Menu Data", components: ["MenuSection", "FeaturedItem"] },
       basic: { title: "Basic", components: ["Hero", "Text"] },
-    },
-    components: {
+  },
+  components: {
       MenuSection: {
         label: "Menu Category",
-        fields: {
+      fields: {
           category: { 
             type: "select", 
             options: categoryOptions
@@ -113,18 +113,18 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             : allItems.filter((i: any) => i.category === category)
 
           if (!displayItems || displayItems.length === 0) {
-            return (
+        return (
               <div className="p-4 border border-dashed text-gray-400 text-center rounded">
                 No items found in category: {category}
-              </div>
-            )
+          </div>
+        )
           }
 
-          const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-3" : "grid-cols-4"
+        const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-3" : "grid-cols-4"
 
           // Render strategies
           if (layout === "List") {
-            return (
+        return (
               <div className="space-y-4">
                 {displayItems.map((item: any) => (
                   <div key={item.id} className="flex justify-between items-start border-b pb-4 last:border-0">
@@ -193,8 +193,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                   </div>
                 </div>
               ))}
-            </div>
-          )
+          </div>
+        )
         }
       },
       FeaturedItem: {
@@ -286,8 +286,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                   Order Now
                 </button>
               </div>
-            </div>
-          )
+        </div>
+      )
         }
       },
       Hero: {
@@ -314,7 +314,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             </div>
           </section>
         ),
-        fields: {
+      fields: {
           backgroundColor: { type: "text" },
           padding: { type: "number", min: 0, max: 100, defaultValue: 40 },
           children: { type: "number" } // Puck handles children specially, but we define it for TS
@@ -339,8 +339,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           },
           gap: { type: "number", defaultValue: 16 },
           children: { type: "number" } // Puck handles children specially
-        },
-        defaultProps: {
+      },
+      defaultProps: {
           direction: "row",
           gap: 16,
           children: null
@@ -350,7 +350,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         render: ({ children, columns, gap }) => (
           <div 
             className="grid" 
-            style={{ 
+            style={{
               gridTemplateColumns: `repeat(${columns}, 1fr)`, 
               gap: `${gap}px` 
             }}
