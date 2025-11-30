@@ -11,16 +11,48 @@ export type MenuProps = {
     layout: "Grid" | "List" | "Minimal" | "Card"
     showImages: boolean
     columns: number
+    // Card/Grid styling
+    cardBackground?: string
+    cardRadius?: number
+    cardShadow?: "none" | "small" | "medium" | "large"
+    cardPadding?: number
+    gap?: number
+    // List styling
+    dividerStyle?: "none" | "line" | "dots"
+    priceAlign?: "right" | "inline"
+    // Typography
+    titleSize?: "xs" | "small" | "medium" | "large" | "xl"
+    titleWeight?: "normal" | "medium" | "semibold" | "bold"
+    descriptionSize?: "xs" | "small" | "medium" | "large"
+    priceSize?: "small" | "medium" | "large" | "xl"
+    priceColor?: string
   }
   FeaturedItem: {
     itemId: string
     style: "Hero" | "Card" | "Banner"
     showPrice: boolean
+    // Typography
+    titleSize?: "xl" | "2xl" | "3xl" | "4xl"
+    titleWeight?: "normal" | "medium" | "semibold" | "bold"
+    descriptionSize?: "small" | "medium" | "large" | "xl"
+    // Visuals
+    badgeText?: string
+    badgeColor?: string
+    buttonLabel?: string
+    buttonVariant?: "solid" | "outline" | "ghost"
+    backgroundStyle?: "light" | "dark" | "gradient"
   }
   Hero: {
     title: string
     subtitle: string
     backgroundImage?: string
+    // Typography
+    titleSize?: "2xl" | "3xl" | "4xl" | "5xl" | "6xl"
+    titleWeight?: "normal" | "medium" | "semibold" | "bold"
+    subtitleSize?: "sm" | "base" | "lg" | "xl" | "2xl"
+    align?: "left" | "center" | "right"
+    titleColor?: string
+    subtitleColor?: string
   }
   Space: {
     size: number
@@ -44,6 +76,13 @@ export type MenuProps = {
     text: string
     align: "left" | "center" | "right"
     size: "small" | "medium" | "large"
+    // Enhanced typography
+    fontSize?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl"
+    fontWeight?: "normal" | "medium" | "semibold" | "bold" | "extrabold"
+    color?: string
+    textTransform?: "none" | "uppercase" | "lowercase" | "capitalize"
+    lineHeight?: "tight" | "normal" | "relaxed" | "loose"
+    letterSpacing?: "tight" | "normal" | "wide" | "wider"
   }
 }
 
@@ -70,14 +109,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       MenuSection: {
         label: "Menu Category",
       fields: {
-          category: { 
-            type: "select", 
+          category: {
+            type: "select",
             options: categoryOptions
           },
-          layout: { 
-            type: "radio", 
+          layout: {
+            type: "radio",
             options: [
-              { label: "Grid", value: "Grid" }, 
+              { label: "Grid", value: "Grid" },
               { label: "List", value: "List" },
               { label: "Minimal", value: "Minimal" },
               { label: "Card", value: "Card" }
@@ -92,24 +131,118 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             ],
             defaultValue: true
           },
-          columns: { type: "number", min: 1, max: 4, defaultValue: 2 }
+          columns: { type: "number", min: 1, max: 4, defaultValue: 2 },
+          // Card/Grid styling
+          cardBackground: { type: "text", label: "Card Background" },
+          cardRadius: { type: "number", min: 0, max: 32, label: "Card Radius (px)" },
+          cardShadow: {
+            type: "select",
+            label: "Card Shadow",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" }
+            ]
+          },
+          cardPadding: { type: "number", min: 0, max: 48, label: "Card Padding (px)" },
+          gap: { type: "number", min: 0, max: 48, label: "Gap between items (px)" },
+          // List styling
+          dividerStyle: {
+            type: "select",
+            label: "List Divider Style",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Line", value: "line" },
+              { label: "Dots", value: "dots" }
+            ]
+          },
+          priceAlign: {
+            type: "radio",
+            label: "Price Alignment",
+            options: [
+              { label: "Right", value: "right" },
+              { label: "Inline", value: "inline" }
+            ]
+          },
+          // Typography
+          titleSize: {
+            type: "select",
+            label: "Title Size",
+            options: [
+              { label: "Extra Small", value: "xs" },
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" },
+              { label: "Extra Large", value: "xl" }
+            ]
+          },
+          titleWeight: {
+            type: "select",
+            label: "Title Weight",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Medium", value: "medium" },
+              { label: "Semibold", value: "semibold" },
+              { label: "Bold", value: "bold" }
+            ]
+          },
+          descriptionSize: {
+            type: "select",
+            label: "Description Size",
+            options: [
+              { label: "Extra Small", value: "xs" },
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" }
+            ]
+          },
+          priceSize: {
+            type: "select",
+            label: "Price Size",
+            options: [
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" },
+              { label: "Extra Large", value: "xl" }
+            ]
+          },
+          priceColor: { type: "text", label: "Price Color (hex or CSS)" }
         },
         defaultProps: {
           category: "All",
           layout: "Grid",
           showImages: true,
-          columns: 2
+          columns: 2,
+          cardRadius: 12,
+          cardShadow: "small",
+          cardPadding: 16,
+          gap: 24,
+          dividerStyle: "line",
+          priceAlign: "right",
+          titleSize: "medium",
+          titleWeight: "semibold",
+          descriptionSize: "small",
+          priceSize: "medium"
         },
-        render: ({ category, layout, showImages, columns }) => {
+        render: (props) => {
+          const {
+            category, layout, showImages, columns,
+            cardBackground, cardRadius = 12, cardShadow = "small", cardPadding = 16, gap = 24,
+            dividerStyle = "line", priceAlign = "right",
+            titleSize = "medium", titleWeight = "semibold",
+            descriptionSize = "small", priceSize = "medium", priceColor
+          } = props
+
           const {
             items: allItems,
             formatPrice,
             resolveImageUrl = (url: string) => url || "/placeholder.svg"
           } = useMenuData() as any
-          
+
           // Filter items
-          const displayItems = category === "All" 
-            ? allItems 
+          const displayItems = category === "All"
+            ? allItems
             : allItems.filter((i: any) => i.category === category)
 
           if (!displayItems || displayItems.length === 0) {
@@ -122,23 +255,86 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
 
         const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-3" : "grid-cols-4"
 
+          // Helper functions for styling
+          const getShadowClass = () => {
+            if (cardShadow === "none") return ""
+            if (cardShadow === "small") return "shadow-sm"
+            if (cardShadow === "medium") return "shadow-md"
+            if (cardShadow === "large") return "shadow-lg"
+            return "shadow-sm"
+          }
+
+          const getTitleSizeClass = () => {
+            if (titleSize === "xs") return "text-xs"
+            if (titleSize === "small") return "text-sm"
+            if (titleSize === "medium") return "text-base"
+            if (titleSize === "large") return "text-lg"
+            if (titleSize === "xl") return "text-xl"
+            return "text-base"
+          }
+
+          const getTitleWeightClass = () => {
+            if (titleWeight === "normal") return "font-normal"
+            if (titleWeight === "medium") return "font-medium"
+            if (titleWeight === "semibold") return "font-semibold"
+            if (titleWeight === "bold") return "font-bold"
+            return "font-semibold"
+          }
+
+          const getDescriptionSizeClass = () => {
+            if (descriptionSize === "xs") return "text-xs"
+            if (descriptionSize === "small") return "text-sm"
+            if (descriptionSize === "medium") return "text-base"
+            if (descriptionSize === "large") return "text-lg"
+            return "text-sm"
+          }
+
+          const getPriceSizeClass = () => {
+            if (priceSize === "small") return "text-sm"
+            if (priceSize === "medium") return "text-base"
+            if (priceSize === "large") return "text-lg"
+            if (priceSize === "xl") return "text-xl"
+            return "text-base"
+          }
+
           // Render strategies
           if (layout === "List") {
+            const dividerClass = dividerStyle === "none" ? "" :
+              dividerStyle === "dots" ? "border-b border-dotted" : "border-b"
+
         return (
-              <div className="space-y-4">
+              <div style={{ gap: `${gap}px` }} className="flex flex-col">
                 {displayItems.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-start border-b pb-4 last:border-0">
-                    <div className="flex-1 pr-4">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
+                  <div
+                    key={item.id}
+                    className={`flex ${priceAlign === "inline" ? "flex-col" : "justify-between items-start"} pb-4 last:pb-0 ${dividerClass}`}
+                  >
+                    <div className={`flex-1 ${priceAlign === "right" ? "pr-4" : ""}`}>
+                      <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>{item.name}</h3>
+                      <p className={`${getDescriptionSizeClass()} text-gray-600 line-clamp-2`}>{item.description}</p>
+                      {priceAlign === "inline" && (
+                        <span
+                          className={`${getPriceSizeClass()} font-bold mt-2 inline-block`}
+                          style={{ color: priceColor || undefined }}
+                        >
+                          {formatPrice(item.price)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="font-bold whitespace-nowrap">{formatPrice(item.price)}</span>
+                      {priceAlign === "right" && (
+                        <span
+                          className={`${getPriceSizeClass()} font-bold whitespace-nowrap`}
+                          style={{ color: priceColor || undefined }}
+                        >
+                          {formatPrice(item.price)}
+                        </span>
+                      )}
                       {showImages && item.image_url && (
-                        <img 
-                          src={resolveImageUrl(item.image_url)} 
-                          alt={item.name} 
-                          className="w-16 h-16 object-cover rounded-md" 
+                        <img
+                          src={resolveImageUrl(item.image_url)}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-md"
                         />
                       )}
                     </div>
@@ -150,46 +346,62 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
 
           if (layout === "Minimal") {
             return (
-              <div className="space-y-2">
+              <div style={{ gap: `${gap}px` }} className="flex flex-col">
                 {displayItems.map((item: any) => (
                   <div key={item.id} className="flex justify-between items-baseline">
                     <div>
-                      <span className="font-medium">{item.name}</span>
+                      <span className={`${getTitleWeightClass()}`}>{item.name}</span>
                       <span className="mx-2 text-xs text-gray-400">----------------</span>
                     </div>
-                    <span className="font-medium">{formatPrice(item.price)}</span>
+                    <span
+                      className={`${getPriceSizeClass()} ${getTitleWeightClass()}`}
+                      style={{ color: priceColor || undefined }}
+                    >
+                      {formatPrice(item.price)}
+                    </span>
                   </div>
                 ))}
               </div>
             )
           }
 
-          // Grid and Card are similar but Card has more padding/shadow
+          // Grid and Card with customizable styling
           return (
-            <div className={`grid ${gridClass} gap-6`}>
+            <div className={`grid ${gridClass}`} style={{ gap: `${gap}px` }}>
               {displayItems.map((item: any) => (
-                <div 
-                  key={item.id} 
-                  className={`
-                    flex flex-col h-full 
-                    ${layout === "Card" ? "bg-white rounded-xl shadow-sm overflow-hidden border" : ""}
-                  `}
+                <div
+                  key={item.id}
+                  className={`flex flex-col h-full ${layout === "Card" ? `${getShadowClass()} overflow-hidden border` : ""}`}
+                  style={{
+                    backgroundColor: layout === "Card" ? cardBackground || "white" : undefined,
+                    borderRadius: layout === "Card" ? `${cardRadius}px` : undefined
+                  }}
                 >
                   {showImages && item.image_url && (
-                    <div className={layout === "Card" ? "aspect-video w-full overflow-hidden" : "aspect-square rounded-lg overflow-hidden mb-3"}>
-                      <img 
-                        src={resolveImageUrl(item.image_url)} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover" 
+                    <div
+                      className={layout === "Card" ? "aspect-video w-full overflow-hidden" : "aspect-square overflow-hidden mb-3"}
+                      style={{
+                        borderRadius: layout === "Card" ? `${cardRadius}px ${cardRadius}px 0 0` : `${cardRadius}px`
+                      }}
+                    >
+                      <img
+                        src={resolveImageUrl(item.image_url)}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   )}
-                  <div className={layout === "Card" ? "p-4" : ""}>
+                  <div style={{ padding: layout === "Card" ? `${cardPadding}px` : undefined }}>
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <span className="font-bold ml-2">{formatPrice(item.price)}</span>
+                      <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>{item.name}</h3>
+                      <span
+                        className={`${getPriceSizeClass()} font-bold ml-2`}
+                        style={{ color: priceColor || undefined }}
+                      >
+                        {formatPrice(item.price)}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-3">{item.description}</p>
+                    <p className={`${getDescriptionSizeClass()} text-gray-600 line-clamp-3`}>{item.description}</p>
                   </div>
                 </div>
               ))}
@@ -200,7 +412,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       FeaturedItem: {
         label: "Featured Item",
         fields: {
-          itemId: { 
+          itemId: {
             type: "select",
             options: itemOptions
           },
@@ -220,14 +432,84 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
               { label: "Hide Price", value: false }
             ],
             defaultValue: true
+          },
+          // Typography
+          titleSize: {
+            type: "select",
+            label: "Title Size",
+            options: [
+              { label: "Extra Large", value: "xl" },
+              { label: "2XL", value: "2xl" },
+              { label: "3XL", value: "3xl" },
+              { label: "4XL", value: "4xl" }
+            ]
+          },
+          titleWeight: {
+            type: "select",
+            label: "Title Weight",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Medium", value: "medium" },
+              { label: "Semibold", value: "semibold" },
+              { label: "Bold", value: "bold" }
+            ]
+          },
+          descriptionSize: {
+            type: "select",
+            label: "Description Size",
+            options: [
+              { label: "Small", value: "small" },
+              { label: "Medium", value: "medium" },
+              { label: "Large", value: "large" },
+              { label: "Extra Large", value: "xl" }
+            ]
+          },
+          // Visuals
+          badgeText: { type: "text", label: "Badge Text" },
+          badgeColor: { type: "text", label: "Badge Color (hex or CSS)" },
+          buttonLabel: { type: "text", label: "Button Label" },
+          buttonVariant: {
+            type: "select",
+            label: "Button Style",
+            options: [
+              { label: "Solid", value: "solid" },
+              { label: "Outline", value: "outline" },
+              { label: "Ghost", value: "ghost" }
+            ]
+          },
+          backgroundStyle: {
+            type: "select",
+            label: "Background Style",
+            options: [
+              { label: "Light", value: "light" },
+              { label: "Dark", value: "dark" },
+              { label: "Gradient", value: "gradient" }
+            ]
           }
         },
         defaultProps: {
           itemId: itemOptions[0]?.value,
           style: "Hero",
-          showPrice: true
+          showPrice: true,
+          titleSize: "3xl",
+          titleWeight: "bold",
+          descriptionSize: "large",
+          badgeText: "Chef's Special",
+          badgeColor: "#f97316",
+          buttonLabel: "Order Now",
+          buttonVariant: "solid",
+          backgroundStyle: "dark"
         },
-        render: ({ itemId, style, showPrice }) => {
+        render: (props) => {
+          const {
+            itemId, style, showPrice,
+            titleSize = "3xl", titleWeight = "bold",
+            descriptionSize = "large",
+            badgeText = "Chef's Special", badgeColor = "#f97316",
+            buttonLabel = "Order Now", buttonVariant = "solid",
+            backgroundStyle = "dark"
+          } = props
+
           const {
             items: allItems,
             formatPrice,
@@ -237,73 +519,233 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
 
           if (!item) return <div className="text-red-500">Item not found</div>
 
+          // Helper functions for styling
+          const getTitleSizeClass = () => {
+            if (titleSize === "xl") return "text-xl"
+            if (titleSize === "2xl") return "text-2xl"
+            if (titleSize === "3xl") return "text-3xl"
+            if (titleSize === "4xl") return "text-4xl"
+            return "text-3xl"
+          }
+
+          const getTitleWeightClass = () => {
+            if (titleWeight === "normal") return "font-normal"
+            if (titleWeight === "medium") return "font-medium"
+            if (titleWeight === "semibold") return "font-semibold"
+            if (titleWeight === "bold") return "font-bold"
+            return "font-bold"
+          }
+
+          const getDescriptionSizeClass = () => {
+            if (descriptionSize === "small") return "text-sm"
+            if (descriptionSize === "medium") return "text-base"
+            if (descriptionSize === "large") return "text-lg"
+            if (descriptionSize === "xl") return "text-xl"
+            return "text-lg"
+          }
+
+          const getButtonClass = () => {
+            const baseClass = "px-6 py-3 rounded-full font-semibold transition-colors"
+            if (buttonVariant === "solid") return `${baseClass} bg-black text-white hover:bg-gray-800`
+            if (buttonVariant === "outline") return `${baseClass} border-2 border-black text-black hover:bg-black hover:text-white`
+            if (buttonVariant === "ghost") return `${baseClass} text-black hover:bg-gray-100`
+            return `${baseClass} bg-black text-white`
+          }
+
+          const getBackgroundClass = () => {
+            if (backgroundStyle === "light") return "bg-black/40"
+            if (backgroundStyle === "dark") return "bg-black/60"
+            if (backgroundStyle === "gradient") return "bg-gradient-to-r from-black/70 to-black/50"
+            return "bg-black/60"
+          }
+
           if (style === "Banner") {
             return (
               <div className="relative rounded-xl overflow-hidden text-white h-48 flex items-center">
-                <div className="absolute inset-0 bg-black/60 z-10" />
+                <div className={`absolute inset-0 z-10 ${getBackgroundClass()}`} />
                 {item.image_url && (
-                  <img 
-                    src={resolveImageUrl(item.image_url)} 
+                  <img
+                    src={resolveImageUrl(item.image_url)}
                     alt={item.name}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 )}
                 <div className="relative z-20 p-6 w-full flex justify-between items-center">
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-wider mb-1 text-orange-400">Chef's Special</div>
-                    <h3 className="text-2xl font-bold">{item.name}</h3>
-                    <p className="text-gray-200 max-w-md truncate">{item.description}</p>
+                    {badgeText && (
+                      <div
+                        className="text-xs font-bold uppercase tracking-wider mb-1"
+                        style={{ color: badgeColor }}
+                      >
+                        {badgeText}
+                      </div>
+                    )}
+                    <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>{item.name}</h3>
+                    <p className={`${getDescriptionSizeClass()} text-gray-200 max-w-md truncate`}>{item.description}</p>
                   </div>
-                  {showPrice && <div className="text-3xl font-bold">{formatPrice(item.price)}</div>}
+                  {showPrice && (
+                    <div className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>
+                      {formatPrice(item.price)}
+                    </div>
+                  )}
                 </div>
               </div>
             )
           }
 
-          // Hero Style
+          // Hero and Card Style
           return (
             <div className={`
               ${style === "Card" ? "border rounded-xl p-6 max-w-sm mx-auto text-center" : "flex flex-col md:flex-row gap-8 items-center py-8"}
             `}>
               {item.image_url && (
                 <div className={style === "Card" ? "mb-4" : "w-full md:w-1/2"}>
-                  <img 
-                    src={resolveImageUrl(item.image_url)} 
+                  <img
+                    src={resolveImageUrl(item.image_url)}
                     alt={item.name}
                     className="rounded-xl shadow-lg w-full object-cover aspect-video"
                   />
                 </div>
               )}
               <div className={style === "Card" ? "" : "w-full md:w-1/2"}>
-                <h3 className="text-3xl font-bold mb-2">{item.name}</h3>
-                <p className="text-gray-600 text-lg mb-4">{item.description}</p>
+                {badgeText && style === "Card" && (
+                  <div
+                    className="text-xs font-bold uppercase tracking-wider mb-2 inline-block"
+                    style={{ color: badgeColor }}
+                  >
+                    {badgeText}
+                  </div>
+                )}
+                <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()} mb-2`}>{item.name}</h3>
+                <p className={`${getDescriptionSizeClass()} text-gray-600 mb-4`}>{item.description}</p>
                 {showPrice && (
                   <div className="text-2xl font-bold text-orange-600 mb-4">
                     {formatPrice(item.price)}
                   </div>
                 )}
-                <button className="bg-black text-white px-6 py-3 rounded-full font-semibold">
-                  Order Now
-                </button>
+                {buttonLabel && (
+                  <button className={getButtonClass()}>
+                    {buttonLabel}
+                  </button>
+                )}
               </div>
         </div>
       )
         }
       },
       Hero: {
-        render: ({ title, subtitle }) => (
-          <div className="text-center py-12">
-            <h1 className="text-5xl font-bold mb-4">{title}</h1>
-            <p className="text-xl text-gray-600">{subtitle}</p>
-          </div>
-        ),
+        render: (props) => {
+          const {
+            title, subtitle,
+            titleSize = "5xl", titleWeight = "bold",
+            subtitleSize = "xl", align = "center",
+            titleColor, subtitleColor
+          } = props
+
+          const getTitleSizeClass = () => {
+            if (titleSize === "2xl") return "text-2xl"
+            if (titleSize === "3xl") return "text-3xl"
+            if (titleSize === "4xl") return "text-4xl"
+            if (titleSize === "5xl") return "text-5xl"
+            if (titleSize === "6xl") return "text-6xl"
+            return "text-5xl"
+          }
+
+          const getTitleWeightClass = () => {
+            if (titleWeight === "normal") return "font-normal"
+            if (titleWeight === "medium") return "font-medium"
+            if (titleWeight === "semibold") return "font-semibold"
+            if (titleWeight === "bold") return "font-bold"
+            return "font-bold"
+          }
+
+          const getSubtitleSizeClass = () => {
+            if (subtitleSize === "sm") return "text-sm"
+            if (subtitleSize === "base") return "text-base"
+            if (subtitleSize === "lg") return "text-lg"
+            if (subtitleSize === "xl") return "text-xl"
+            if (subtitleSize === "2xl") return "text-2xl"
+            return "text-xl"
+          }
+
+          const getAlignClass = () => {
+            if (align === "left") return "text-left"
+            if (align === "center") return "text-center"
+            if (align === "right") return "text-right"
+            return "text-center"
+          }
+
+          return (
+            <div className={`${getAlignClass()} py-12`}>
+              <h1
+                className={`${getTitleSizeClass()} ${getTitleWeightClass()} mb-4`}
+                style={{ color: titleColor || undefined }}
+              >
+                {title}
+              </h1>
+              <p
+                className={`${getSubtitleSizeClass()} text-gray-600`}
+                style={{ color: subtitleColor || undefined }}
+              >
+                {subtitle}
+              </p>
+            </div>
+          )
+        },
         fields: {
           title: { type: "text" },
-          subtitle: { type: "text" }
+          subtitle: { type: "text" },
+          titleSize: {
+            type: "select",
+            label: "Title Size",
+            options: [
+              { label: "2XL", value: "2xl" },
+              { label: "3XL", value: "3xl" },
+              { label: "4XL", value: "4xl" },
+              { label: "5XL", value: "5xl" },
+              { label: "6XL", value: "6xl" }
+            ]
+          },
+          titleWeight: {
+            type: "select",
+            label: "Title Weight",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Medium", value: "medium" },
+              { label: "Semibold", value: "semibold" },
+              { label: "Bold", value: "bold" }
+            ]
+          },
+          subtitleSize: {
+            type: "select",
+            label: "Subtitle Size",
+            options: [
+              { label: "Small", value: "sm" },
+              { label: "Base", value: "base" },
+              { label: "Large", value: "lg" },
+              { label: "XL", value: "xl" },
+              { label: "2XL", value: "2xl" }
+            ]
+          },
+          align: {
+            type: "radio",
+            label: "Alignment",
+            options: [
+              { label: "Left", value: "left" },
+              { label: "Center", value: "center" },
+              { label: "Right", value: "right" }
+            ]
+          },
+          titleColor: { type: "text", label: "Title Color (hex or CSS)" },
+          subtitleColor: { type: "text", label: "Subtitle Color (hex or CSS)" }
         },
         defaultProps: {
           title: "Our Menu",
-          subtitle: "Fresh & Delicious"
+          subtitle: "Fresh & Delicious",
+          titleSize: "5xl",
+          titleWeight: "bold",
+          subtitleSize: "xl",
+          align: "center"
         }
       },
       Section: {
@@ -375,25 +817,99 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         defaultProps: { size: 24 }
       },
       Text: {
-        render: ({ text, align, size }) => (
-          <p 
-            className={`
-              ${align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left"}
-              ${size === "large" ? "text-xl" : size === "small" ? "text-sm" : "text-base"}
-            `}
-          >
-            {text}
-          </p>
-        ),
+        render: (props) => {
+          const {
+            text, align = "left", size = "medium",
+            fontSize, fontWeight, color,
+            textTransform, lineHeight, letterSpacing
+          } = props
+
+          const getAlignClass = () => {
+            if (align === "center") return "text-center"
+            if (align === "right") return "text-right"
+            return "text-left"
+          }
+
+          const getSizeClass = () => {
+            if (size === "large") return "text-xl"
+            if (size === "small") return "text-sm"
+            return "text-base"
+          }
+
+          const getFontSizeClass = () => {
+            if (!fontSize) return ""
+            if (fontSize === "xs") return "text-xs"
+            if (fontSize === "sm") return "text-sm"
+            if (fontSize === "base") return "text-base"
+            if (fontSize === "lg") return "text-lg"
+            if (fontSize === "xl") return "text-xl"
+            if (fontSize === "2xl") return "text-2xl"
+            if (fontSize === "3xl") return "text-3xl"
+            return ""
+          }
+
+          const getFontWeightClass = () => {
+            if (!fontWeight) return ""
+            if (fontWeight === "normal") return "font-normal"
+            if (fontWeight === "medium") return "font-medium"
+            if (fontWeight === "semibold") return "font-semibold"
+            if (fontWeight === "bold") return "font-bold"
+            if (fontWeight === "extrabold") return "font-extrabold"
+            return ""
+          }
+
+          const getTextTransformClass = () => {
+            if (!textTransform || textTransform === "none") return ""
+            if (textTransform === "uppercase") return "uppercase"
+            if (textTransform === "lowercase") return "lowercase"
+            if (textTransform === "capitalize") return "capitalize"
+            return ""
+          }
+
+          const getLineHeightClass = () => {
+            if (!lineHeight || lineHeight === "normal") return ""
+            if (lineHeight === "tight") return "leading-tight"
+            if (lineHeight === "relaxed") return "leading-relaxed"
+            if (lineHeight === "loose") return "leading-loose"
+            return ""
+          }
+
+          const getLetterSpacingClass = () => {
+            if (!letterSpacing || letterSpacing === "normal") return ""
+            if (letterSpacing === "tight") return "tracking-tight"
+            if (letterSpacing === "wide") return "tracking-wide"
+            if (letterSpacing === "wider") return "tracking-wider"
+            return ""
+          }
+
+          // fontSize overrides size if specified
+          const finalSizeClass = fontSize ? getFontSizeClass() : getSizeClass()
+
+          return (
+            <p
+              className={`
+                ${getAlignClass()}
+                ${finalSizeClass}
+                ${getFontWeightClass()}
+                ${getTextTransformClass()}
+                ${getLineHeightClass()}
+                ${getLetterSpacingClass()}
+              `.trim().replace(/\s+/g, ' ')}
+              style={{ color: color || undefined }}
+            >
+              {text}
+            </p>
+          )
+        },
         fields: {
           text: { type: "textarea" },
-          align: { 
-            type: "radio", 
+          align: {
+            type: "radio",
             options: [
-              { label: "Left", value: "left" }, 
+              { label: "Left", value: "left" },
               { label: "Center", value: "center" },
               { label: "Right", value: "right" }
-            ] 
+            ]
           },
           size: {
             type: "radio",
@@ -402,12 +918,72 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
               { label: "Medium", value: "medium" },
               { label: "Large", value: "large" }
             ]
+          },
+          fontSize: {
+            type: "select",
+            label: "Font Size (Advanced)",
+            options: [
+              { label: "Default", value: "" },
+              { label: "Extra Small", value: "xs" },
+              { label: "Small", value: "sm" },
+              { label: "Base", value: "base" },
+              { label: "Large", value: "lg" },
+              { label: "XL", value: "xl" },
+              { label: "2XL", value: "2xl" },
+              { label: "3XL", value: "3xl" }
+            ]
+          },
+          fontWeight: {
+            type: "select",
+            label: "Font Weight",
+            options: [
+              { label: "Default", value: "" },
+              { label: "Normal", value: "normal" },
+              { label: "Medium", value: "medium" },
+              { label: "Semibold", value: "semibold" },
+              { label: "Bold", value: "bold" },
+              { label: "Extra Bold", value: "extrabold" }
+            ]
+          },
+          color: { type: "text", label: "Text Color (hex or CSS)" },
+          textTransform: {
+            type: "select",
+            label: "Text Transform",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Uppercase", value: "uppercase" },
+              { label: "Lowercase", value: "lowercase" },
+              { label: "Capitalize", value: "capitalize" }
+            ]
+          },
+          lineHeight: {
+            type: "select",
+            label: "Line Height",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Tight", value: "tight" },
+              { label: "Relaxed", value: "relaxed" },
+              { label: "Loose", value: "loose" }
+            ]
+          },
+          letterSpacing: {
+            type: "select",
+            label: "Letter Spacing",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Tight", value: "tight" },
+              { label: "Wide", value: "wide" },
+              { label: "Wider", value: "wider" }
+            ]
           }
         },
         defaultProps: {
           text: "Enter text here...",
           align: "left",
-          size: "medium"
+          size: "medium",
+          textTransform: "none",
+          lineHeight: "normal",
+          letterSpacing: "normal"
         }
       }
     }
