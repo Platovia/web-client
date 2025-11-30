@@ -101,8 +101,11 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           columns: 2
         },
         render: ({ category, layout, showImages, columns }) => {
-          // Safely get data from context
-          const { items: allItems, formatPrice, resolveImageUrl } = useMenuData() as any
+          const {
+            items: allItems,
+            formatPrice,
+            resolveImageUrl = (url: string) => url || "/placeholder.svg"
+          } = useMenuData() as any
           
           // Filter items
           const displayItems = category === "All" 
@@ -225,7 +228,11 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           showPrice: true
         },
         render: ({ itemId, style, showPrice }) => {
-          const { items: allItems, formatPrice, resolveImageUrl } = useMenuData() as any
+          const {
+            items: allItems,
+            formatPrice,
+            resolveImageUrl = (url: string) => url || "/placeholder.svg"
+          } = useMenuData() as any
           const item = allItems.find((i: any) => i.id === itemId)
 
           if (!item) return <div className="text-red-500">Item not found</div>

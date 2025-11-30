@@ -35,6 +35,8 @@ export interface MenuRendererProps {
   searchQuery: string;
   onChangeCategory: (category: string) => void;
   onChangeSearch: (query: string) => void;
+  formatPrice?: (price: number) => string;
+  resolveImageUrl?: (url?: string) => string;
 }
 
 

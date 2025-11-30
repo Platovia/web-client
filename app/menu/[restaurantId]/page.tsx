@@ -466,6 +466,8 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
           searchQuery={searchQuery}
           onChangeCategory={setSelectedCategory}
           onChangeSearch={setSearchQuery}
+          formatPrice={formatPrice}
+          resolveImageUrl={resolveImageUrl}
         />
       </div>
 
