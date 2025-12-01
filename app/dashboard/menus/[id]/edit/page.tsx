@@ -16,7 +16,7 @@ import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCir
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
-import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant } from "@/lib/api"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -50,6 +50,23 @@ export default function EditMenuPage() {
   const [processing, setProcessing] = useState<{ status: string; progress: number; processed?: number; total?: number } | null>(null)
   const [error, setError] = useState("")
   const [activeToken, setActiveToken] = useState<string | null>(null)
+  const [menuTemplates, setMenuTemplates] = useState<MenuTemplate[]>([])
+  const [isPublishingTemplateId, setIsPublishingTemplateId] = useState<string | null>(null)
+
+  const refreshTemplates = useCallback(async () => {
+    if (!id) return
+    try {
+      const templatesResponse = await apiClient.listMenuTemplates(id)
+      if (templatesResponse.error) {
+        setError("Failed to load template history: " + templatesResponse.error)
+        return
+      }
+      setMenuTemplates(templatesResponse.data?.templates || [])
+    } catch (err) {
+      console.error("Unable to refresh template history:", err)
+      setError("Failed to load template history")
+    }
+  }, [id])
 
   const loadMenuData = useCallback(async () => {
     if (!id) return
@@ -97,6 +114,7 @@ export default function EditMenuPage() {
         items: itemsResponse.data?.items || [],
         restaurant: restaurantResponse.data || undefined
       })
+      await refreshTemplates()
 
       // Load analytics for this menu
       try {
@@ -129,13 +147,31 @@ export default function EditMenuPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [id, fromUpload])
+  }, [id, fromUpload, refreshTemplates])
 
   useEffect(() => {
     if (id) {
       loadMenuData()
     }
   }, [id, loadMenuData])
+
+  const handleActivateTemplate = useCallback(async (templateId: string) => {
+    if (!id) return
+    setIsPublishingTemplateId(templateId)
+    setError("")
+    try {
+      const response = await apiClient.publishMenuTemplate(id, templateId, true)
+      if (response.error) {
+        setError("Failed to activate template: " + response.error)
+        return
+      }
+      setSuccess("Template activated")
+      setTimeout(() => setSuccess(""), 3000)
+      await refreshTemplates()
+    } finally {
+      setIsPublishingTemplateId(null)
+    }
+  }, [id, refreshTemplates])
 
   // Load/refresh active QR token for Preview
   useEffect(() => {
@@ -680,6 +716,49 @@ export default function EditMenuPage() {
                 </div>
               </CardContent>
             </Card>
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Clock className="h-4 w-4" /> Template History</CardTitle>
+              <CardDescription>Saved layout versions you can re-activate for this menu.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {menuTemplates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No saved templates yet.</p>
+              ) : (
+                menuTemplates.map((template) => (
+                  <div key={template.id} className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{template.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(template.created_at).toLocaleString()}
+                      </p>
+                      {template.definition_key && (
+                        <p className="text-xs text-muted-foreground">Source: {template.definition_key}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {template.is_active && <Badge variant="secondary">Active</Badge>}
+                        {template.is_draft && <Badge variant="outline">Draft</Badge>}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleActivateTemplate(template.id)}
+                        disabled={template.is_active || isPublishingTemplateId === template.id}
+                      >
+                        {isPublishingTemplateId === template.id
+                          ? "Activating..."
+                          : template.is_active
+                            ? "Active"
+                            : "Activate"}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
           </TabsContent>
 
           <TabsContent value="design">

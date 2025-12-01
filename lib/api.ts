@@ -444,6 +444,22 @@ interface MenuTemplate {
   created_at: string;
 }
 
+interface DesignTemplateMetadata {
+  id: string;
+  name: string;
+  description?: string;
+  company_id: string;
+  owner_user_id?: string;
+  created_at: string;
+  updated_at: string;
+  is_system: boolean;
+}
+
+interface DesignTemplate extends DesignTemplateMetadata {
+  preset_layout: any;
+  default_theme?: any;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -1026,6 +1042,29 @@ class ApiClient {
     })
   }
 
+  async listDesignTemplates(companyId: string): Promise<ApiResponse<{ templates: DesignTemplateMetadata[]; total: number }>> {
+    const params = new URLSearchParams()
+    params.append('company_id', companyId)
+    return this.makeRequest<{ templates: DesignTemplateMetadata[]; total: number }>(`/menus/design-templates?${params.toString()}`)
+  }
+
+  async createDesignTemplate(payload: { company_id: string; name: string; description?: string; layout_config: any; theme_config?: any }): Promise<ApiResponse<DesignTemplate>> {
+    return this.makeRequest<DesignTemplate>('/menus/design-templates', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async getDesignTemplate(templateId: string): Promise<ApiResponse<DesignTemplate>> {
+    return this.makeRequest<DesignTemplate>(`/menus/design-templates/${templateId}`)
+  }
+
+  async deleteDesignTemplate(templateId: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.makeRequest<{ success: boolean }>(`/menus/design-templates/${templateId}`, {
+      method: 'DELETE',
+    })
+  }
+
   async getRestaurantMenusWithDetails(restaurantId: string): Promise<ApiResponse<MenuWithDetailsListResponse>> {
     return this.makeRequest<MenuWithDetailsListResponse>(`/restaurants/${restaurantId}/menus/with-details`);
   }
@@ -1222,6 +1261,8 @@ export type {
   ApiResponse,
   MenuItem,
   Menu,
+  DesignTemplate,
+  DesignTemplateMetadata,
   MenuCreateRequest,
   MenuUpdateRequest,
   MenuListResponse,
