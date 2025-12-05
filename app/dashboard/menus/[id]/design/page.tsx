@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
-import { apiClient, type DesignTemplateMetadata } from "@/lib/api"
+import { apiClient, type DesignTemplate, type DesignTemplateMetadata } from "@/lib/api"
 import { resolveImageUrl as resolveImageUrlUtil } from "@/lib/utils"
 import { MenuDataProvider } from "@/components/menu-renderer/data-context"
 import { getPuckConfig } from "@/components/puck/config"
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 
 // Load Puck Editor dynamically to keep it isolated
@@ -65,6 +66,7 @@ export default function MenuDesignPage() {
   const [templateName, setTemplateName] = React.useState("")
   const [templateDescription, setTemplateDescription] = React.useState("")
   const [savingTemplate, setSavingTemplate] = React.useState(false)
+  const [loadingTemplateId, setLoadingTemplateId] = React.useState<string | null>(null)
   const [applyingTemplateId, setApplyingTemplateId] = React.useState<string | null>(null)
   const { toast } = useToast()
 
@@ -148,6 +150,32 @@ export default function MenuDesignPage() {
     void loadTemplates()
   }, [companyId, loadTemplates])
 
+  const fetchDesignTemplate = React.useCallback(async (templateId: string): Promise<DesignTemplate | null> => {
+    const resp = await apiClient.getDesignTemplate(templateId)
+    if (resp.error) {
+      toast({
+        title: "Unable to load template",
+        description: resp.error,
+      })
+      return null
+    }
+    if (!resp.data) {
+      toast({
+        title: "Unable to load template",
+        description: "Template data missing.",
+      })
+      return null
+    }
+    if (!resp.data.preset_layout) {
+      toast({
+        title: "Template missing layout",
+        description: "This template does not contain layout data.",
+      })
+      return null
+    }
+    return resp.data
+  }, [toast])
+
   const handleSaveTemplate = React.useCallback(async () => {
     if (!companyId) {
       toast({
@@ -211,29 +239,17 @@ export default function MenuDesignPage() {
 
     setApplyingTemplateId(templateId)
     try {
-      const resp = await apiClient.getDesignTemplate(templateId)
-      if (resp.error || !resp.data) {
-        toast({
-          title: "Unable to load template",
-          description: resp.error || "This template cannot be applied right now.",
-        })
+      const template = await fetchDesignTemplate(templateId)
+      if (!template) {
         return
       }
-
-      const layoutPayload = resp.data.preset_layout
-      if (!layoutPayload) {
-        toast({
-          title: "Template missing layout",
-          description: "This template lacks serialized layout data.",
-        })
-        return
-      }
+      const layoutPayload = template.preset_layout
 
       const created = await apiClient.createMenuTemplate(id, {
-        name: resp.data.name,
-        definition_id: resp.data.id,
+        name: template.name,
+        definition_id: template.id,
         layout_config: layoutPayload,
-        theme_config: resp.data.default_theme,
+        theme_config: template.default_theme,
       })
       if (created.error) {
         toast({ title: "Failed to apply template", description: created.error })
@@ -252,7 +268,7 @@ export default function MenuDesignPage() {
       }
 
       setData(migratePuckData(layoutPayload))
-      setThemeConfig(resp.data.default_theme ?? null)
+      setThemeConfig(template.default_theme ?? null)
       toast({
         title: "Template applied",
         description: `${templateName} is now the active layout.`,
@@ -260,7 +276,23 @@ export default function MenuDesignPage() {
     } finally {
       setApplyingTemplateId(null)
     }
-  }, [id, migratePuckData, toast])
+  }, [fetchDesignTemplate, id, migratePuckData, toast])
+
+  const handleLoadTemplate = React.useCallback(async (templateId: string) => {
+    setLoadingTemplateId(templateId)
+    try {
+      const template = await fetchDesignTemplate(templateId)
+      if (!template) return
+      setData(migratePuckData(template.preset_layout))
+      setThemeConfig(template.default_theme ?? null)
+      toast({
+        title: "Template loaded",
+        description: "You can now edit this layout before publishing.",
+      })
+    } finally {
+      setLoadingTemplateId(null)
+    }
+  }, [fetchDesignTemplate, migratePuckData, toast])
 
   const onPublish = async (nextData: any) => {
     setSaving(true)
@@ -367,25 +399,41 @@ export default function MenuDesignPage() {
               ) : (
                 designTemplates.map((template) => (
                   <div key={template.id} className="rounded-md border bg-muted/60 p-3">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                       <div className="flex-1">
                         <p className="text-sm font-semibold">{template.name}</p>
                         {template.description && (
                           <p className="text-xs text-muted-foreground line-clamp-2">{template.description}</p>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(template.created_at).toLocaleDateString()}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleApplyTemplate(template.id, template.name)}
-                          disabled={applyingTemplateId === template.id}
-                        >
-                          {applyingTemplateId === template.id ? "Applying..." : "Apply"}
-                        </Button>
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>{new Date(template.created_at).toLocaleDateString()}</span>
+                          {template.is_active && <Badge variant="secondary">Active</Badge>}
+                          {template.is_draft && <Badge variant="outline">Draft</Badge>}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleLoadTemplate(template.id)}
+                            disabled={loadingTemplateId === template.id}
+                          >
+                            {loadingTemplateId === template.id ? "Loading..." : "Load for edit"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApplyTemplate(template.id, template.name)}
+                            disabled={template.is_active || applyingTemplateId === template.id}
+                          >
+                            {applyingTemplateId === template.id
+                              ? "Applying..."
+                              : template.is_active
+                                ? "Active"
+                                : "Apply"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
