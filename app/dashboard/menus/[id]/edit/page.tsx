@@ -16,7 +16,7 @@ import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCir
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
-import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate } from "@/lib/api"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate, type DesignTemplateMetadata } from "@/lib/api"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -52,6 +52,9 @@ export default function EditMenuPage() {
   const [activeToken, setActiveToken] = useState<string | null>(null)
   const [menuTemplates, setMenuTemplates] = useState<MenuTemplate[]>([])
   const [isPublishingTemplateId, setIsPublishingTemplateId] = useState<string | null>(null)
+  const [designTemplates, setDesignTemplates] = useState<DesignTemplateMetadata[]>([])
+  const [loadingDesignTemplates, setLoadingDesignTemplates] = useState(false)
+  const [applyingDesignTemplateId, setApplyingDesignTemplateId] = useState<string | null>(null)
 
   const refreshTemplates = useCallback(async () => {
     if (!id) return
@@ -67,6 +70,21 @@ export default function EditMenuPage() {
       setError("Failed to load template history")
     }
   }, [id])
+
+  const loadDesignTemplates = useCallback(async () => {
+    if (!menuData?.restaurant?.company_id) return
+    setLoadingDesignTemplates(true)
+    try {
+      const resp = await apiClient.listDesignTemplates(menuData.restaurant.company_id)
+      if (resp.error) {
+        setError((prev) => prev || "Failed to load design templates: " + resp.error)
+        return
+      }
+      setDesignTemplates(resp.data?.templates || [])
+    } finally {
+      setLoadingDesignTemplates(false)
+    }
+  }, [menuData?.restaurant?.company_id])
 
   const loadMenuData = useCallback(async () => {
     if (!id) return
@@ -155,6 +173,10 @@ export default function EditMenuPage() {
     }
   }, [id, loadMenuData])
 
+  useEffect(() => {
+    void loadDesignTemplates()
+  }, [loadDesignTemplates])
+
   const handleActivateTemplate = useCallback(async (templateId: string) => {
     if (!id) return
     setIsPublishingTemplateId(templateId)
@@ -170,6 +192,47 @@ export default function EditMenuPage() {
       await refreshTemplates()
     } finally {
       setIsPublishingTemplateId(null)
+    }
+  }, [id, refreshTemplates])
+
+  const handleApplyDesignTemplate = useCallback(async (templateId: string, templateName: string) => {
+    if (!id) return
+    setApplyingDesignTemplateId(templateId)
+    setError("")
+    try {
+      const templateResp = await apiClient.getDesignTemplate(templateId)
+      if (templateResp.error || !templateResp.data) {
+        setError("Failed to load design template: " + (templateResp.error || "Not found"))
+        return
+      }
+
+      const layoutPayload = templateResp.data.preset_layout
+      const created = await apiClient.createMenuTemplate(id, {
+        name: templateName,
+        definition_id: templateResp.data.id,
+        layout_config: layoutPayload,
+        theme_config: templateResp.data.default_theme,
+      })
+      if (created.error || !created.data?.id) {
+        setError("Failed to create design version: " + (created.error || "Missing template id"))
+        return
+      }
+
+      const published = await apiClient.publishMenuTemplate(id, created.data.id, true)
+      if (published.error) {
+        setError("Failed to activate design: " + published.error)
+        return
+      }
+
+      setSuccess(`${templateName} applied and set active`)
+      setTimeout(() => setSuccess(""), 3000)
+      await refreshTemplates()
+      setMenuData((prev) => prev ? ({
+        ...prev,
+        menu: { ...prev.menu, theme_config: templateResp.data.default_theme ?? prev.menu.theme_config }
+      }) : prev)
+    } finally {
+      setApplyingDesignTemplateId(null)
     }
   }, [id, refreshTemplates])
 
@@ -826,6 +889,54 @@ export default function EditMenuPage() {
                     setIsSaving(false)
                     if (resp.error) setError(resp.error); else setSuccess("Design saved")
                   }}>Save Design</Button>
+                </div>
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">Saved designs</p>
+                      <p className="text-sm text-muted-foreground">Apply visual builder designs without leaving this page.</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadDesignTemplates}
+                      disabled={loadingDesignTemplates}
+                    >
+                      {loadingDesignTemplates ? "Refreshing..." : "Refresh"}
+                    </Button>
+                  </div>
+                  {loadingDesignTemplates ? (
+                    <p className="text-sm text-muted-foreground">Loading designs…</p>
+                  ) : designTemplates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No saved designs yet.</p>
+                  ) : (
+                    designTemplates.map((template) => (
+                      <div key={template.id} className="flex flex-col gap-2 rounded-md border bg-muted/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{template.name}</p>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{template.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApplyDesignTemplate(template.id, template.name)}
+                            disabled={applyingDesignTemplateId === template.id}
+                          >
+                            {applyingDesignTemplateId === template.id ? "Applying..." : "Set Active"}
+                          </Button>
+                          <Link href={`/dashboard/menus/${id}/design`}>
+                            <Button size="sm" variant="ghost">
+                              <LayoutTemplate className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -61,6 +61,8 @@ export default function MenuDesignPage() {
   const [companyId, setCompanyId] = React.useState<string | null>(null)
   const [themeConfig, setThemeConfig] = React.useState<any>(null)
   const [designTemplates, setDesignTemplates] = React.useState<DesignTemplateMetadata[]>([])
+  const [editorKey, setEditorKey] = React.useState(0)
+  const [lastAction, setLastAction] = React.useState<string | null>(null)
   const [loadingTemplates, setLoadingTemplates] = React.useState(false)
   const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false)
   const [templateName, setTemplateName] = React.useState("")
@@ -68,6 +70,9 @@ export default function MenuDesignPage() {
   const [savingTemplate, setSavingTemplate] = React.useState(false)
   const [loadingTemplateId, setLoadingTemplateId] = React.useState<string | null>(null)
   const [applyingTemplateId, setApplyingTemplateId] = React.useState<string | null>(null)
+  const [renameTemplate, setRenameTemplate] = React.useState<{ id: string; name: string; description?: string } | null>(null)
+  const [updatingTemplateId, setUpdatingTemplateId] = React.useState<string | null>(null)
+  const [deletingTemplateId, setDeletingTemplateId] = React.useState<string | null>(null)
   const { toast } = useToast()
 
   // Normalize older layouts to new Puck schema and ensure all items (and children) have IDs
@@ -273,18 +278,22 @@ export default function MenuDesignPage() {
         title: "Template applied",
         description: `${templateName} is now the active layout.`,
       })
+      setEditorKey((key) => key + 1)
+      setLastAction(`Applied ${templateName} and set active`)
     } finally {
       setApplyingTemplateId(null)
     }
   }, [fetchDesignTemplate, id, migratePuckData, toast])
 
-  const handleLoadTemplate = React.useCallback(async (templateId: string) => {
+  const handleLoadTemplate = React.useCallback(async (templateId: string, templateName: string) => {
     setLoadingTemplateId(templateId)
     try {
       const template = await fetchDesignTemplate(templateId)
       if (!template) return
       setData(migratePuckData(template.preset_layout))
       setThemeConfig(template.default_theme ?? null)
+      setEditorKey((key) => key + 1)
+      setLastAction(`Loaded ${templateName} into the editor`)
       toast({
         title: "Template loaded",
         description: "You can now edit this layout before publishing.",
@@ -293,6 +302,53 @@ export default function MenuDesignPage() {
       setLoadingTemplateId(null)
     }
   }, [fetchDesignTemplate, migratePuckData, toast])
+
+  const handleRenameTemplate = React.useCallback(async () => {
+    if (!renameTemplate) return
+    const trimmed = renameTemplate.name.trim()
+    if (!trimmed) {
+      toast({ title: "Template name required", description: "Please enter a name for the template." })
+      return
+    }
+    setUpdatingTemplateId(renameTemplate.id)
+    try {
+      const resp = await apiClient.updateDesignTemplate(renameTemplate.id, {
+        name: trimmed,
+        description: renameTemplate.description?.trim() || undefined,
+      })
+      if (resp.error) {
+        toast({ title: "Could not rename template", description: resp.error })
+        return
+      }
+      toast({ title: "Template updated", description: "Changes saved." })
+      setRenameTemplate(null)
+      void loadTemplates()
+    } finally {
+      setUpdatingTemplateId(null)
+    }
+  }, [loadTemplates, renameTemplate, toast])
+
+  const handleDeleteTemplate = React.useCallback(
+    async (templateId: string, templateName: string) => {
+      if (!confirm(`Delete "${templateName}"? This cannot be undone.`)) return
+      setDeletingTemplateId(templateId)
+      try {
+        const resp = await apiClient.deleteDesignTemplate(templateId)
+        if (resp.error) {
+          toast({ title: "Failed to delete template", description: resp.error })
+          return
+        }
+        toast({ title: "Template deleted", description: `${templateName} has been removed.` })
+        if (lastAction?.includes(templateName)) {
+          setLastAction(null)
+        }
+        void loadTemplates()
+      } finally {
+        setDeletingTemplateId(null)
+      }
+    },
+    [lastAction, loadTemplates, toast],
+  )
 
   const onPublish = async (nextData: any) => {
     setSaving(true)
@@ -331,6 +387,7 @@ export default function MenuDesignPage() {
                   {menuData ? (
                     <MenuDataProvider value={menuData}>
                       <Puck
+                        key={editorKey}
                         config={config as any}
                         data={migratePuckData(data)}
                         onPublish={onPublish}
@@ -381,6 +438,9 @@ export default function MenuDesignPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
+                {lastAction && (
+                  <div className="px-6 pb-2 text-sm text-muted-foreground">Last action: {lastAction}</div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -412,11 +472,11 @@ export default function MenuDesignPage() {
                           {template.is_active && <Badge variant="secondary">Active</Badge>}
                           {template.is_draft && <Badge variant="outline">Draft</Badge>}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleLoadTemplate(template.id)}
+                            onClick={() => handleLoadTemplate(template.id, template.name)}
                             disabled={loadingTemplateId === template.id}
                           >
                             {loadingTemplateId === template.id ? "Loading..." : "Load for edit"}
@@ -433,6 +493,23 @@ export default function MenuDesignPage() {
                                 ? "Active"
                                 : "Apply"}
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setRenameTemplate({ id: template.id, name: template.name, description: template.description || "" })}
+                            disabled={updatingTemplateId === template.id}
+                          >
+                            {updatingTemplateId === template.id ? "Renaming..." : "Rename"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteTemplate(template.id, template.name)}
+                            disabled={deletingTemplateId === template.id}
+                          >
+                            {deletingTemplateId === template.id ? "Deleting..." : "Delete"}
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -443,6 +520,43 @@ export default function MenuDesignPage() {
           </Card>
         </div>
       </div>
+      <Dialog open={Boolean(renameTemplate)} onOpenChange={(open) => { if (!open) setRenameTemplate(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename design template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1">
+              <Label htmlFor="rename-template-name">Template name</Label>
+              <Input
+                id="rename-template-name"
+                value={renameTemplate?.name ?? ""}
+                onChange={(event) => setRenameTemplate((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+                placeholder="Updated name"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="rename-template-description">Description</Label>
+              <Textarea
+                id="rename-template-description"
+                value={renameTemplate?.description ?? ""}
+                onChange={(event) => setRenameTemplate((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
+                placeholder="Short description (optional)"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="ghost" onClick={() => setRenameTemplate(null)}>Cancel</Button>
+            <Button
+              onClick={handleRenameTemplate}
+              disabled={!renameTemplate || updatingTemplateId === renameTemplate.id}
+            >
+              {renameTemplate && updatingTemplateId === renameTemplate.id ? "Saving..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

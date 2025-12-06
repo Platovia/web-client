@@ -1059,6 +1059,13 @@ class ApiClient {
     return this.makeRequest<DesignTemplate>(`/menus/design-templates/${templateId}`)
   }
 
+  async updateDesignTemplate(templateId: string, payload: { name?: string; description?: string; layout_config?: any; theme_config?: any }): Promise<ApiResponse<DesignTemplate>> {
+    return this.makeRequest<DesignTemplate>(`/menus/design-templates/${templateId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  }
+
   async deleteDesignTemplate(templateId: string): Promise<ApiResponse<{ success: boolean }>> {
     return this.makeRequest<{ success: boolean }>(`/menus/design-templates/${templateId}`, {
       method: 'DELETE',
