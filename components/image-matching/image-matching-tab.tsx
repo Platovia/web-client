@@ -20,7 +20,9 @@ import {
   ImageIcon,
   Zap,
   Trash2,
-  Wand2
+  Wand2,
+  Search,
+  Upload
 } from "lucide-react"
 import { 
   apiClient, 
@@ -299,6 +301,23 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
   const categories = Array.from(
     new Set(menuItems.map((item) => item.category || "Other").filter(Boolean))
   )
+
+  const sanitize = (text?: string | null) =>
+    (text || "")
+      .replace(/[^\w\s-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+  const buildGoogleImageSearchUrl = (item: MenuItem) => {
+    const parts = [
+      sanitize(item.name),
+      sanitize(item.category),
+      "restaurant dish photo",
+    ].filter(Boolean)
+    const query = parts.join(" ")
+    return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`
+  }
+
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
@@ -578,7 +597,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                   <div className="flex-shrink-0">
                     {item.image_url ? (
                       <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -591,9 +610,29 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             variant="outline"
                             size="sm"
                             onClick={() => handleAssignImage(item.id)}
-                            title="Reassign image"
+                            title="Reassign or upload"
                           >
                             <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignImage(item.id)}
+                            title="Upload a custom image"
+                          >
+                            <Upload className="h-4 w-4 mr-1" />
+                            Upload
+                          </Button>
+                          <Button asChild variant="outline" size="sm">
+                            <a
+                              href={buildGoogleImageSearchUrl(item)}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Search Google Images for ${item.name}`}
+                            >
+                              <Search className="h-4 w-4 mr-1" />
+                              Search
+                            </a>
                           </Button>
                         </div>
                         <Button
@@ -619,15 +658,27 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAssignImage(item.id)}
-                          disabled={stats.unassigned === 0}
-                        >
-                          <Link2 className="h-4 w-4 mr-1" />
-                          Assign Image
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAssignImage(item.id)}
+                          >
+                            <Link2 className="h-4 w-4 mr-1" />
+                            Assign / Upload
+                          </Button>
+                          <Button asChild variant="outline" size="sm">
+                            <a
+                              href={buildGoogleImageSearchUrl(item)}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Search Google Images for ${item.name}`}
+                            >
+                              <Search className="h-4 w-4 mr-1" />
+                              Search
+                            </a>
+                          </Button>
+                        </div>
                         <Button
                           variant="default"
                           size="sm"

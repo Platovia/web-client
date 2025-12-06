@@ -350,6 +350,26 @@ export default function MenuDesignPage() {
     [lastAction, loadTemplates, toast],
   )
 
+  const buildGoogleImageSearchUrl = React.useCallback(
+    (item: any) => {
+      const sanitize = (text?: string | null) =>
+        (text || "")
+          .replace(/[^\w\s-]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+      const parts = [
+        sanitize(item?.name),
+        sanitize(item?.category),
+        sanitize(menuData?.restaurant?.cuisine_type),
+        sanitize(menuData?.restaurant?.location),
+        "restaurant dish photo",
+      ].filter(Boolean)
+      const query = parts.join(" ")
+      return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`
+    },
+    [menuData?.restaurant?.cuisine_type, menuData?.restaurant?.location],
+  )
+
   const onPublish = async (nextData: any) => {
     setSaving(true)
     const created = await apiClient.createMenuTemplate(id, { name: "Custom", layout_config: nextData, theme_config: {} })
@@ -515,6 +535,49 @@ export default function MenuDesignPage() {
                     </div>
                   </div>
                 ))
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Google Images (manual)</CardTitle>
+              <CardDescription>Opens a new tab for research; upload only licensed photos.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!menuData?.items?.length ? (
+                <div className="text-sm text-muted-foreground">Menu items will appear here once loaded.</div>
+              ) : (
+                <>
+                  {(menuData.items as any[]).slice(0, 30).map((item) => (
+                    <div
+                      key={item.id ?? item.name}
+                      className="flex items-start justify-between gap-3 rounded-md border bg-muted/40 p-3"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold leading-tight">{item.name}</p>
+                        {item.category && <p className="text-xs text-muted-foreground">{item.category}</p>}
+                      </div>
+                      <Button asChild size="sm" variant="outline">
+                        <a
+                          href={buildGoogleImageSearchUrl(item)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Search Google Images for ${item.name}`}
+                        >
+                          Search
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                  {menuData.items.length > 30 && (
+                    <div className="text-xs text-muted-foreground">
+                      Showing first 30 items. Refine your Google query in the opened tab if needed.
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    Pick images you have rights to use, then upload them here for the item.
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

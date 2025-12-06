@@ -509,6 +509,20 @@ export default function UploadMenuPage() {
               <CardDescription>
                 Upload clear photos of your menu pages or PDF files (max 10 pages). Our AI will automatically extract items, prices, and descriptions.
               </CardDescription>
+              <div className="mt-3 grid gap-2 text-sm text-gray-700 md:grid-cols-2">
+                <div className="rounded-md border bg-muted/40 p-3">
+                  <p className="font-medium">Best results: real dish photos</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Add a few clear photos of your top-selling dishes (no watermarks, good lighting, full plate in frame). These become the images diners see—far better than AI or generic stock.
+                  </p>
+                </div>
+                <div className="rounded-md border bg-muted/40 p-3">
+                  <p className="font-medium">Tip</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    If you upload a PDF for text extraction, you can still upload separate real dish photos here so items get matched with accurate imagery.
+                  </p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
