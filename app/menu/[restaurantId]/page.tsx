@@ -37,6 +37,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [filteredItems, setFilteredItems] = useState<MenuItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [availabilityFilter, setAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("Available")
   const [showChat, setShowChat] = useState(false)
   const [isChatMinimized, setIsChatMinimized] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -56,6 +57,15 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [currentStatus, setCurrentStatus] = useState<any>(null)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
 
+  const isUnavailable = (value: any) => {
+    if (value === false || value === 0) return true
+    if (typeof value === "string") {
+      const lowered = value.toLowerCase()
+      return lowered === "false" || lowered === "0"
+    }
+    return false
+  }
+
   useEffect(() => {
     const initParams = async () => {
       const resolved = (typeof (params as any)?.then === "function") ? await (params as Promise<{ restaurantId: string }>) : (params as { restaurantId: string })
@@ -72,7 +82,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
 
   useEffect(() => {
     filterItems()
-  }, [menuItems, searchQuery, selectedCategory])
+  }, [menuItems, searchQuery, selectedCategory, availabilityFilter])
 
   // Auto-scroll to bottom when chat messages change
   const scrollToBottom = () => {
@@ -174,6 +184,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const filterItems = () => {
     let filtered = menuItems
 
+    // Availability filter (default hides unavailable)
+    if (availabilityFilter === "Available") {
+      filtered = filtered.filter((item) => !isUnavailable(item.is_available))
+    } else if (availabilityFilter === "Unavailable") {
+      filtered = filtered.filter((item) => isUnavailable(item.is_available))
+    }
+
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
@@ -189,7 +206,21 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
     setFilteredItems(filtered)
   }
 
-  const categories = ["All", ...Array.from(new Set(menuItems.map((item) => item.category || "Other").filter(Boolean)))]
+  const categories = [
+    "All",
+    ...Array.from(
+      new Set(
+        menuItems
+          .filter((item) => {
+            if (availabilityFilter === "Available") return !isUnavailable(item.is_available)
+            if (availabilityFilter === "Unavailable") return isUnavailable(item.is_available)
+            return true
+          })
+          .map((item) => item.category || "Other")
+          .filter(Boolean),
+      ),
+    ),
+  ]
 
   const createChatSession = async () => {
     if (!qrToken || chatSession) return
@@ -447,6 +478,21 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-end mb-4 gap-2">
+          <label htmlFor="availability-filter" className="text-sm text-gray-700">
+            Availability
+          </label>
+          <select
+            id="availability-filter"
+            className="p-2 border rounded-md"
+            value={availabilityFilter}
+            onChange={(e) => setAvailabilityFilter(e.target.value as typeof availabilityFilter)}
+          >
+            <option value="All">All</option>
+            <option value="Available">Available</option>
+            <option value="Unavailable">Unavailable</option>
+          </select>
+        </div>
         <MenuRenderer
           templateId={templateId}
           restaurant={{
@@ -457,7 +503,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             currency_code: restaurant?.currency_code,
             locale: restaurant?.locale,
           }}
-          items={filteredItems.length ? filteredItems : menuItems}
+          items={filteredItems}
           themeConfig={themeConfig}
           layoutConfig={layoutStatus === "published" ? layoutConfig : null}
           mode={layoutStatus === "published" && layoutConfig ? "builder" : "template"}

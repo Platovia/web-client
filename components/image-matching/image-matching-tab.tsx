@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { 
   Images, 
   RefreshCw, 
@@ -54,6 +55,8 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
   const [warningModalOpen, setWarningModalOpen] = useState(false)
   const [warningMessage, setWarningMessage] = useState("")
   const [warningAction, setWarningAction] = useState<(() => void) | null>(null)
+  const [itemSearch, setItemSearch] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("All")
 
   useEffect(() => {
     if (menuId) {
@@ -293,6 +296,18 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
     }
   }
 
+  const categories = Array.from(
+    new Set(menuItems.map((item) => item.category || "Other").filter(Boolean))
+  )
+  const filteredMenuItems = menuItems.filter((item) => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+      (item.description || "").toLowerCase().includes(itemSearch.toLowerCase())
+    const matchesCategory =
+      categoryFilter === "All" || (item.category || "Other") === categoryFilter
+    return matchesSearch && matchesCategory
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -493,8 +508,38 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="grid gap-3 md:grid-cols-3 mb-4">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-700" htmlFor="match-item-search">Search items</label>
+                <Input
+                  id="match-item-search"
+                  placeholder="Search by name or description"
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700" htmlFor="match-item-category">Filter by category</label>
+                <select
+                  id="match-item-category"
+                  className="w-full p-2 border rounded-md"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="space-y-3">
-              {menuItems.map((item) => (
+              {filteredMenuItems.length === 0 && (
+                <div className="text-sm text-muted-foreground border rounded-md p-3 border-dashed">
+                  No items match your search/filter.
+                </div>
+              )}
+              {filteredMenuItems.map((item) => (
                 <div key={item.id} className="flex items-start gap-4 p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
                   {/* Thumbnail Section */}
                   <div className="flex-shrink-0">

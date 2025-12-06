@@ -55,6 +55,17 @@ export default function EditMenuPage() {
   const [designTemplates, setDesignTemplates] = useState<DesignTemplateMetadata[]>([])
   const [loadingDesignTemplates, setLoadingDesignTemplates] = useState(false)
   const [applyingDesignTemplateId, setApplyingDesignTemplateId] = useState<string | null>(null)
+  const [itemSearch, setItemSearch] = useState("")
+  const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
+  const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
+  const isUnavailable = (value: any) => {
+    if (value === false || value === 0) return true
+    if (typeof value === "string") {
+      const lowered = value.toLowerCase()
+      return lowered === "false" || lowered === "0"
+    }
+    return false
+  }
 
   const refreshTemplates = useCallback(async () => {
     if (!id) return
@@ -255,6 +266,25 @@ export default function EditMenuPage() {
   }, [id])
 
   const categories = menuData ? Array.from(new Set(menuData.items.map((item) => item.category || "Other").filter(Boolean))) : []
+  const filteredItems = menuData
+    ? menuData.items.filter((item) => {
+        const matchesSearch =
+          item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+          (item.description || "").toLowerCase().includes(itemSearch.toLowerCase())
+        const matchesCategory =
+          itemCategoryFilter === "All" ||
+          (item.category || "Other") === itemCategoryFilter
+        const matchesAvailability =
+          itemAvailabilityFilter === "All" ||
+          (itemAvailabilityFilter === "Available" ? !isUnavailable(item.is_available) : isUnavailable(item.is_available))
+        return matchesSearch && matchesCategory && matchesAvailability
+      })
+    : []
+  const filteredCategories = Array.from(
+    new Set(
+      filteredItems.map((item) => item.category || "Other").filter(Boolean)
+    )
+  )
 
   const handleSaveMenu = async () => {
     if (!menuData) return
@@ -592,8 +622,51 @@ export default function EditMenuPage() {
                 </AlertDescription>
               </Alert>
             )}
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="item-search">Search items</Label>
+                <Input
+                  id="item-search"
+                  placeholder="Search by name or description"
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="item-category">Filter by category</Label>
+                <select
+                  id="item-category"
+                  className="w-full p-2 border rounded-md"
+                  value={itemCategoryFilter}
+                  onChange={(e) => setItemCategoryFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="item-availability">Availability</Label>
+                <select
+                  id="item-availability"
+                  className="w-full p-2 border rounded-md"
+                  value={itemAvailabilityFilter}
+                  onChange={(e) => setItemAvailabilityFilter(e.target.value as typeof itemAvailabilityFilter)}
+                >
+                  <option value="All">All</option>
+                  <option value="Available">Available</option>
+                  <option value="Unavailable">Unavailable</option>
+                </select>
+              </div>
+            </div>
+            {filteredItems.length === 0 && (
+              <Alert className="border border-dashed">
+                <AlertDescription>No items match your search/filter.</AlertDescription>
+              </Alert>
+            )}
             {/* Menu Items by Category */}
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <Card key={category}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -606,8 +679,8 @@ export default function EditMenuPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {menuData.items
-                      .filter((item) => item.category === category)
+                        {filteredItems
+                          .filter((item) => (item.category || "Other") === category)
                       .map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
                           {/* Item Image */}
