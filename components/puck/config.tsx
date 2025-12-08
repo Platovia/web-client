@@ -7,6 +7,7 @@ import { useMenuData } from "../menu-renderer/data-context"
 // Define the props for our components
 export type MenuProps = {
   MenuSection: {
+    visible?: boolean
     category: string
     layout: "Grid" | "List" | "Minimal" | "Card"
     showImages: boolean
@@ -28,6 +29,7 @@ export type MenuProps = {
     priceColor?: string
   }
   FeaturedItem: {
+    visible?: boolean
     itemId: string
     style: "Hero" | "Card" | "Banner"
     showPrice: boolean
@@ -43,6 +45,7 @@ export type MenuProps = {
     backgroundStyle?: "light" | "dark" | "gradient"
   }
   Hero: {
+    visible?: boolean
     title: string
     subtitle: string
     backgroundImage?: string
@@ -55,24 +58,29 @@ export type MenuProps = {
     subtitleColor?: string
   }
   Space: {
+    visible?: boolean
     size: number
   }
   Section: {
+    visible?: boolean
     backgroundColor: string
     padding: number
     children: React.ReactNode
   }
   Flex: {
+    visible?: boolean
     direction: "row" | "column"
     gap: number
     children: React.ReactNode
   }
   Grid: {
+    visible?: boolean
     columns: number
     gap: number
     children: React.ReactNode
   }
   Text: {
+    visible?: boolean
     text: string
     align: "left" | "center" | "right"
     size: "small" | "medium" | "large"
@@ -85,6 +93,7 @@ export type MenuProps = {
     letterSpacing?: "tight" | "normal" | "wide" | "wider"
   }
   Image: {
+    visible?: boolean
     src: string
     alt: string
     width?: "full" | "auto" | "small" | "medium" | "large"
@@ -101,6 +110,7 @@ export type MenuProps = {
     blur?: number
   }
   ImageCard: {
+    visible?: boolean
     src: string
     alt: string
     title?: string
@@ -133,6 +143,18 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
     value: item.id 
   }))
 
+  const visibilityField = {
+    visible: {
+      type: "radio",
+      label: "Visibility",
+      options: [
+        { label: "Show", value: true },
+        { label: "Hide", value: false }
+      ],
+      defaultValue: true
+    }
+  }
+
   return {
   categories: {
       layout: { title: "Layout", components: ["Section", "Flex", "Grid", "Space"] },
@@ -143,6 +165,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       MenuSection: {
         label: "Menu Category",
       fields: {
+          ...visibilityField,
           category: {
             type: "select",
             options: categoryOptions
@@ -247,6 +270,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           category: "All",
           layout: "Grid",
           showImages: true,
+          visible: true,
           columns: 2,
           cardRadius: 12,
           cardShadow: "small",
@@ -261,12 +285,15 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         },
         render: (props) => {
           const {
+            visible = true,
             category, layout, showImages, columns,
             cardBackground, cardRadius = 12, cardShadow = "small", cardPadding = 16, gap = 24,
             dividerStyle = "line", priceAlign = "right",
             titleSize = "medium", titleWeight = "semibold",
             descriptionSize = "small", priceSize = "medium", priceColor
           } = props
+
+          if (!visible) return null
 
           const {
             items: allItems,
@@ -493,6 +520,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       FeaturedItem: {
         label: "Featured Item",
         fields: {
+          ...visibilityField,
           itemId: {
             type: "select",
             options: itemOptions
@@ -570,6 +598,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         },
         defaultProps: {
           itemId: itemOptions[0]?.value,
+          visible: true,
           style: "Hero",
           showPrice: true,
           titleSize: "3xl",
@@ -583,6 +612,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         },
         render: (props) => {
           const {
+            visible = true,
             itemId, style, showPrice,
             titleSize = "3xl", titleWeight = "bold",
             descriptionSize = "large",
@@ -590,6 +620,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             buttonLabel = "Order Now", buttonVariant = "solid",
             backgroundStyle = "dark"
           } = props
+
+          if (!visible) return null
 
           const {
             items: allItems,
@@ -717,11 +749,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       Hero: {
         render: (props) => {
           const {
+            visible = true,
             title, subtitle,
             titleSize = "5xl", titleWeight = "bold",
             subtitleSize = "xl", align = "center",
             titleColor, subtitleColor
           } = props
+
+          if (!visible) return null
 
           const getTitleSizeClass = () => {
             if (titleSize === "2xl") return "text-2xl"
@@ -774,6 +809,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
+          ...visibilityField,
           title: { type: "text" },
           subtitle: { type: "text" },
           titleSize: {
@@ -821,6 +857,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           subtitleColor: { type: "text", label: "Subtitle Color (hex or CSS)" }
         },
         defaultProps: {
+          visible: true,
           title: "Our Menu",
           subtitle: "Fresh & Delicious",
           titleSize: "5xl",
@@ -830,80 +867,101 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         }
       },
       Section: {
-        render: ({ puck, backgroundColor, padding }) => (
-          <section style={{ backgroundColor, padding: `${padding}px 0` }}>
-            <div className="max-w-4xl mx-auto px-4">
-              <DropZone zone="section-content" />
-            </div>
-          </section>
-        ),
-      fields: {
+        render: ({ puck, backgroundColor, padding, visible = true }) => {
+          if (!visible) return null
+          return (
+            <section style={{ backgroundColor, padding: `${padding}px 0` }}>
+              <div className="max-w-4xl mx-auto px-4">
+                <DropZone zone="section-content" />
+              </div>
+            </section>
+          )
+        },
+        fields: {
+          ...visibilityField,
           backgroundColor: { type: "text" },
           padding: { type: "number", min: 0, max: 100, defaultValue: 40 }
         },
         defaultProps: {
+          visible: true,
           backgroundColor: "transparent",
           padding: 40
         }
       },
       Flex: {
-        render: ({ puck, direction, gap }) => (
-          <DropZone
-            zone="flex-items"
-            style={{
-              display: "flex",
-              flexDirection: direction as any,
-              gap: `${gap}px`,
-              minHeight: "100px"
-            }}
-          />
-        ),
+        render: ({ puck, direction, gap, visible = true }) => {
+          if (!visible) return null
+          return (
+            <DropZone
+              zone="flex-items"
+              style={{
+                display: "flex",
+                flexDirection: direction as any,
+                gap: `${gap}px`,
+                minHeight: "100px"
+              }}
+            />
+          )
+        },
         fields: {
+          ...visibilityField,
           direction: {
             type: "radio",
             options: [{ label: "Row", value: "row" }, { label: "Column", value: "column" }],
             defaultValue: "row"
           },
           gap: { type: "number", defaultValue: 16 }
-      },
-      defaultProps: {
+        },
+        defaultProps: {
+          visible: true,
           direction: "row",
           gap: 16
         }
       },
       Grid: {
-        render: ({ puck, columns, gap }) => (
-          <DropZone
-            zone="grid-items"
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${columns}, 1fr)`,
-              gap: `${gap}px`,
-              minHeight: "100px"
-            }}
-          />
-        ),
+        render: ({ puck, columns, gap, visible = true }) => {
+          if (!visible) return null
+          return (
+            <DropZone
+              zone="grid-items"
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                gap: `${gap}px`,
+                minHeight: "100px"
+              }}
+            />
+          )
+        },
         fields: {
+          ...visibilityField,
           columns: { type: "number", min: 1, max: 12, defaultValue: 3 },
           gap: { type: "number", defaultValue: 16 }
         },
         defaultProps: {
+          visible: true,
           columns: 3,
           gap: 16
         }
       },
       Space: {
-        render: ({ size }) => <div style={{ height: size }} />,
-        fields: { size: { type: "number", defaultValue: 24 } },
-        defaultProps: { size: 24 }
+        render: ({ size, visible = true }) => {
+          if (!visible) return null
+          return <div style={{ height: size }} />
+        },
+        fields: { ...visibilityField, size: { type: "number", defaultValue: 24 } },
+        defaultProps: { size: 24, visible: true }
       },
       Text: {
         render: (props) => {
           const {
+            visible = true,
             text, align = "left", size = "medium",
             fontSize, fontWeight, color,
             textTransform, lineHeight, letterSpacing
           } = props
+
+          if (!visible) return null
 
           const getAlignClass = () => {
             if (align === "center") return "text-center"
@@ -983,6 +1041,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
+          ...visibilityField,
           text: { type: "textarea" },
           align: {
             type: "radio",
@@ -1059,6 +1118,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           }
         },
         defaultProps: {
+          visible: true,
           text: "Enter text here...",
           align: "left",
           size: "medium",
@@ -1070,6 +1130,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       Image: {
         render: (props) => {
           const {
+            visible = true,
             src,
             alt = "",
             width = "full",
@@ -1084,6 +1145,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             saturate = 1,
             blur = 0
           } = props
+
+          if (!visible) return null
 
           const getWidthClass = () => {
             if (width === "full") return "w-full"
@@ -1137,6 +1200,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
+          ...visibilityField,
           src: {
             type: "custom",
             label: "Image",
@@ -1248,6 +1312,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           blur: { type: "number", label: "Blur (px)", min: 0, max: 20, defaultValue: 0 }
         },
         defaultProps: {
+          visible: true,
           src: "/placeholder.svg",
           alt: "Image",
           width: "full",
@@ -1265,6 +1330,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
       ImageCard: {
         render: (props) => {
           const {
+            visible = true,
             src,
             alt = "",
             title,
@@ -1281,6 +1347,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             saturate = 1,
             blur = 0
           } = props
+
+          if (!visible) return null
 
           const getAlignClass = () => {
             if (textAlign === "left") return "text-left items-start"
@@ -1333,6 +1401,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           )
         },
         fields: {
+          ...visibilityField,
           src: {
             type: "custom",
             label: "Image",
@@ -1431,6 +1500,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
           blur: { type: "number", label: "Blur (px)", min: 0, max: 20, defaultValue: 0 }
         },
         defaultProps: {
+          visible: true,
           src: "/placeholder.svg",
           alt: "Image Card",
           overlay: true,
