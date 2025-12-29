@@ -9,14 +9,20 @@ export type MenuProps = {
   MenuSection: {
     visible?: boolean
     category: string
-    layout: "Grid" | "List" | "Minimal" | "Card"
+    layout: "Grid" | "Masonry" | "List" | "Minimal" | "Card"
     showImages: boolean
+    imageAspectRatio?: "square" | "video" | "portrait" | "auto"
     columns: number
+    columnsTablet?: number
+    columnsMobile?: number
     // Card/Grid styling
     cardBackground?: string
     cardRadius?: number
     cardShadow?: "none" | "small" | "medium" | "large"
     cardPadding?: number
+    borderWidth?: number
+    borderColor?: string
+    hoverEffect?: "none" | "scale" | "lift" | "glow" | "border"
     gap?: number
     // List styling
     dividerStyle?: "none" | "line" | "dots"
@@ -174,6 +180,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             type: "radio",
             options: [
               { label: "Grid", value: "Grid" },
+              { label: "Masonry", value: "Masonry" },
               { label: "List", value: "List" },
               { label: "Minimal", value: "Minimal" },
               { label: "Card", value: "Card" }
@@ -188,7 +195,20 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             ],
             defaultValue: true
           },
-          columns: { type: "number", min: 1, max: 4, defaultValue: 2 },
+          imageAspectRatio: {
+            type: "select",
+            label: "Image Aspect Ratio",
+            options: [
+              { label: "Square (1:1)", value: "square" },
+              { label: "Video (16:9)", value: "video" },
+              { label: "Portrait (3:4)", value: "portrait" },
+              { label: "Auto", value: "auto" }
+            ],
+            defaultValue: "video"
+          },
+          columns: { type: "number", min: 1, max: 4, defaultValue: 2, label: "Columns (Desktop)" },
+          columnsTablet: { type: "number", min: 1, max: 3, defaultValue: 2, label: "Columns (Tablet)" },
+          columnsMobile: { type: "number", min: 1, max: 2, defaultValue: 1, label: "Columns (Mobile)" },
           // Card/Grid styling
           cardBackground: { type: "text", label: "Card Background" },
           cardRadius: { type: "number", min: 0, max: 32, label: "Card Radius (px)" },
@@ -203,6 +223,19 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             ]
           },
           cardPadding: { type: "number", min: 0, max: 48, label: "Card Padding (px)" },
+          borderWidth: { type: "number", min: 0, max: 8, label: "Border Width (px)" },
+          borderColor: { type: "text", label: "Border Color" },
+          hoverEffect: {
+            type: "select",
+            label: "Hover Effect",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Scale", value: "scale" },
+              { label: "Lift", value: "lift" },
+              { label: "Glow", value: "glow" },
+              { label: "Border Highlight", value: "border" }
+            ]
+          },
           gap: { type: "number", min: 0, max: 48, label: "Gap between items (px)" },
           // List styling
           dividerStyle: {
@@ -286,8 +319,11 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
         render: (props) => {
           const {
             visible = true,
-            category, layout, showImages, columns,
+            category, layout, showImages, 
+            columns, columnsTablet, columnsMobile,
             cardBackground, cardRadius = 12, cardShadow = "small", cardPadding = 16, gap = 24,
+            borderWidth = 0, borderColor, hoverEffect = "none",
+            imageAspectRatio = "video",
             dividerStyle = "line", priceAlign = "right",
             titleSize = "medium", titleWeight = "semibold",
             descriptionSize = "small", priceSize = "medium", priceColor
@@ -307,14 +343,28 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             : allItems.filter((i: any) => i.category === category)
 
           if (!displayItems || displayItems.length === 0) {
-        return (
+            return (
               <div className="p-4 border border-dashed text-gray-400 text-center rounded">
                 No items found in category: {category}
-          </div>
-        )
+              </div>
+            )
           }
 
-        const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-3" : "grid-cols-4"
+          // Responsive Grid Classes
+          const getGridClass = () => {
+            const mobile = columnsMobile ? `grid-cols-${columnsMobile}` : 'grid-cols-1';
+            const tablet = columnsTablet ? `sm:grid-cols-${columnsTablet}` : 'sm:grid-cols-2';
+            const desktop = columns ? `lg:grid-cols-${columns}` : 'lg:grid-cols-2';
+            return `${mobile} ${tablet} ${desktop}`;
+          }
+
+          // Responsive Masonry Classes
+          const getMasonryClass = () => {
+             const mobile = columnsMobile ? `columns-${columnsMobile}` : 'columns-1';
+             const tablet = columnsTablet ? `sm:columns-${columnsTablet}` : 'sm:columns-2';
+             const desktop = columns ? `lg:columns-${columns}` : 'lg:columns-2';
+             return `${mobile} ${tablet} ${desktop}`;
+          }
 
           // Helper functions for styling
           const getShadowClass = () => {
@@ -323,6 +373,21 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             if (cardShadow === "medium") return "shadow-md"
             if (cardShadow === "large") return "shadow-lg"
             return "shadow-sm"
+          }
+
+          const getHoverClass = () => {
+            if (hoverEffect === "scale") return "transition-transform duration-300 hover:scale-[1.02]";
+            if (hoverEffect === "lift") return "transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg";
+            if (hoverEffect === "glow") return "transition-shadow duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.15)]";
+            if (hoverEffect === "border") return "transition-colors duration-300 hover:border-black/20";
+            return "";
+          }
+
+          const getAspectRatioClass = () => {
+            if (imageAspectRatio === "square") return "aspect-square";
+            if (imageAspectRatio === "video") return "aspect-video";
+            if (imageAspectRatio === "portrait") return "aspect-[3/4]";
+            return ""; 
           }
 
           const getTitleSizeClass = () => {
@@ -363,12 +428,12 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             const dividerClass = dividerStyle === "none" ? "" :
               dividerStyle === "dots" ? "border-b border-dotted" : "border-b"
 
-        return (
+            return (
               <div style={{ gap: `${gap}px` }} className="flex flex-col">
                 {displayItems.map((item: any) => (
                   <div
                     key={item.id}
-                    className={`flex ${priceAlign === "inline" ? "flex-col" : "justify-between items-start"} pb-4 last:pb-0 ${dividerClass}`}
+                    className={`flex ${priceAlign === "inline" ? "flex-col" : "justify-between items-start"} pb-4 last:pb-0 ${dividerClass} ${getHoverClass()}`}
                   >
                     <div className={`flex-1 ${priceAlign === "right" ? "pr-4" : ""}`}>
                       <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>{item.name}</h3>
@@ -396,17 +461,14 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                           <img
                             src={resolveImageUrl(item.image_url)}
                             alt={item.name}
-                            className="w-16 h-16 object-cover rounded-md"
+                            className={`w-16 h-16 object-cover rounded-md ${getAspectRatioClass()}`}
                             onError={(e) => {
                               console.error('[Editor] Failed to load image:', item.image_url, 'resolved to:', resolveImageUrl(item.image_url))
                               ;(e.target as HTMLImageElement).style.display = 'none'
                             }}
-                            onLoad={() => {
-                              console.log('[Editor] Successfully loaded image:', item.image_url)
-                            }}
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+                          <div className={`w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center ${getAspectRatioClass()}`}>
                             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -424,7 +486,7 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             return (
               <div style={{ gap: `${gap}px` }} className="flex flex-col">
                 {displayItems.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-baseline">
+                  <div key={item.id} className={`flex justify-between items-baseline ${getHoverClass()}`}>
                     <div>
                       <span className={`${getTitleWeightClass()}`}>{item.name}</span>
                       <span className="mx-2 text-xs text-gray-400">----------------</span>
@@ -441,21 +503,73 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
             )
           }
 
+          // Masonry Layout
+          if (layout === "Masonry") {
+             return (
+               <div className={`${getMasonryClass()} space-y-4`} style={{ columnGap: `${gap}px` }}>
+                 {displayItems.map((item: any) => (
+                   <div
+                     key={item.id}
+                     className={`break-inside-avoid mb-4 flex flex-col ${getShadowClass()} overflow-hidden border ${getHoverClass()}`}
+                     style={{
+                       backgroundColor: cardBackground || "white",
+                       borderRadius: `${cardRadius}px`,
+                       borderWidth: borderWidth ? `${borderWidth}px` : undefined,
+                       borderColor: borderColor || undefined
+                     }}
+                   >
+                     {showImages && (
+                       <div className="w-full overflow-hidden">
+                         {item.image_url ? (
+                           <img
+                             src={resolveImageUrl(item.image_url)}
+                             alt={item.name}
+                             className="w-full h-auto object-cover"
+                           />
+                         ) : (
+                           <div className={`w-full bg-gray-100 flex items-center justify-center ${imageAspectRatio === "auto" ? "aspect-video" : getAspectRatioClass()}`}>
+                             <div className="text-center text-gray-400 p-2">
+                               <span className="text-xs">No Image</span>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                     <div style={{ padding: `${cardPadding}px` }}>
+                       <div className="flex justify-between items-start mb-1">
+                         <h3 className={`${getTitleSizeClass()} ${getTitleWeightClass()}`}>{item.name}</h3>
+                         <span
+                           className={`${getPriceSizeClass()} font-bold ml-2`}
+                           style={{ color: priceColor || undefined }}
+                         >
+                           {formatPrice(item.price)}
+                         </span>
+                       </div>
+                       <p className={`${getDescriptionSizeClass()} text-gray-600`}>{item.description}</p>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )
+          }
+
           // Grid and Card with customizable styling
           return (
-            <div className={`grid ${gridClass}`} style={{ gap: `${gap}px` }}>
+            <div className={`grid ${getGridClass()}`} style={{ gap: `${gap}px` }}>
               {displayItems.map((item: any) => (
                 <div
                   key={item.id}
-                  className={`flex flex-col h-full ${layout === "Card" ? `${getShadowClass()} overflow-hidden border` : ""}`}
+                  className={`flex flex-col h-full ${layout === "Card" ? `${getShadowClass()} overflow-hidden border` : ""} ${getHoverClass()}`}
                   style={{
                     backgroundColor: layout === "Card" ? cardBackground || "white" : undefined,
-                    borderRadius: layout === "Card" ? `${cardRadius}px` : undefined
+                    borderRadius: layout === "Card" ? `${cardRadius}px` : undefined,
+                    borderWidth: layout === "Card" && borderWidth ? `${borderWidth}px` : undefined,
+                    borderColor: layout === "Card" && borderColor ? borderColor : undefined
                   }}
                 >
                   {showImages && (
                     <div
-                      className={layout === "Card" ? "aspect-video w-full overflow-hidden" : "aspect-square overflow-hidden mb-3"}
+                      className={`${layout === "Card" ? "w-full overflow-hidden" : "overflow-hidden mb-3"} ${getAspectRatioClass()}`}
                       style={{
                         borderRadius: layout === "Card" ? `${cardRadius}px ${cardRadius}px 0 0` : `${cardRadius}px`
                       }}
@@ -469,22 +583,6 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                             console.error('[Editor] Failed to load image:', item.image_url, 'resolved to:', resolveImageUrl(item.image_url))
                             const target = e.target as HTMLImageElement
                             target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <div class="text-center text-gray-400 p-2">
-                                    <svg class="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                    <span class="text-xs">Image Failed</span>
-                                  </div>
-                                </div>
-                              `
-                            }
-                          }}
-                          onLoad={() => {
-                            console.log('[Editor] Successfully loaded image:', item.image_url)
                           }}
                         />
                       ) : (
@@ -513,8 +611,8 @@ export const getPuckConfig = ({ categories, items }: { categories: string[], ite
                   </div>
                 </div>
               ))}
-          </div>
-        )
+            </div>
+          )
         }
       },
       FeaturedItem: {
