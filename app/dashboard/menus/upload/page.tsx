@@ -48,7 +48,6 @@ export default function UploadMenuPage() {
   const [menuDescription, setMenuDescription] = useState("")
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isFinalizing, setIsFinalizing] = useState(false)
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true)
   const [error, setError] = useState("")
   const [createdMenu, setCreatedMenu] = useState<Menu | null>(null)
@@ -336,7 +335,6 @@ export default function UploadMenuPage() {
     setError("")
 
     try {
-      // Create menu first
       const menu = await createMenuFirst()
       if (!menu) {
         setError("Failed to create menu")
@@ -344,63 +342,14 @@ export default function UploadMenuPage() {
         return
       }
 
-      // Process all pending files sequentially
-      for (const file of uploadedFiles.filter(f => f.status === "pending")) {
-        await processFile(file.file, file.id, menu.id)
-      }
+      // Kick off uploads/OCR job creation in parallel; don't block on OCR completion
+      await Promise.all(
+        uploadedFiles
+          .filter(f => f.status === "pending")
+          .map(file => processFile(file.file, file.id, menu.id))
+      )
 
-      // Wait until all files reach completed or error using a proper polling mechanism
-      await new Promise<void>((resolve, reject) => {
-        const check = () => {
-          // Get current state by using a ref callback
-          setUploadedFiles(currentFiles => {
-            const pendingFiles = currentFiles.filter(f => f.status === "pending" || f.status === "uploading" || f.status === "processing")
-            const completedFiles = currentFiles.filter(f => f.status === "completed")
-            const errorFiles = currentFiles.filter(f => f.status === "error")
-            
-            if (pendingFiles.length === 0) {
-              // All files are done processing
-              if (errorFiles.length > 0) {
-                reject(new Error("Some files failed to process"))
-              } else {
-                resolve()
-              }
-            } else {
-              // Still processing, check again in 1 second
-              setTimeout(check, 1000)
-            }
-            
-            return currentFiles // Return unchanged state
-          })
-        }
-        check()
-      })
-
-      // Get actual count of extracted menu items
-      setIsFinalizing(true)
-      try {
-        const menuItemsResponse = await apiClient.getMenuItems(menu.id)
-        if (menuItemsResponse.data) {
-          const totalExtractedItems = menuItemsResponse.data.total
-          
-          // Update all completed files with the total count
-          setUploadedFiles(prev => prev.map(file => 
-            file.status === "completed" 
-              ? { ...file, itemsExtracted: totalExtractedItems }
-              : file
-          ))
-          
-          // Small delay to show the updated count before redirect
-          await new Promise(resolve => setTimeout(resolve, 1500))
-        }
-      } catch (err) {
-        console.warn("Could not get menu items count:", err)
-        // Continue anyway
-      } finally {
-        setIsFinalizing(false)
-      }
-
-      // Navigate to edit page (menu is active by default after creation)
+      // Navigate immediately; OCR continues in background and menu edit page will show status
       router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
     } catch (err) {
       console.error(err)
@@ -638,27 +587,6 @@ export default function UploadMenuPage() {
             </CardContent>
           </Card>
 
-          {/* AI Processing Info */}
-          {uploadedFiles.some((file) => file.status === "processing") && (
-            <Alert>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>
-                Our AI is analyzing your menu images and extracting items, prices, and descriptions. This usually takes
-                30-60 seconds per image.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Finalizing Info */}
-          {isFinalizing && (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription>
-                All images processed successfully! Gathering extracted menu items and preparing your menu...
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Submit Button */}
           <div className="flex justify-end gap-4">
             <Link href="/dashboard/menus">
@@ -669,11 +597,10 @@ export default function UploadMenuPage() {
             <Button type="submit" disabled={!canSubmit || isProcessing}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isProcessing 
-                ? (isFinalizing ? "Finalizing & Preparing Menu..." : "Processing & Extracting Items...") 
+                ? "Processing uploads & starting AI extraction..." 
                 : createdMenu 
                 ? "Process Images & Create Menu" 
-                : "Create Menu"
-              }
+                : "Create Menu"}
             </Button>
           </div>
         </form>

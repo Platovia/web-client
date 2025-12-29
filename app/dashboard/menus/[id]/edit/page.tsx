@@ -184,6 +184,50 @@ export default function EditMenuPage() {
     }
   }, [id, loadMenuData])
 
+  // Poll OCR job progress while processing to update banner and items once done
+  useEffect(() => {
+    if (!id) return
+    if (!processing || (processing.status !== "processing" && processing.status !== "pending")) return
+
+    let isActive = true
+
+    const interval = setInterval(async () => {
+      try {
+        const latest = await apiClient.getLatestOCRJobForMenu(id)
+        if (!isActive || !latest.data) return
+
+        const job = latest.data
+        if (job.status === "processing" || job.status === "pending") {
+          setProcessing({
+            status: job.status,
+            progress: Math.round(job.progress_percentage || 0),
+            processed: job.processed_images || 0,
+            total: job.total_images || 0,
+          })
+        } else {
+          setProcessing(null)
+          clearInterval(interval)
+          // Refresh items so newly extracted data appears without a full reload
+          try {
+            const itemsResponse = await apiClient.getMenuItems(id)
+            if (isActive && itemsResponse.data) {
+              setMenuData((prev) => prev ? { ...prev, items: itemsResponse.data.items || [] } : prev)
+            }
+          } catch {
+            // Ignore item refresh errors during polling
+          }
+        }
+      } catch {
+        // Ignore transient errors; continue polling
+      }
+    }, 5000)
+
+    return () => {
+      isActive = false
+      clearInterval(interval)
+    }
+  }, [id, processing])
+
   useEffect(() => {
     void loadDesignTemplates()
   }, [loadDesignTemplates])
