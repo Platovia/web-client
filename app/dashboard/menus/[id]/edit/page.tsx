@@ -48,6 +48,7 @@ export default function EditMenuPage() {
   })
   const [success, setSuccess] = useState("")
   const [processing, setProcessing] = useState<{ status: string; progress: number; processed?: number; total?: number } | null>(null)
+  const [awaitingItems, setAwaitingItems] = useState(false)
   const [error, setError] = useState("")
   const [activeToken, setActiveToken] = useState<string | null>(null)
   const [menuTemplates, setMenuTemplates] = useState<MenuTemplate[]>([])
@@ -112,8 +113,12 @@ export default function EditMenuPage() {
       }
 
       // Check processing status first to guard UI during processing
+      let latestJobStatus: string | null = null
       try {
         const latestJob = await apiClient.getLatestOCRJobForMenu(id)
+        if (latestJob.data) {
+          latestJobStatus = latestJob.data.status
+        }
         if (latestJob.data && (latestJob.data.status === 'processing' || latestJob.data.status === 'pending')) {
           setProcessing({
             status: latestJob.data.status,
@@ -168,7 +173,17 @@ export default function EditMenuPage() {
       }
 
       if (fromUpload) {
-        setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+        const itemCount = itemsResponse.data?.items?.length || 0
+        if (latestJobStatus === "completed" && itemCount > 0) {
+          setAwaitingItems(false)
+          setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+        } else if (latestJobStatus === "completed" && itemCount === 0) {
+          setAwaitingItems(true)
+          setSuccess("")
+        } else {
+          setAwaitingItems(false)
+          setSuccess("")
+        }
       }
     } catch (err) {
       console.error("Error loading menu data:", err)
@@ -204,6 +219,9 @@ export default function EditMenuPage() {
             processed: job.processed_images || 0,
             total: job.total_images || 0,
           })
+          if (fromUpload) {
+            setAwaitingItems(false)
+          }
         } else {
           setProcessing(null)
           clearInterval(interval)
@@ -211,7 +229,13 @@ export default function EditMenuPage() {
           try {
             const itemsResponse = await apiClient.getMenuItems(id)
             if (isActive && itemsResponse.data) {
-              setMenuData((prev) => prev ? { ...prev, items: itemsResponse.data.items || [] } : prev)
+              const newItems = itemsResponse.data.items || []
+              setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
+              if (fromUpload && newItems.length > 0) {
+                setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+              } else if (fromUpload && newItems.length === 0) {
+                setAwaitingItems(true)
+              }
             }
           } catch {
             // Ignore item refresh errors during polling
@@ -226,7 +250,57 @@ export default function EditMenuPage() {
       isActive = false
       clearInterval(interval)
     }
-  }, [id, processing])
+  }, [id, processing, fromUpload])
+
+  // If OCR completed but items haven't surfaced yet, keep refreshing until they appear
+  useEffect(() => {
+    if (!id || !fromUpload || !awaitingItems) return
+
+    let isActive = true
+
+    const interval = setInterval(async () => {
+      try {
+        const latest = await apiClient.getLatestOCRJobForMenu(id)
+        if (!isActive || !latest.data) return
+
+        if (latest.data.status === "processing" || latest.data.status === "pending") {
+          setProcessing({
+            status: latest.data.status,
+            progress: Math.round(latest.data.progress_percentage || 0),
+            processed: latest.data.processed_images || 0,
+            total: latest.data.total_images || 0,
+          })
+          setAwaitingItems(false)
+          return
+        }
+
+        if (latest.data.status === "failed") {
+          setAwaitingItems(false)
+          setError("AI processing failed. Please retry the upload or check the job logs.")
+          clearInterval(interval)
+          return
+        }
+
+        const itemsResponse = await apiClient.getMenuItems(id)
+        if (isActive && itemsResponse.data) {
+          const newItems = itemsResponse.data.items || []
+          if (newItems.length > 0) {
+            setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
+            setAwaitingItems(false)
+            setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+            clearInterval(interval)
+          }
+        }
+      } catch {
+        // Ignore transient errors; continue polling
+      }
+    }, 4000)
+
+    return () => {
+      isActive = false
+      clearInterval(interval)
+    }
+  }, [id, fromUpload, awaitingItems])
 
   useEffect(() => {
     void loadDesignTemplates()
@@ -567,6 +641,8 @@ export default function EditMenuPage() {
     )
   }
 
+  const isMenuLocked = Boolean(processing) || awaitingItems
+
   return (
     <DashboardLayout>
       <div className="p-6 max-w-6xl mx-auto">
@@ -603,6 +679,12 @@ export default function EditMenuPage() {
                 AI processing {processing.processed || 0}/{processing.total || 0} pages... {processing.progress}%
               </div>
             )}
+            {awaitingItems && !processing && (
+              <div className="px-3 py-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-2 mr-4">
+                <Clock className="h-4 w-4" />
+                Finalizing extracted items... This can take a moment.
+              </div>
+            )}
             {!menuData.menu.is_active && (
               <Button onClick={handleActivateMenu} disabled={isActivating} variant="default" className="bg-green-600 hover:bg-green-700">
                 {isActivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -622,12 +704,12 @@ export default function EditMenuPage() {
                 {activeToken ? "Preview" : "Generate QR"}
               </Button>
             </Link>
-            <Button onClick={handleSaveMenu} disabled={isSaving || Boolean(processing)}>
+            <Button onClick={handleSaveMenu} disabled={isSaving || isMenuLocked}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>
-            <Button onClick={handleDeleteMenu} variant="destructive" disabled={Boolean(processing)}>
+            <Button onClick={handleDeleteMenu} variant="destructive" disabled={isMenuLocked}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Menu
             </Button>
@@ -658,7 +740,7 @@ export default function EditMenuPage() {
           </TabsList>
 
           <TabsContent value="items" className="space-y-6">
-            {processing && (
+            {(processing || awaitingItems) && (
               <Alert className="mb-4 border-amber-200 bg-amber-50">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800">
@@ -715,7 +797,7 @@ export default function EditMenuPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{category}</CardTitle>
-                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={Boolean(processing)}>
+                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={isMenuLocked}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Item
                     </Button>
@@ -784,14 +866,14 @@ export default function EditMenuPage() {
                               variant={item.is_available ? "outline" : "default"}
                               size="sm"
                               onClick={() => toggleItemAvailability(item.id)}
-                              disabled={Boolean(processing)}
+                              disabled={isMenuLocked}
                             >
                               {item.is_available ? "Available" : "Unavailable"}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={Boolean(processing)}>
+                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={isMenuLocked}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={Boolean(processing)}>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={isMenuLocked}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
