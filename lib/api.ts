@@ -496,6 +496,21 @@ interface UpdateSourceRequest {
   is_active?: boolean;
 }
 
+// Menu version management interfaces
+interface MenuVersion {
+  id: string;
+  menu_id: string;
+  version_number: number;
+  status: string;
+  source_ids?: any[];
+  notes?: string;
+  item_count: number;
+  activated_at?: string;
+  archived_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -1337,6 +1352,41 @@ class ApiClient {
       headers: headers,
     });
   }
+
+  // Menu version management endpoints
+  async getMenuVersions(menuId: string): Promise<ApiResponse<MenuVersion[]>> {
+    return this.makeRequest<MenuVersion[]>(`/menus/${menuId}/versions`);
+  }
+
+  async getDraftVersion(menuId: string): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/draft`);
+  }
+
+  async getActiveVersion(menuId: string): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/active`);
+  }
+
+  async getVersionItems(menuId: string, versionId: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
+    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/versions/${versionId}/items`);
+  }
+
+  async acceptDraft(menuId: string): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/draft/accept`, {
+      method: 'POST',
+    });
+  }
+
+  async restoreVersion(menuId: string, versionId: string): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/${versionId}/restore`, {
+      method: 'POST',
+    });
+  }
+
+  async discardDraft(menuId: string): Promise<ApiResponse<void>> {
+    return this.makeRequest<void>(`/menus/${menuId}/versions/draft`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -1405,5 +1455,6 @@ export type {
   AutoMatchImagesResponse,
   RestaurantSource,
   CreateSourceRequest,
-  UpdateSourceRequest
+  UpdateSourceRequest,
+  MenuVersion
 }; 
