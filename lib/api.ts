@@ -460,6 +460,42 @@ interface DesignTemplate extends DesignTemplateMetadata {
   default_theme?: any;
 }
 
+// Source management interfaces
+interface RestaurantSource {
+  id: string;
+  restaurant_id: string;
+  source_category: string;
+  source_type: string;
+  url?: string;
+  file_url?: string;
+  file_name?: string;
+  file_type?: string;
+  menu_id?: string;
+  status: string;
+  label?: string;
+  is_active: boolean;
+  raw_content?: string;
+  structured_data?: { [key: string]: any };
+  items_extracted?: number;
+  error_message?: string;
+  last_processed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CreateSourceRequest {
+  url: string;
+  source_category: string;
+  menu_id?: string;
+  label?: string;
+}
+
+interface UpdateSourceRequest {
+  label?: string;
+  source_category?: string;
+  is_active?: boolean;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -1236,6 +1272,71 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Source management endpoints
+  async createSource(restaurantId: string, data: CreateSourceRequest): Promise<ApiResponse<RestaurantSource>> {
+    return this.makeRequest<RestaurantSource>(`/restaurants/${restaurantId}/sources`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getRestaurantSources(restaurantId: string, category?: string): Promise<ApiResponse<RestaurantSource[]>> {
+    const params = category ? `?category=${category}` : '';
+    return this.makeRequest<RestaurantSource[]>(`/restaurants/${restaurantId}/sources${params}`);
+  }
+
+  async getMenuSources(menuId: string): Promise<ApiResponse<RestaurantSource[]>> {
+    return this.makeRequest<RestaurantSource[]>(`/menus/${menuId}/sources`);
+  }
+
+  async getSource(sourceId: string): Promise<ApiResponse<RestaurantSource>> {
+    return this.makeRequest<RestaurantSource>(`/sources/${sourceId}`);
+  }
+
+  async updateSource(sourceId: string, data: UpdateSourceRequest): Promise<ApiResponse<RestaurantSource>> {
+    return this.makeRequest<RestaurantSource>(`/sources/${sourceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSource(sourceId: string): Promise<ApiResponse<void>> {
+    return this.makeRequest<void>(`/sources/${sourceId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async processSource(sourceId: string): Promise<ApiResponse<RestaurantSource>> {
+    return this.makeRequest<RestaurantSource>(`/sources/${sourceId}/process`, {
+      method: 'POST',
+    });
+  }
+
+  async uploadSourceDocument(
+    restaurantId: string,
+    file: File,
+    metadata: { source_category: string; menu_id?: string; label?: string }
+  ): Promise<ApiResponse<RestaurantSource>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('source_category', metadata.source_category);
+    if (metadata.menu_id) {
+      formData.append('menu_id', metadata.menu_id);
+    }
+    if (metadata.label) {
+      formData.append('label', metadata.label);
+    }
+
+    const headers = {
+      ...this.getAuthHeader(),
+    };
+    return this.makeRequest<RestaurantSource>(`/restaurants/${restaurantId}/sources/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: headers,
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -1253,17 +1354,17 @@ interface CurrencyListResponse {
 export const apiClient = new ApiClient();
 
 // Type exports for use in components
-export type { 
-  User, 
-  Company, 
+export type {
+  User,
+  Company,
   CompanyUpdateRequest,
-  Restaurant, 
-  RestaurantCreateRequest, 
-  RestaurantUpdateRequest, 
-  RestaurantListResponse, 
-  AuthTokens, 
-  LoginRequest, 
-  RegisterRequest, 
+  Restaurant,
+  RestaurantCreateRequest,
+  RestaurantUpdateRequest,
+  RestaurantListResponse,
+  AuthTokens,
+  LoginRequest,
+  RegisterRequest,
   UserUpdateRequest,
   ApiResponse,
   MenuItem,
@@ -1301,5 +1402,8 @@ export type {
   ExtractedImagesResponse,
   ImageAssignmentRequest,
   ImageAssignmentResponse,
-  AutoMatchImagesResponse
+  AutoMatchImagesResponse,
+  RestaurantSource,
+  CreateSourceRequest,
+  UpdateSourceRequest
 }; 
