@@ -35,6 +35,8 @@ interface UploadedFile {
     fileSize: number
   }
   errorMessage?: string
+  // Category for the file: 'menu' for OCR processing, 'context' for restaurant context
+  category: "menu" | "context"
 }
 
 export default function UploadMenuPage() {
@@ -204,7 +206,8 @@ export default function UploadMenuPage() {
         status: "pending",
         progress: 0,
         fileType: isPDF ? "pdf" : "image",
-        pdfInfo
+        pdfInfo,
+        category: "menu" // Default to menu document
       }
 
       setUploadedFiles((prev) => [...prev, newFile])
@@ -329,28 +332,103 @@ export default function UploadMenuPage() {
     })
   }
 
+  const updateFileCategory = (fileId: string, category: "menu" | "context") => {
+    setUploadedFiles((prev) =>
+      prev.map((f) => (f.id === fileId ? { ...f, category } : f))
+    )
+  }
+
+  const processContextFile = async (file: File, fileId: string, restaurantId: string) => {
+    try {
+      // Update to uploading state
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileId ? { ...f, status: "uploading", progress: 30 } : f
+      ))
+
+      // Upload as context source
+      const response = await apiClient.uploadSourceDocument(restaurantId, file, {
+        source_category: "context"
+      })
+
+      if (response.error) {
+        throw new Error(response.error)
+      }
+
+      // Update to processing state
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileId ? { ...f, status: "processing", progress: 60 } : f
+      ))
+
+      // Trigger processing
+      if (response.data) {
+        await apiClient.processSource(response.data.id)
+      }
+
+      // Mark as completed (processing happens in background)
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileId ? { ...f, status: "completed", progress: 100 } : f
+      ))
+    } catch (err: any) {
+      console.error("Error processing context file:", err)
+      setUploadedFiles(prev => prev.map(f =>
+        f.id === fileId ? {
+          ...f,
+          status: "error",
+          errorMessage: err.message || "Upload failed"
+        } : f
+      ))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsProcessing(true)
     setError("")
 
     try {
-      const menu = await createMenuFirst()
-      if (!menu) {
-        setError("Failed to create menu")
-        setIsProcessing(false)
-        return
+      // Separate files by category
+      const menuFiles = uploadedFiles.filter(f => f.status === "pending" && f.category === "menu")
+      const contextFiles = uploadedFiles.filter(f => f.status === "pending" && f.category === "context")
+
+      // Only create menu if there are menu files
+      let menu: Menu | null = null
+      if (menuFiles.length > 0) {
+        menu = await createMenuFirst()
+        if (!menu) {
+          setError("Failed to create menu")
+          setIsProcessing(false)
+          return
+        }
       }
 
-      // Kick off uploads/OCR job creation in parallel; don't block on OCR completion
-      await Promise.all(
-        uploadedFiles
-          .filter(f => f.status === "pending")
-          .map(file => processFile(file.file, file.id, menu.id))
-      )
+      // Process all files in parallel
+      const allPromises: Promise<void>[] = []
 
-      // Navigate immediately; OCR continues in background and menu edit page will show status
-      router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
+      // Process menu files with OCR pipeline
+      if (menu) {
+        menuFiles.forEach(file => {
+          allPromises.push(processFile(file.file, file.id, menu!.id))
+        })
+      }
+
+      // Process context files as restaurant sources
+      contextFiles.forEach(file => {
+        allPromises.push(processContextFile(file.file, file.id, selectedRestaurant))
+      })
+
+      await Promise.all(allPromises)
+
+      // Navigate based on what was uploaded
+      if (menu) {
+        // Navigate to menu edit page
+        router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
+      } else if (contextFiles.length > 0) {
+        // Navigate to restaurant context page
+        router.push(`/dashboard/restaurants/${selectedRestaurant}/context`)
+      } else {
+        // Fallback to menus page
+        router.push(`/dashboard/menus`)
+      }
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -358,9 +436,13 @@ export default function UploadMenuPage() {
     }
   }
 
+  // Check if there are any menu category files
+  const hasMenuFiles = uploadedFiles.some(f => f.category === "menu" && f.status === "pending")
+
+  // Menu name is only required if uploading menu files
   const canSubmit =
     Boolean(selectedRestaurant) &&
-    Boolean(menuName) &&
+    (hasMenuFiles ? Boolean(menuName) : true) &&
     uploadedFiles.length > 0 &&
     !isProcessing
 
@@ -528,6 +610,25 @@ export default function UploadMenuPage() {
                                 {file.status === "completed" && <CheckCircle className="h-4 w-4 text-green-600" />}
                               </div>
 
+                              {/* Category selector */}
+                              {file.status === "pending" && (
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-gray-500">Category</Label>
+                                  <Select
+                                    value={file.category}
+                                    onValueChange={(value: "menu" | "context") => updateFileCategory(file.id, value)}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="menu">Menu Document</SelectItem>
+                                      <SelectItem value="context">Restaurant Context</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
                               {/* Show file type and PDF info */}
                               <div className="flex items-center gap-2 text-xs text-gray-500">
                                 <span className="capitalize">{file.fileType}</span>
@@ -551,9 +652,11 @@ export default function UploadMenuPage() {
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2 text-sm text-blue-600">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    {file.fileType === "pdf" 
-                                      ? `AI processing ${file.pdfInfo?.pageCount || 'multiple'} pages...`
-                                      : "AI extracting menu items..."
+                                    {file.category === "context"
+                                      ? "Processing context document..."
+                                      : file.fileType === "pdf"
+                                        ? `AI processing ${file.pdfInfo?.pageCount || 'multiple'} pages...`
+                                        : "AI extracting menu items..."
                                     }
                                   </div>
                                   <Progress value={file.progress} className="h-2" />
@@ -562,11 +665,13 @@ export default function UploadMenuPage() {
 
                               {file.status === "completed" && (
                                 <div className="text-sm text-green-600">
-                                  {file.fileType === "pdf"
-                                    ? `✓ ${file.pagesProcessed ?? file.pdfInfo?.pageCount ?? 0} pages processed${file.itemsExtracted !== undefined ? `, ${file.itemsExtracted} items extracted` : ""}`
-                                    : (file.itemsExtracted !== undefined 
-                                        ? `Extracted ${file.itemsExtracted} menu items`
-                                        : "✓ Processing completed")
+                                  {file.category === "context"
+                                    ? "✓ Added to restaurant context"
+                                    : file.fileType === "pdf"
+                                      ? `✓ ${file.pagesProcessed ?? file.pdfInfo?.pageCount ?? 0} pages processed${file.itemsExtracted !== undefined ? `, ${file.itemsExtracted} items extracted` : ""}`
+                                      : (file.itemsExtracted !== undefined
+                                          ? `Extracted ${file.itemsExtracted} menu items`
+                                          : "✓ Processing completed")
                                   }
                                 </div>
                               )}
