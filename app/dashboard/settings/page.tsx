@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -152,6 +153,20 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Link href="/dashboard/settings/billing" className="block">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader>
+              <CardTitle>Billing & Usage</CardTitle>
+              <CardDescription>Manage your subscription and view usage</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-500">
+                View your current plan, usage statistics, and upgrade or manage your subscription.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </DashboardLayout>
   )
