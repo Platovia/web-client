@@ -24,6 +24,7 @@ import {
   BarChart3,
   CheckCircle,
   Trash2,
+  BookOpen,
 } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -509,6 +510,12 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     <Button variant="outline" className="w-full justify-start bg-transparent">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Restaurant Details
+                    </Button>
+                  </Link>
+                  <Link href={`/dashboard/restaurants/${restaurant.id}/context`}>
+                    <Button variant="outline" className="w-full justify-start bg-transparent">
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Manage Knowledge Base
                     </Button>
                   </Link>
                 </CardContent>
