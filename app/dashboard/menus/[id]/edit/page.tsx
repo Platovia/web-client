@@ -12,11 +12,11 @@ import { TagSelector } from "@/components/ui/tag-selector"
 import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
-import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate, type DesignTemplateMetadata, type RestaurantSource, type CreateSourceRequest } from "@/lib/api"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate, type DesignTemplateMetadata, type RestaurantSource, type CreateSourceRequest, type MenuVersion } from "@/lib/api"
 import {
   Dialog,
   DialogContent,
@@ -88,6 +88,15 @@ export default function EditMenuPage() {
   const [addingSource, setAddingSource] = useState(false)
   const [uploadingSource, setUploadingSource] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Version History tab state
+  const [versions, setVersions] = useState<MenuVersion[]>([])
+  const [loadingVersions, setLoadingVersions] = useState(false)
+  const [acceptingDraft, setAcceptingDraft] = useState(false)
+  const [discardingDraft, setDiscardingDraft] = useState(false)
+  const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null)
+  const [previewVersionId, setPreviewVersionId] = useState<string | null>(null)
+  const [previewItems, setPreviewItems] = useState<MenuItem[]>([])
+  const [loadingPreviewItems, setLoadingPreviewItems] = useState(false)
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
   const isUnavailable = (value: any) => {
@@ -241,6 +250,121 @@ export default function EditMenuPage() {
     }
   }, [id, menuData?.restaurant?.id, loadSources])
 
+  // Version History tab callbacks
+  const loadVersions = useCallback(async () => {
+    if (!id) return
+    setLoadingVersions(true)
+    try {
+      const resp = await apiClient.getMenuVersions(id)
+      if (resp.error) {
+        setError((prev) => prev || "Failed to load versions: " + resp.error)
+        return
+      }
+      // Sort by version number descending (newest first)
+      const sortedVersions = (resp.data || []).sort((a, b) => b.version_number - a.version_number)
+      setVersions(sortedVersions)
+    } catch (err) {
+      console.error("Error loading versions:", err)
+    } finally {
+      setLoadingVersions(false)
+    }
+  }, [id])
+
+  const handleAcceptDraft = useCallback(async () => {
+    if (!id) return
+    setAcceptingDraft(true)
+    setError("")
+    try {
+      const resp = await apiClient.acceptDraft(id)
+      if (resp.error) {
+        setError("Failed to accept draft: " + resp.error)
+        return
+      }
+      setSuccess("Draft accepted and set as active version")
+      setTimeout(() => setSuccess(""), 3000)
+      await loadVersions()
+      // Refresh menu items to show the new active version's items
+      const itemsResp = await apiClient.getMenuItems(id)
+      if (itemsResp.data) {
+        setMenuData((prev) => prev ? { ...prev, items: itemsResp.data?.items || [] } : prev)
+      }
+    } catch (err) {
+      console.error("Error accepting draft:", err)
+      setError("Failed to accept draft")
+    } finally {
+      setAcceptingDraft(false)
+    }
+  }, [id, loadVersions])
+
+  const handleDiscardDraft = useCallback(async () => {
+    if (!id) return
+    setDiscardingDraft(true)
+    setError("")
+    try {
+      const resp = await apiClient.discardDraft(id)
+      if (resp.error) {
+        setError("Failed to discard draft: " + resp.error)
+        return
+      }
+      setSuccess("Draft discarded")
+      setTimeout(() => setSuccess(""), 3000)
+      await loadVersions()
+    } catch (err) {
+      console.error("Error discarding draft:", err)
+      setError("Failed to discard draft")
+    } finally {
+      setDiscardingDraft(false)
+    }
+  }, [id, loadVersions])
+
+  const handleRestoreVersion = useCallback(async (versionId: string) => {
+    if (!id) return
+    setRestoringVersionId(versionId)
+    setError("")
+    try {
+      const resp = await apiClient.restoreVersion(id, versionId)
+      if (resp.error) {
+        setError("Failed to restore version: " + resp.error)
+        return
+      }
+      setSuccess("Version restored as active")
+      setTimeout(() => setSuccess(""), 3000)
+      await loadVersions()
+      // Refresh menu items to show the restored version's items
+      const itemsResp = await apiClient.getMenuItems(id)
+      if (itemsResp.data) {
+        setMenuData((prev) => prev ? { ...prev, items: itemsResp.data?.items || [] } : prev)
+      }
+    } catch (err) {
+      console.error("Error restoring version:", err)
+      setError("Failed to restore version")
+    } finally {
+      setRestoringVersionId(null)
+    }
+  }, [id, loadVersions])
+
+  const handlePreviewVersionItems = useCallback(async (versionId: string) => {
+    if (!id) return
+    setPreviewVersionId(versionId)
+    setLoadingPreviewItems(true)
+    setPreviewItems([])
+    try {
+      const resp = await apiClient.getVersionItems(id, versionId)
+      if (resp.error) {
+        setError("Failed to load version items: " + resp.error)
+        setPreviewVersionId(null)
+        return
+      }
+      setPreviewItems(resp.data?.items || [])
+    } catch (err) {
+      console.error("Error loading version items:", err)
+      setError("Failed to load version items")
+      setPreviewVersionId(null)
+    } finally {
+      setLoadingPreviewItems(false)
+    }
+  }, [id])
+
   const loadDesignTemplates = useCallback(async () => {
     if (!menuData?.restaurant?.company_id) return
     setLoadingDesignTemplates(true)
@@ -363,6 +487,13 @@ export default function EditMenuPage() {
       loadSources()
     }
   }, [id, loadSources])
+
+  // Load versions for the Version History tab
+  useEffect(() => {
+    if (id) {
+      loadVersions()
+    }
+  }, [id, loadVersions])
 
   // Poll OCR job progress while processing to update banner and items once done
   useEffect(() => {
@@ -903,6 +1034,7 @@ export default function EditMenuPage() {
             <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
+            <TabsTrigger value="versions">Version History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="space-y-6">
@@ -1528,7 +1660,310 @@ export default function EditMenuPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="versions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Version History
+                    </CardTitle>
+                    <CardDescription>
+                      View and manage menu versions. Accept drafts or restore previous versions.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={loadVersions}
+                    disabled={loadingVersions}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingVersions ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingVersions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-muted-foreground">Loading versions...</span>
+                  </div>
+                ) : versions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No versions yet</p>
+                    <p className="text-sm">Menu versions are created when sources are processed</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Draft version card - displayed prominently at top */}
+                    {versions.filter(v => v.status === 'draft').map((version) => (
+                      <Card key={version.id} className="border-2 border-amber-300 bg-amber-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-semibold text-lg">v{version.version_number}</span>
+                                <Badge className="bg-amber-100 text-amber-800 border-amber-300">
+                                  Draft
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                <span>{version.item_count} items</span>
+                                <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
+                              </div>
+                              {/* Item count comparison with active version */}
+                              {(() => {
+                                const activeVersion = versions.find(v => v.status === 'active')
+                                if (activeVersion) {
+                                  return (
+                                    <div className="text-sm mb-3 p-2 bg-white rounded border">
+                                      <span className="text-muted-foreground">Current: </span>
+                                      <span className="font-medium">{activeVersion.item_count} items</span>
+                                      <span className="text-muted-foreground"> / Draft: </span>
+                                      <span className="font-medium">{version.item_count} items</span>
+                                      {version.item_count > activeVersion.item_count && (
+                                        <span className="text-green-600 ml-2">(+{version.item_count - activeVersion.item_count})</span>
+                                      )}
+                                      {version.item_count < activeVersion.item_count && (
+                                        <span className="text-red-600 ml-2">({version.item_count - activeVersion.item_count})</span>
+                                      )}
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePreviewVersionItems(version.id)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Preview Items
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={handleAcceptDraft}
+                                disabled={acceptingDraft}
+                              >
+                                {acceptingDraft ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                )}
+                                Accept
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive hover:text-destructive"
+                                    disabled={discardingDraft}
+                                  >
+                                    {discardingDraft ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    Discard
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Discard Draft</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to discard this draft? This action cannot be undone and the draft version will be permanently deleted.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleDiscardDraft}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Discard
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Active version card */}
+                    {versions.filter(v => v.status === 'active').map((version) => (
+                      <Card key={version.id} className="border-2 border-green-300 bg-green-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-semibold text-lg">v{version.version_number}</span>
+                                <Badge className="bg-green-100 text-green-800 border-green-300">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>{version.item_count} items</span>
+                                {version.activated_at && (
+                                  <span>Activated: {new Date(version.activated_at).toLocaleDateString()}</span>
+                                )}
+                                <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handlePreviewVersionItems(version.id)}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Items
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Archived versions */}
+                    {versions.filter(v => v.status === 'archived').map((version) => (
+                      <Card key={version.id} className="border bg-gray-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-semibold text-lg">v{version.version_number}</span>
+                                <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
+                                  <Archive className="h-3 w-3 mr-1" />
+                                  Archived
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>{version.item_count} items</span>
+                                {version.archived_at && (
+                                  <span>Archived: {new Date(version.archived_at).toLocaleDateString()}</span>
+                                )}
+                                <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePreviewVersionItems(version.id)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Items
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={restoringVersionId === version.id}
+                                  >
+                                    {restoringVersionId === version.id ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <RotateCcw className="h-4 w-4 mr-2" />
+                                    )}
+                                    Restore
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Restore Version</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will restore version {version.version_number} as the active menu version. The current active version will be archived.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleRestoreVersion(version.id)}>
+                                      Restore Version
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Preview Version Items Modal */}
+        <Dialog open={previewVersionId !== null} onOpenChange={(open) => !open && setPreviewVersionId(null)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Version Items Preview
+                {previewVersionId && versions.find(v => v.id === previewVersionId) && (
+                  <span className="ml-2 text-muted-foreground font-normal">
+                    (v{versions.find(v => v.id === previewVersionId)?.version_number})
+                  </span>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {previewItems.length} items in this version
+              </DialogDescription>
+            </DialogHeader>
+            {loadingPreviewItems ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading items...</span>
+              </div>
+            ) : previewItems.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No items in this version
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Group items by category */}
+                {Array.from(new Set(previewItems.map(item => item.category || 'Other'))).map(category => (
+                  <div key={category}>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-2">{category}</h4>
+                    <div className="space-y-2">
+                      {previewItems.filter(item => (item.category || 'Other') === category).map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-2 border rounded-md text-sm">
+                          <div className="flex-1">
+                            <span className="font-medium">{item.name}</span>
+                            {item.description && (
+                              <span className="text-muted-foreground ml-2 text-xs">
+                                {item.description.length > 50 ? item.description.slice(0, 50) + '...' : item.description}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-green-600">
+                            {formatPrice(item.price, menuData?.restaurant?.currency_code)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPreviewVersionId(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Item Modal */}
         {editingItem && (
