@@ -97,6 +97,9 @@ export default function EditMenuPage() {
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null)
   const [previewItems, setPreviewItems] = useState<MenuItem[]>([])
   const [loadingPreviewItems, setLoadingPreviewItems] = useState(false)
+  // Draft banner state
+  const [draftVersion, setDraftVersion] = useState<MenuVersion | null>(null)
+  const [activeTab, setActiveTab] = useState("items")
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
   const isUnavailable = (value: any) => {
@@ -270,6 +273,23 @@ export default function EditMenuPage() {
     }
   }, [id])
 
+  // Check for draft version (for the banner)
+  const checkForDraft = useCallback(async () => {
+    if (!id) return
+    try {
+      const resp = await apiClient.getDraftVersion(id)
+      if (resp.error) {
+        // 404 means no draft exists - this is expected, not an error
+        setDraftVersion(null)
+        return
+      }
+      setDraftVersion(resp.data || null)
+    } catch (err) {
+      // No draft exists
+      setDraftVersion(null)
+    }
+  }, [id])
+
   const handleAcceptDraft = useCallback(async () => {
     if (!id) return
     setAcceptingDraft(true)
@@ -282,6 +302,7 @@ export default function EditMenuPage() {
       }
       setSuccess("Draft accepted and set as active version")
       setTimeout(() => setSuccess(""), 3000)
+      setDraftVersion(null) // Clear draft banner
       await loadVersions()
       // Refresh menu items to show the new active version's items
       const itemsResp = await apiClient.getMenuItems(id)
@@ -308,6 +329,7 @@ export default function EditMenuPage() {
       }
       setSuccess("Draft discarded")
       setTimeout(() => setSuccess(""), 3000)
+      setDraftVersion(null) // Clear draft banner
       await loadVersions()
     } catch (err) {
       console.error("Error discarding draft:", err)
@@ -494,6 +516,13 @@ export default function EditMenuPage() {
       loadVersions()
     }
   }, [id, loadVersions])
+
+  // Check for draft version (for the banner)
+  useEffect(() => {
+    if (id) {
+      checkForDraft()
+    }
+  }, [id, checkForDraft])
 
   // Poll OCR job progress while processing to update banner and items once done
   useEffect(() => {
@@ -1026,7 +1055,62 @@ export default function EditMenuPage() {
           </Alert>
         )}
 
-        <Tabs defaultValue="items" className="space-y-6">
+        {/* Draft banner - visible across all tabs */}
+        {draftVersion && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 flex items-center justify-between flex-wrap gap-4">
+              <span>
+                A new menu draft (v{draftVersion.version_number}) is available from recently processed sources.
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setActiveTab("versions")}
+                >
+                  Review & Accept
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                      disabled={discardingDraft}
+                    >
+                      {discardingDraft ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Discard"
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Discard Draft</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to discard this draft? This action cannot be undone and the draft version will be permanently deleted.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDiscardDraft}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Discard
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="items">Menu Items</TabsTrigger>
             <TabsTrigger value="image-matching">Image Matching</TabsTrigger>
