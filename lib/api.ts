@@ -460,6 +460,25 @@ interface DesignTemplate extends DesignTemplateMetadata {
   default_theme?: any;
 }
 
+// Onboarding interfaces
+interface OnboardingSourceInput {
+  url: string;
+  category: 'menu' | 'context';
+}
+
+interface QuickSetupRequest {
+  restaurant_name: string;
+  sources: OnboardingSourceInput[];
+}
+
+interface QuickSetupResponse {
+  restaurant_id: string;
+  menu_id: string | null;
+  source_ids: string[];
+  embed_token: string;
+  embed_snippet: string;
+}
+
 // Source management interfaces
 interface RestaurantSource {
   id: string;
@@ -1387,6 +1406,14 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Onboarding endpoints
+  async quickSetup(data: QuickSetupRequest): Promise<ApiResponse<QuickSetupResponse>> {
+    return this.makeRequest<QuickSetupResponse>('/onboarding/quick-setup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -1456,5 +1483,8 @@ export type {
   RestaurantSource,
   CreateSourceRequest,
   UpdateSourceRequest,
-  MenuVersion
+  MenuVersion,
+  OnboardingSourceInput,
+  QuickSetupRequest,
+  QuickSetupResponse
 }; 
