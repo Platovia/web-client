@@ -460,6 +460,42 @@ interface DesignTemplate extends DesignTemplateMetadata {
   default_theme?: any;
 }
 
+// Billing interfaces
+interface BillingSubscription {
+  id: string;
+  tier: string;
+  status: 'active' | 'canceled' | 'past_due' | 'trialing';
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  provider: string;
+  provider_subscription_id: string | null;
+}
+
+interface BillingUsage {
+  usage: Record<string, number>;
+  limits: Record<string, number>;
+  tier: string;
+}
+
+interface BillingPlan {
+  tier: string;
+  price: number;
+  limits: Record<string, number>;
+  paddle_price_id: string | null;
+}
+
+interface CheckoutRequest {
+  price_id: string;
+  customer_email?: string;
+  success_url?: string;
+}
+
+interface CheckoutResponse {
+  checkout_url?: string;
+  client_token?: string;
+}
+
 // Onboarding interfaces
 interface OnboardingSourceInput {
   url: string;
@@ -1414,6 +1450,32 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Billing endpoints
+  async getSubscription(): Promise<ApiResponse<BillingSubscription>> {
+    return this.makeRequest<BillingSubscription>('/billing/subscription');
+  }
+
+  async getUsage(): Promise<ApiResponse<BillingUsage>> {
+    return this.makeRequest<BillingUsage>('/billing/usage');
+  }
+
+  async getPlans(): Promise<ApiResponse<{ plans: BillingPlan[] }>> {
+    return this.makeRequest<{ plans: BillingPlan[] }>('/billing/plans');
+  }
+
+  async createCheckout(data: CheckoutRequest): Promise<ApiResponse<CheckoutResponse>> {
+    return this.makeRequest<CheckoutResponse>('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cancelSubscription(): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>('/billing/cancel', {
+      method: 'POST',
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -1486,5 +1548,10 @@ export type {
   MenuVersion,
   OnboardingSourceInput,
   QuickSetupRequest,
-  QuickSetupResponse
+  QuickSetupResponse,
+  BillingSubscription,
+  BillingUsage,
+  BillingPlan,
+  CheckoutRequest,
+  CheckoutResponse
 }; 
