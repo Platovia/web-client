@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { TrendingUp, Users, MessageCircle, QrCode, Eye, Clock, Star } from "lucide-react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { apiClient } from "@/lib/api"
+import Link from "next/link"
 
 // Initial analytics data structure
 const initialAnalyticsData = {
@@ -302,6 +303,19 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Chat Analytics Link */}
+        <Link href="/dashboard/analytics/chat" className="block">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                <CardTitle>Chat Analytics</CardTitle>
+              </div>
+              <CardDescription>Detailed insights into chatbot conversations</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       </div>
     </DashboardLayout>
   )
