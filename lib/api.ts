@@ -1206,6 +1206,16 @@ class ApiClient {
     return this.makeRequest<any>(`/chat/admin/analytics/overview${params}`);
   }
 
+  async getRestaurantChatAnalytics(restaurantId: string, days?: number): Promise<ApiResponse<any>> {
+    const params = days ? `?days=${days}` : '';
+    return this.makeRequest<any>(`/analytics/restaurants/${restaurantId}/chat-analytics${params}`);
+  }
+
+  async getMenuChatAnalytics(menuId: string, days?: number): Promise<ApiResponse<any>> {
+    const params = days ? `?days=${days}` : '';
+    return this.makeRequest<any>(`/analytics/menus/${menuId}/chat-analytics${params}`);
+  }
+
   // Tag management endpoints
   async getAvailableTags(category?: string): Promise<ApiResponse<{ tags: TagDefinition[]; total: number }>> {
     const params = category ? `?category=${category}` : '';
