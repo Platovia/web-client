@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { AuthProvider } from '@/contexts/auth-context'
@@ -29,6 +30,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <Script src="https://cdn.paddle.com/paddle/v2/paddle.js" strategy="lazyOnload" />
       </body>
     </html>
   )
