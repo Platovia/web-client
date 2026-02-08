@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,11 +12,31 @@ import { TagSelector } from "@/components/ui/tag-selector"
 import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
-import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate, type DesignTemplateMetadata } from "@/lib/api"
+import { apiClient, type Menu, type MenuItem, type MenuUpdateRequest, type MenuItemCreateRequest, type MenuItemUpdateRequest, type Restaurant, type MenuTemplate, type DesignTemplateMetadata, type RestaurantSource, type CreateSourceRequest } from "@/lib/api"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { formatPrice } from "@/lib/currency"
 import { resolveImageUrl } from "@/lib/utils"
 
@@ -57,6 +77,17 @@ export default function EditMenuPage() {
   const [loadingDesignTemplates, setLoadingDesignTemplates] = useState(false)
   const [applyingDesignTemplateId, setApplyingDesignTemplateId] = useState<string | null>(null)
   const [itemSearch, setItemSearch] = useState("")
+  // Sources tab state
+  const [sources, setSources] = useState<RestaurantSource[]>([])
+  const [loadingSources, setLoadingSources] = useState(false)
+  const [processingSourceId, setProcessingSourceId] = useState<string | null>(null)
+  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null)
+  const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false)
+  const [addSourceUrl, setAddSourceUrl] = useState("")
+  const [addSourceLabel, setAddSourceLabel] = useState("")
+  const [addingSource, setAddingSource] = useState(false)
+  const [uploadingSource, setUploadingSource] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
   const isUnavailable = (value: any) => {
@@ -82,6 +113,133 @@ export default function EditMenuPage() {
       setError("Failed to load template history")
     }
   }, [id])
+
+  // Sources tab callbacks
+  const loadSources = useCallback(async () => {
+    if (!id) return
+    setLoadingSources(true)
+    try {
+      const resp = await apiClient.getMenuSources(id)
+      if (resp.error) {
+        setError((prev) => prev || "Failed to load sources: " + resp.error)
+        return
+      }
+      setSources(resp.data || [])
+    } catch (err) {
+      console.error("Error loading sources:", err)
+    } finally {
+      setLoadingSources(false)
+    }
+  }, [id])
+
+  const handleProcessSource = useCallback(async (sourceId: string) => {
+    setProcessingSourceId(sourceId)
+    setError("")
+    try {
+      const resp = await apiClient.processSource(sourceId)
+      if (resp.error) {
+        setError("Failed to re-process source: " + resp.error)
+        return
+      }
+      // Update status in local state
+      setSources((prev) => prev.map((s) => s.id === sourceId ? { ...s, status: 'pending' } : s))
+      setSuccess("Source queued for re-processing")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error processing source:", err)
+      setError("Failed to re-process source")
+    } finally {
+      setProcessingSourceId(null)
+    }
+  }, [])
+
+  const handleDeleteSource = useCallback(async (sourceId: string) => {
+    setDeletingSourceId(sourceId)
+    setError("")
+    try {
+      const resp = await apiClient.deleteSource(sourceId)
+      if (resp.error) {
+        setError("Failed to delete source: " + resp.error)
+        return
+      }
+      // Remove from local state
+      setSources((prev) => prev.filter((s) => s.id !== sourceId))
+      setSuccess("Source deleted successfully")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error deleting source:", err)
+      setError("Failed to delete source")
+    } finally {
+      setDeletingSourceId(null)
+    }
+  }, [])
+
+  const handleAddSource = useCallback(async () => {
+    if (!addSourceUrl.trim() || !menuData?.restaurant?.id) return
+    setAddingSource(true)
+    setError("")
+    try {
+      const data: CreateSourceRequest = {
+        url: addSourceUrl.trim(),
+        source_category: 'menu',
+        menu_id: id,
+        label: addSourceLabel.trim() || undefined,
+      }
+      const resp = await apiClient.createSource(menuData.restaurant.id, data)
+      if (resp.error) {
+        setError("Failed to add source: " + resp.error)
+        return
+      }
+      // Add to local state
+      if (resp.data) {
+        setSources((prev) => [...prev, resp.data!])
+      }
+      // Dispatch processing
+      if (resp.data?.id) {
+        await apiClient.processSource(resp.data.id)
+      }
+      setAddSourceDialogOpen(false)
+      setAddSourceUrl("")
+      setAddSourceLabel("")
+      setSuccess("Source added and queued for processing")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error adding source:", err)
+      setError("Failed to add source")
+    } finally {
+      setAddingSource(false)
+    }
+  }, [id, addSourceUrl, addSourceLabel, menuData?.restaurant?.id])
+
+  const handleUploadSourceFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !menuData?.restaurant?.id) return
+    setUploadingSource(true)
+    setError("")
+    try {
+      const resp = await apiClient.uploadSourceDocument(menuData.restaurant.id, file, {
+        source_category: 'menu',
+        menu_id: id,
+      })
+      if (resp.error) {
+        setError("Failed to upload document: " + resp.error)
+        return
+      }
+      // Refresh sources list
+      await loadSources()
+      setSuccess("Document uploaded and queued for processing")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error uploading document:", err)
+      setError("Failed to upload document")
+    } finally {
+      setUploadingSource(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }, [id, menuData?.restaurant?.id, loadSources])
 
   const loadDesignTemplates = useCallback(async () => {
     if (!menuData?.restaurant?.company_id) return
@@ -198,6 +356,13 @@ export default function EditMenuPage() {
       loadMenuData()
     }
   }, [id, loadMenuData])
+
+  // Load sources for the Sources tab
+  useEffect(() => {
+    if (id) {
+      loadSources()
+    }
+  }, [id, loadSources])
 
   // Poll OCR job progress while processing to update banner and items once done
   useEffect(() => {
@@ -737,6 +902,7 @@ export default function EditMenuPage() {
             <TabsTrigger value="settings">Menu Settings</TabsTrigger>
             <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="sources">Sources</TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="space-y-6">
@@ -1137,6 +1303,228 @@ export default function EditMenuPage() {
                     ))
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sources" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Link2 className="h-5 w-5" />
+                      Menu Sources
+                    </CardTitle>
+                    <CardDescription>
+                      URLs and documents used to extract menu items
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Dialog open={addSourceDialogOpen} onOpenChange={setAddSourceDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add URL
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add URL Source</DialogTitle>
+                          <DialogDescription>
+                            Add a URL to extract menu items from
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="source-url">URL (required)</Label>
+                            <Input
+                              id="source-url"
+                              placeholder="https://example.com/menu"
+                              value={addSourceUrl}
+                              onChange={(e) => setAddSourceUrl(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="source-label">Label (optional)</Label>
+                            <Input
+                              id="source-label"
+                              placeholder="Main menu page"
+                              value={addSourceLabel}
+                              onChange={(e) => setAddSourceLabel(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setAddSourceDialogOpen(false)}
+                            disabled={addingSource}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleAddSource}
+                            disabled={addingSource || !addSourceUrl.trim()}
+                          >
+                            {addingSource && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Add Source
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingSource}
+                    >
+                      {uploadingSource ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Upload Document
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={handleUploadSourceFile}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={loadSources}
+                      disabled={loadingSources}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${loadingSources ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingSources ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-muted-foreground">Loading sources...</span>
+                  </div>
+                ) : sources.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No sources added yet</p>
+                    <p className="text-sm">Add a URL or upload a document to extract menu items</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {sources.map((source) => (
+                      <Card key={source.id} className="border">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                {source.source_type === 'url' ? (
+                                  <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                                <span className="font-medium truncate">
+                                  {source.url || source.file_name || 'Unknown source'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge
+                                  variant={
+                                    source.status === 'completed' ? 'default' :
+                                    source.status === 'failed' ? 'destructive' :
+                                    source.status === 'processing' ? 'secondary' :
+                                    'outline'
+                                  }
+                                  className={
+                                    source.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                                    source.status === 'failed' ? '' :
+                                    source.status === 'processing' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                    'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  }
+                                >
+                                  {source.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                                  {source.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
+                                  {(source.status === 'pending' || source.status === 'processing') && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                                  {source.status.charAt(0).toUpperCase() + source.status.slice(1)}
+                                </Badge>
+                                {source.label && (
+                                  <Badge variant="outline">{source.label}</Badge>
+                                )}
+                                {source.items_extracted !== undefined && source.items_extracted > 0 && (
+                                  <span className="text-sm text-muted-foreground">
+                                    {source.items_extracted} items extracted
+                                  </span>
+                                )}
+                                {source.last_processed_at && (
+                                  <span className="text-sm text-muted-foreground">
+                                    Processed: {new Date(source.last_processed_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              {source.error_message && (
+                                <p className="text-sm text-destructive mt-2">{source.error_message}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleProcessSource(source.id)}
+                                disabled={processingSourceId === source.id || source.status === 'processing' || source.status === 'pending'}
+                              >
+                                {processingSourceId === source.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4" />
+                                )}
+                                <span className="ml-2 hidden sm:inline">Re-process</span>
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive hover:text-destructive"
+                                    disabled={deletingSourceId === source.id}
+                                  >
+                                    {deletingSourceId === source.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Source</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this source? This will remove the source but menu items already extracted will remain.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteSource(source.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
