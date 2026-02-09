@@ -594,6 +594,28 @@ export default function EditMenuPage() {
     }
   }, [id, processing?.status, fromUpload, awaitingItems])
 
+  // Poll sources when any are pending/processing
+  const pendingSourceCount = sources.filter(
+    (s) => s.status === "pending" || s.status === "processing"
+  ).length
+
+  useEffect(() => {
+    if (!pendingSourceCount || !id) return
+
+    const interval = setInterval(async () => {
+      try {
+        const resp = await apiClient.getMenuSources(id)
+        if (resp.data) {
+          setSources(resp.data)
+        }
+      } catch {
+        // Ignore transient errors
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [id, pendingSourceCount])
+
   useEffect(() => {
     void loadDesignTemplates()
   }, [loadDesignTemplates])
