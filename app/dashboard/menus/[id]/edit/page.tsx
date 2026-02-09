@@ -13,7 +13,7 @@ import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive, Info } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
@@ -86,7 +86,7 @@ export default function EditMenuPage() {
   const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false)
   const [addSourceUrl, setAddSourceUrl] = useState("")
   const [addSourceLabel, setAddSourceLabel] = useState("")
-  const [addSourceCategory, setAddSourceCategory] = useState<"menu" | "context">("menu")
+
   const [addingSource, setAddingSource] = useState(false)
   const [uploadingSource, setUploadingSource] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -195,8 +195,8 @@ export default function EditMenuPage() {
     try {
       const data: CreateSourceRequest = {
         url: addSourceUrl.trim(),
-        source_category: addSourceCategory,
-        menu_id: addSourceCategory === 'menu' ? id : undefined,
+        source_category: 'menu',
+        menu_id: id,
         label: addSourceLabel.trim() || undefined,
       }
       const resp = await apiClient.createSource(menuData.restaurant.id, data)
@@ -215,7 +215,6 @@ export default function EditMenuPage() {
       setAddSourceDialogOpen(false)
       setAddSourceUrl("")
       setAddSourceLabel("")
-      setAddSourceCategory("menu")
       setSuccess("Source added and queued for processing")
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
@@ -224,7 +223,7 @@ export default function EditMenuPage() {
     } finally {
       setAddingSource(false)
     }
-  }, [id, addSourceUrl, addSourceLabel, addSourceCategory, menuData?.restaurant?.id])
+  }, [id, addSourceUrl, addSourceLabel, menuData?.restaurant?.id])
 
   const handleUploadSourceFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -1559,18 +1558,6 @@ export default function EditMenuPage() {
                               onChange={(e) => setAddSourceLabel(e.target.value)}
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="source-category">Category</Label>
-                            <Select value={addSourceCategory} onValueChange={(v: "menu" | "context") => setAddSourceCategory(v)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="menu">Menu Source</SelectItem>
-                                <SelectItem value="context">Restaurant Context</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
                         </div>
                         <DialogFooter>
                           <Button
@@ -1670,9 +1657,6 @@ export default function EditMenuPage() {
                                   {(source.status === 'pending' || source.status === 'processing') && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
                                   {source.status.charAt(0).toUpperCase() + source.status.slice(1)}
                                 </Badge>
-                                <Badge variant="outline" className={source.source_category === 'context' ? 'bg-purple-50 text-purple-700 border-purple-200' : ''}>
-                                  {source.source_category === 'context' ? 'Context' : 'Menu'}
-                                </Badge>
                                 {source.label && (
                                   <Badge variant="outline">{source.label}</Badge>
                                 )}
@@ -1751,6 +1735,17 @@ export default function EditMenuPage() {
                 )}
               </CardContent>
             </Card>
+            {menuData?.restaurant?.id && (
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  These sources apply to this menu only. To manage restaurant-wide context sources (hours, location, policies, etc.), go to the{" "}
+                  <Link href={`/dashboard/restaurants/${menuData.restaurant.id}?tab=context`} className="text-primary underline underline-offset-4 hover:text-primary/80">
+                    restaurant Context tab
+                  </Link>.
+                </p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="versions" className="space-y-6">

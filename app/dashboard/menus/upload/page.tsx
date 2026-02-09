@@ -450,7 +450,7 @@ export default function UploadMenuPage() {
         router.push(`/dashboard/menus/${menu.id}/edit?fromUpload=true`)
       } else if (contextFiles.length > 0) {
         // Navigate to restaurant context page
-        router.push(`/dashboard/restaurants/${selectedRestaurant}/context`)
+        router.push(`/dashboard/restaurants/${selectedRestaurant}?tab=context`)
       } else {
         // Fallback to menus page
         router.push(`/dashboard/menus`)
