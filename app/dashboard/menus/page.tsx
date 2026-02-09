@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -70,48 +70,64 @@ export default function MenusPage() {
     handleSearch(searchQuery)
   }, [menus, searchQuery])
 
-  // Poll OCR status for menus
+  // Track menus in a ref so the polling effect doesn't restart on every menus change
+  const menusRef = useRef(menus)
+  menusRef.current = menus
+
+  // Poll OCR status only for menus that are processing/pending
   useEffect(() => {
-    let timer: any
+    const processingIds = Object.entries(ocrStatuses)
+      .filter(([, v]) => v.status === 'processing' || v.status === 'pending')
+      .map(([id]) => id)
+
+    // On first load (no statuses yet), do one pass over all menus to detect processing ones
+    const idsToCheck = processingIds.length > 0
+      ? processingIds
+      : menusRef.current.map(m => m.id)
+
+    if (idsToCheck.length === 0) return
+
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
+
     const poll = async () => {
-      try {
-        const updates: Record<string, { status: string; progress: number; processed: number; total: number }> = {}
-        const tokenChecks: Record<string, string | null> = {}
-        await Promise.all(
-          menus.map(async (m) => {
-            try {
-              const res = await apiClient.getLatestOCRJobForMenu(m.id)
-              if (res.data) {
-                updates[m.id] = {
-                  status: res.data.status,
-                  progress: Math.round(res.data.progress_percentage || 0),
-                  processed: res.data.processed_images || 0,
-                  total: res.data.total_images || 0,
-                }
+      if (cancelled) return
+      const updates: Record<string, { status: string; progress: number; processed: number; total: number }> = {}
+      await Promise.all(
+        idsToCheck.map(async (menuId) => {
+          try {
+            const res = await apiClient.getLatestOCRJobForMenu(menuId)
+            if (res.data) {
+              updates[menuId] = {
+                status: res.data.status,
+                progress: Math.round(res.data.progress_percentage || 0),
+                processed: res.data.processed_images || 0,
+                total: res.data.total_images || 0,
               }
-              // Validate QR token availability for this menu
-              try {
-                const qr = await apiClient.getQRCodeInfo(m.id)
-                tokenChecks[m.id] = qr.data?.token || null
-              } catch {
-                tokenChecks[m.id] = null
-              }
-            } catch {}
-          })
-        )
-        if (Object.keys(updates).length) {
-          setOcrStatuses((prev) => ({ ...prev, ...updates }))
-        }
-        if (Object.keys(tokenChecks).length) {
-          setValidTokens((prev) => ({ ...prev, ...tokenChecks }))
-        }
-      } finally {
-        timer = setTimeout(poll, 3000)
+            }
+          } catch {}
+        })
+      )
+      if (!cancelled && Object.keys(updates).length) {
+        setOcrStatuses((prev) => ({ ...prev, ...updates }))
+      }
+      // Only continue polling if there are still processing menus
+      const stillProcessing = Object.values(updates).some(
+        v => v.status === 'processing' || v.status === 'pending'
+      )
+      if (!cancelled && stillProcessing) {
+        timer = setTimeout(poll, 5000)
       }
     }
-    if (menus.length) poll()
-    return () => timer && clearTimeout(timer)
-  }, [menus])
+
+    poll()
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [menus.length, JSON.stringify(
+    Object.entries(ocrStatuses)
+      .filter(([, v]) => v.status === 'processing' || v.status === 'pending')
+      .map(([k]) => k)
+      .sort()
+  )])
 
   const loadMenus = async () => {
     setIsLoading(true)
@@ -152,7 +168,21 @@ export default function MenusPage() {
         )
 
         setMenus(menusWithAnalytics)
-        
+
+        // Load QR tokens once (not polled)
+        const tokenChecks: Record<string, string | null> = {}
+        await Promise.all(
+          allMenus.map(async (m) => {
+            try {
+              const qr = await apiClient.getQRCodeInfo(m.id)
+              tokenChecks[m.id] = qr.data?.token || null
+            } catch {
+              tokenChecks[m.id] = null
+            }
+          })
+        )
+        setValidTokens(tokenChecks)
+
         // Get overview analytics data
         try {
           const analyticsResponse = await apiClient.getAnalyticsOverview()

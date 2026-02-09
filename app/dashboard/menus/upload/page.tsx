@@ -12,10 +12,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Upload, FileImage, Loader2, CheckCircle, X } from "lucide-react"
+import { ArrowLeft, Upload, FileImage, Loader2, CheckCircle, X, Link2, Plus } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
-import { apiClient, type Restaurant, type Menu, type OCRJobResponse } from "@/lib/api"
+import { apiClient, type Restaurant, type Menu, type OCRJobResponse, type CreateSourceRequest } from "@/lib/api"
+
+interface PendingUrl {
+  id: string
+  url: string
+  category: "menu" | "context"
+  label: string
+}
 
 interface UploadedFile {
   id: string
@@ -53,6 +60,11 @@ export default function UploadMenuPage() {
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true)
   const [error, setError] = useState("")
   const [createdMenu, setCreatedMenu] = useState<Menu | null>(null)
+  // URL sources
+  const [urlInput, setUrlInput] = useState("")
+  const [urlCategory, setUrlCategory] = useState<"menu" | "context">("menu")
+  const [urlLabel, setUrlLabel] = useState("")
+  const [pendingUrls, setPendingUrls] = useState<PendingUrl[]>([])
 
   useEffect(() => {
     loadRestaurants()
@@ -390,9 +402,9 @@ export default function UploadMenuPage() {
       const menuFiles = uploadedFiles.filter(f => f.status === "pending" && f.category === "menu")
       const contextFiles = uploadedFiles.filter(f => f.status === "pending" && f.category === "context")
 
-      // Only create menu if there are menu files
+      // Create menu if there are menu files or menu URL sources
       let menu: Menu | null = null
-      if (menuFiles.length > 0) {
+      if (menuFiles.length > 0 || pendingUrls.some(u => u.category === 'menu')) {
         menu = await createMenuFirst()
         if (!menu) {
           setError("Failed to create menu")
@@ -418,6 +430,20 @@ export default function UploadMenuPage() {
 
       await Promise.all(allPromises)
 
+      // Process URL sources
+      for (const urlSource of pendingUrls) {
+        const data: CreateSourceRequest = {
+          url: urlSource.url,
+          source_category: urlSource.category,
+          menu_id: urlSource.category === 'menu' && menu ? menu.id : undefined,
+          label: urlSource.label || undefined,
+        }
+        const resp = await apiClient.createSource(selectedRestaurant, data)
+        if (resp.data?.id) {
+          await apiClient.processSource(resp.data.id)
+        }
+      }
+
       // Navigate based on what was uploaded
       if (menu) {
         // Navigate to menu edit page
@@ -436,14 +462,16 @@ export default function UploadMenuPage() {
     }
   }
 
-  // Check if there are any menu category files
+  // Check if there are any menu category files or URL sources
   const hasMenuFiles = uploadedFiles.some(f => f.category === "menu" && f.status === "pending")
+  const hasMenuUrls = pendingUrls.some(u => u.category === "menu")
+  const hasAnyMenuContent = hasMenuFiles || hasMenuUrls
 
   // Menu name is only required if uploading menu files
   const canSubmit =
     Boolean(selectedRestaurant) &&
-    (hasMenuFiles ? Boolean(menuName) : true) &&
-    uploadedFiles.length > 0 &&
+    (hasAnyMenuContent ? Boolean(menuName) : true) &&
+    (uploadedFiles.length > 0 || pendingUrls.length > 0) &&
     !isProcessing
 
   return (
@@ -689,6 +717,86 @@ export default function UploadMenuPage() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* URL Sources */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Add URL Sources (Optional)
+              </CardTitle>
+              <CardDescription>
+                Paste a link to a menu page or PDF to extract items from
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://example.com/menu or .pdf link"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  className="flex-1"
+                />
+                <Select value={urlCategory} onValueChange={(v: "menu" | "context") => setUrlCategory(v)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="menu">Menu Source</SelectItem>
+                    <SelectItem value="context">Context</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!urlInput.trim()) return
+                    setPendingUrls(prev => [...prev, {
+                      id: `url-${Date.now()}`,
+                      url: urlInput.trim(),
+                      category: urlCategory,
+                      label: urlLabel.trim(),
+                    }])
+                    setUrlInput("")
+                    setUrlLabel("")
+                  }}
+                  disabled={!urlInput.trim()}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+              <Input
+                placeholder="Label (optional)"
+                value={urlLabel}
+                onChange={(e) => setUrlLabel(e.target.value)}
+              />
+              {pendingUrls.length > 0 && (
+                <div className="space-y-2">
+                  {pendingUrls.map((u) => (
+                    <div key={u.id} className="flex items-center justify-between gap-2 p-2 border rounded-md text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate">{u.url}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${u.category === 'context' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {u.category === 'context' ? 'Context' : 'Menu'}
+                        </span>
+                        {u.label && <span className="text-muted-foreground">({u.label})</span>}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPendingUrls(prev => prev.filter(p => p.id !== u.id))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

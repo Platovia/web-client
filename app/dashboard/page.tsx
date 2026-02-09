@@ -31,17 +31,19 @@ export default function DashboardPage() {
   // Get the primary company
   const primaryCompany = companies?.[0]
 
+  // Stable dependency: use company ID string instead of companies array reference
+  const primaryCompanyId = companies?.[0]?.id
+
   // Fetch restaurants from API
   useEffect(() => {
     const fetchRestaurants = async () => {
-      if (!companies || companies.length === 0) return
-      
+      if (!primaryCompanyId) return
+
       setIsLoading(true)
       setError("")
-      
+
       try {
-        const company = companies[0] // Use the first company
-        const response = await apiClient.getCompanyRestaurants(company.id)
+        const response = await apiClient.getCompanyRestaurants(primaryCompanyId)
         
         if (response.error) {
           setError(response.error)
@@ -85,7 +87,7 @@ export default function DashboardPage() {
     }
     
     fetchRestaurants()
-  }, [companies])
+  }, [primaryCompanyId])
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)

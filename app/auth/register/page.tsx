@@ -193,27 +193,46 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                {formData.password && (
-                  <div className="mt-1">
-                    <div className="flex gap-1">
-                      <div
-                        className={`h-1 w-full rounded ${formData.password.length >= 4 ? "bg-red-500" : "bg-gray-200"}`}
-                      />
-                      <div
-                        className={`h-1 w-full rounded ${formData.password.length >= 6 ? "bg-yellow-500" : "bg-gray-200"}`}
-                      />
-                      <div
-                        className={`h-1 w-full rounded ${formData.password.length >= 8 ? "bg-green-500" : "bg-gray-200"}`}
-                      />
+                {formData.password && (() => {
+                  const pw = formData.password
+                  let score = 0
+                  if (pw.length >= 8) score += 1
+                  if (pw.length >= 12) score += 1
+                  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 1
+                  if (/\d/.test(pw)) score += 1
+                  if (/[^a-zA-Z0-9]/.test(pw)) score += 1
+                  const capped = Math.min(score, 4)
+
+                  const label = ["Weak", "Weak", "Fair", "Good", "Strong"][capped]
+                  const barColors = [
+                    ["bg-gray-200", "bg-gray-200", "bg-gray-200"],
+                    ["bg-red-500", "bg-gray-200", "bg-gray-200"],
+                    ["bg-yellow-500", "bg-yellow-500", "bg-gray-200"],
+                    ["bg-yellow-500", "bg-yellow-500", "bg-green-400"],
+                    ["bg-green-500", "bg-green-500", "bg-green-500"],
+                  ][capped]
+
+                  const hints: string[] = []
+                  if (pw.length < 8) hints.push("8+ characters")
+                  if (!/[A-Z]/.test(pw)) hints.push("uppercase")
+                  if (!/[a-z]/.test(pw)) hints.push("lowercase")
+                  if (!/\d/.test(pw)) hints.push("number")
+                  if (!/[^a-zA-Z0-9]/.test(pw)) hints.push("special character")
+
+                  return (
+                    <div className="mt-1">
+                      <div className="flex gap-1">
+                        <div className={`h-1 w-full rounded ${barColors[0]}`} />
+                        <div className={`h-1 w-full rounded ${barColors[1]}`} />
+                        <div className={`h-1 w-full rounded ${barColors[2]}`} />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {label} password
+                        {capped < 4 && hints.length > 0 && ` — add ${hints.join(", ")}`}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.password.length < 4 && "Weak password"}
-                      {formData.password.length >= 4 && formData.password.length < 6 && "Fair password"}
-                      {formData.password.length >= 6 && formData.password.length < 8 && "Good password"}
-                      {formData.password.length >= 8 && "Strong password"}
-                    </p>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
 
               <div className="space-y-2">

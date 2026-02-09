@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { TagSelector } from "@/components/ui/tag-selector"
 import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive } from "lucide-react"
 import Link from "next/link"
@@ -85,6 +86,7 @@ export default function EditMenuPage() {
   const [addSourceDialogOpen, setAddSourceDialogOpen] = useState(false)
   const [addSourceUrl, setAddSourceUrl] = useState("")
   const [addSourceLabel, setAddSourceLabel] = useState("")
+  const [addSourceCategory, setAddSourceCategory] = useState<"menu" | "context">("menu")
   const [addingSource, setAddingSource] = useState(false)
   const [uploadingSource, setUploadingSource] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -193,8 +195,8 @@ export default function EditMenuPage() {
     try {
       const data: CreateSourceRequest = {
         url: addSourceUrl.trim(),
-        source_category: 'menu',
-        menu_id: id,
+        source_category: addSourceCategory,
+        menu_id: addSourceCategory === 'menu' ? id : undefined,
         label: addSourceLabel.trim() || undefined,
       }
       const resp = await apiClient.createSource(menuData.restaurant.id, data)
@@ -213,6 +215,7 @@ export default function EditMenuPage() {
       setAddSourceDialogOpen(false)
       setAddSourceUrl("")
       setAddSourceLabel("")
+      setAddSourceCategory("menu")
       setSuccess("Source added and queued for processing")
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
@@ -221,7 +224,7 @@ export default function EditMenuPage() {
     } finally {
       setAddingSource(false)
     }
-  }, [id, addSourceUrl, addSourceLabel, menuData?.restaurant?.id])
+  }, [id, addSourceUrl, addSourceLabel, addSourceCategory, menuData?.restaurant?.id])
 
   const handleUploadSourceFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -524,10 +527,15 @@ export default function EditMenuPage() {
     }
   }, [id, checkForDraft])
 
-  // Poll OCR job progress while processing to update banner and items once done
+  // Unified polling: handles both OCR processing and awaiting-items states
   useEffect(() => {
     if (!id) return
-    if (!processing || (processing.status !== "processing" && processing.status !== "pending")) return
+
+    const shouldPoll =
+      (processing && (processing.status === "processing" || processing.status === "pending")) ||
+      (fromUpload && awaitingItems)
+
+    if (!shouldPoll) return
 
     let isActive = true
 
@@ -537,6 +545,7 @@ export default function EditMenuPage() {
         if (!isActive || !latest.data) return
 
         const job = latest.data
+
         if (job.status === "processing" || job.status === "pending") {
           setProcessing({
             status: job.status,
@@ -544,22 +553,30 @@ export default function EditMenuPage() {
             processed: job.processed_images || 0,
             total: job.total_images || 0,
           })
-          if (fromUpload) {
-            setAwaitingItems(false)
-          }
-        } else {
+          setAwaitingItems(false)
+        } else if (job.status === "failed") {
           setProcessing(null)
+          setAwaitingItems(false)
+          setError("AI processing failed. Please retry the upload or check the job logs.")
           clearInterval(interval)
-          // Refresh items so newly extracted data appears without a full reload
+        } else {
+          // Completed — refresh items
+          setProcessing(null)
           try {
             const itemsResponse = await apiClient.getMenuItems(id)
             if (isActive && itemsResponse.data) {
               const newItems = itemsResponse.data.items || []
               setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
-              if (fromUpload && newItems.length > 0) {
-                setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
-              } else if (fromUpload && newItems.length === 0) {
-                setAwaitingItems(true)
+              if (fromUpload) {
+                if (newItems.length > 0) {
+                  setAwaitingItems(false)
+                  setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
+                  clearInterval(interval)
+                } else {
+                  setAwaitingItems(true)
+                }
+              } else {
+                clearInterval(interval)
               }
             }
           } catch {
@@ -575,57 +592,7 @@ export default function EditMenuPage() {
       isActive = false
       clearInterval(interval)
     }
-  }, [id, processing, fromUpload])
-
-  // If OCR completed but items haven't surfaced yet, keep refreshing until they appear
-  useEffect(() => {
-    if (!id || !fromUpload || !awaitingItems) return
-
-    let isActive = true
-
-    const interval = setInterval(async () => {
-      try {
-        const latest = await apiClient.getLatestOCRJobForMenu(id)
-        if (!isActive || !latest.data) return
-
-        if (latest.data.status === "processing" || latest.data.status === "pending") {
-          setProcessing({
-            status: latest.data.status,
-            progress: Math.round(latest.data.progress_percentage || 0),
-            processed: latest.data.processed_images || 0,
-            total: latest.data.total_images || 0,
-          })
-          setAwaitingItems(false)
-          return
-        }
-
-        if (latest.data.status === "failed") {
-          setAwaitingItems(false)
-          setError("AI processing failed. Please retry the upload or check the job logs.")
-          clearInterval(interval)
-          return
-        }
-
-        const itemsResponse = await apiClient.getMenuItems(id)
-        if (isActive && itemsResponse.data) {
-          const newItems = itemsResponse.data.items || []
-          if (newItems.length > 0) {
-            setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
-            setAwaitingItems(false)
-            setSuccess("Menu uploaded successfully! Review and edit the extracted items below.")
-            clearInterval(interval)
-          }
-        }
-      } catch {
-        // Ignore transient errors; continue polling
-      }
-    }, 4000)
-
-    return () => {
-      isActive = false
-      clearInterval(interval)
-    }
-  }, [id, fromUpload, awaitingItems])
+  }, [id, processing?.status, fromUpload, awaitingItems])
 
   useEffect(() => {
     void loadDesignTemplates()
@@ -1570,6 +1537,18 @@ export default function EditMenuPage() {
                               onChange={(e) => setAddSourceLabel(e.target.value)}
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="source-category">Category</Label>
+                            <Select value={addSourceCategory} onValueChange={(v: "menu" | "context") => setAddSourceCategory(v)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="menu">Menu Source</SelectItem>
+                                <SelectItem value="context">Restaurant Context</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button
@@ -1669,6 +1648,9 @@ export default function EditMenuPage() {
                                   {(source.status === 'pending' || source.status === 'processing') && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
                                   {source.status.charAt(0).toUpperCase() + source.status.slice(1)}
                                 </Badge>
+                                <Badge variant="outline" className={source.source_category === 'context' ? 'bg-purple-50 text-purple-700 border-purple-200' : ''}>
+                                  {source.source_category === 'context' ? 'Context' : 'Menu'}
+                                </Badge>
                                 {source.label && (
                                   <Badge variant="outline">{source.label}</Badge>
                                 )}
@@ -1684,7 +1666,11 @@ export default function EditMenuPage() {
                                 )}
                               </div>
                               {source.error_message && (
-                                <p className="text-sm text-destructive mt-2">{source.error_message}</p>
+                                <p className="text-sm text-destructive mt-2">
+                                  {/poppler|traceback|errno|exception|in PATH/i.test(source.error_message)
+                                    ? "Source processing failed. Please try again or use a different format."
+                                    : source.error_message}
+                                </p>
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
