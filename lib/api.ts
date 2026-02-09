@@ -615,7 +615,12 @@ class ApiClient {
         return { error: errorMessage };
       }
 
-      const data = await response.json();
+      // Handle empty responses (e.g., 204 No Content from DELETE)
+      const text = await response.text();
+      if (!text) {
+        return { data: undefined as unknown as T };
+      }
+      const data = JSON.parse(text);
       console.log('API success data:', data);
       return { data };
     } catch (error) {
