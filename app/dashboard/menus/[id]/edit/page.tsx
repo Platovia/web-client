@@ -560,12 +560,12 @@ export default function EditMenuPage() {
           clearInterval(interval)
         } else {
           // Completed — refresh items
-          setProcessing(null)
           try {
             const itemsResponse = await apiClient.getMenuItems(id)
             if (isActive && itemsResponse.data) {
               const newItems = itemsResponse.data.items || []
               setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
+              setProcessing(null)
               if (fromUpload) {
                 if (newItems.length > 0) {
                   setAwaitingItems(false)
