@@ -273,13 +273,8 @@ export default function UploadMenuPage() {
           } : f
         ))
 
-        // For PDFs, process all converted images with OCR
-        const imageUrls = uploadResult.files.map((fileInfo: any) => {
-          const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-          return fileInfo.image_url.startsWith('http') 
-            ? fileInfo.image_url 
-            : `${backendBaseUrl}${fileInfo.image_url}`
-        })
+        // For PDFs, pass relative image paths for OCR (Celery worker reads files directly)
+        const imageUrls = uploadResult.files.map((fileInfo: any) => fileInfo.image_url)
 
         const ocrJob = await processWithOCR(imageUrls, menuId)
         
@@ -297,17 +292,13 @@ export default function UploadMenuPage() {
       } else {
         // Handle single image processing
         const imageInfo = uploadResult.files[0]
-        const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const fullImageUrl = imageInfo.image_url.startsWith('http') 
-          ? imageInfo.image_url 
-          : `${backendBaseUrl}${imageInfo.image_url}`
-        
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, progress: 50, imageUrl: fullImageUrl } : f
+
+        setUploadedFiles(prev => prev.map(f =>
+          f.id === fileId ? { ...f, progress: 50, imageUrl: imageInfo.image_url } : f
         ))
 
-        // Start OCR processing
-        const ocrJob = await processWithOCR([fullImageUrl], menuId)
+        // Start OCR processing (pass relative path — Celery worker reads files directly)
+        const ocrJob = await processWithOCR([imageInfo.image_url], menuId)
         
         setUploadedFiles(prev => prev.map(f => 
           f.id === fileId ? { 
