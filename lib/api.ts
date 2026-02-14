@@ -1436,8 +1436,8 @@ class ApiClient {
     return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/active`);
   }
 
-  async getVersionItems(menuId: string, versionId: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
-    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/versions/${versionId}/items`);
+  async getVersionItems(menuId: string, versionId: string): Promise<ApiResponse<MenuItem[]>> {
+    return this.makeRequest<MenuItem[]>(`/menus/${menuId}/versions/${versionId}/items`);
   }
 
   async acceptDraft(menuId: string): Promise<ApiResponse<MenuVersion>> {
@@ -1455,6 +1455,12 @@ class ApiClient {
   async discardDraft(menuId: string): Promise<ApiResponse<void>> {
     return this.makeRequest<void>(`/menus/${menuId}/versions/draft`, {
       method: 'DELETE',
+    });
+  }
+
+  async compileSources(menuId: string): Promise<ApiResponse<{ status: string; source_count: number }>> {
+    return this.makeRequest<{ status: string; source_count: number }>(`/menus/${menuId}/sources/compile`, {
+      method: 'POST',
     });
   }
 

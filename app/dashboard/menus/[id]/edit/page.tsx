@@ -89,6 +89,7 @@ export default function EditMenuPage() {
 
   const [addingSource, setAddingSource] = useState(false)
   const [uploadingSource, setUploadingSource] = useState(false)
+  const [compilingSources, setCompilingSources] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Version History tab state
   const [versions, setVersions] = useState<MenuVersion[]>([])
@@ -146,116 +147,7 @@ export default function EditMenuPage() {
     }
   }, [id])
 
-  const handleProcessSource = useCallback(async (sourceId: string) => {
-    setProcessingSourceId(sourceId)
-    setError("")
-    try {
-      const resp = await apiClient.processSource(sourceId)
-      if (resp.error) {
-        setError("Failed to re-process source: " + resp.error)
-        return
-      }
-      // Update status in local state
-      setSources((prev) => prev.map((s) => s.id === sourceId ? { ...s, status: 'pending' } : s))
-      setSuccess("Source queued for re-processing")
-      setTimeout(() => setSuccess(""), 3000)
-    } catch (err) {
-      console.error("Error processing source:", err)
-      setError("Failed to re-process source")
-    } finally {
-      setProcessingSourceId(null)
-    }
-  }, [])
-
-  const handleDeleteSource = useCallback(async (sourceId: string) => {
-    setDeletingSourceId(sourceId)
-    setError("")
-    try {
-      const resp = await apiClient.deleteSource(sourceId)
-      if (resp.error) {
-        setError("Failed to delete source: " + resp.error)
-        return
-      }
-      // Remove from local state
-      setSources((prev) => prev.filter((s) => s.id !== sourceId))
-      setSuccess("Source deleted successfully")
-      setTimeout(() => setSuccess(""), 3000)
-    } catch (err) {
-      console.error("Error deleting source:", err)
-      setError("Failed to delete source")
-    } finally {
-      setDeletingSourceId(null)
-    }
-  }, [])
-
-  const handleAddSource = useCallback(async () => {
-    if (!addSourceUrl.trim() || !menuData?.restaurant?.id) return
-    setAddingSource(true)
-    setError("")
-    try {
-      const data: CreateSourceRequest = {
-        url: addSourceUrl.trim(),
-        source_category: 'menu',
-        menu_id: id,
-        label: addSourceLabel.trim() || undefined,
-      }
-      const resp = await apiClient.createSource(menuData.restaurant.id, data)
-      if (resp.error) {
-        setError("Failed to add source: " + resp.error)
-        return
-      }
-      // Add to local state
-      if (resp.data) {
-        setSources((prev) => [...prev, resp.data!])
-      }
-      // Dispatch processing
-      if (resp.data?.id) {
-        await apiClient.processSource(resp.data.id)
-      }
-      setAddSourceDialogOpen(false)
-      setAddSourceUrl("")
-      setAddSourceLabel("")
-      setSuccess("Source added and queued for processing")
-      setTimeout(() => setSuccess(""), 3000)
-    } catch (err) {
-      console.error("Error adding source:", err)
-      setError("Failed to add source")
-    } finally {
-      setAddingSource(false)
-    }
-  }, [id, addSourceUrl, addSourceLabel, menuData?.restaurant?.id])
-
-  const handleUploadSourceFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !menuData?.restaurant?.id) return
-    setUploadingSource(true)
-    setError("")
-    try {
-      const resp = await apiClient.uploadSourceDocument(menuData.restaurant.id, file, {
-        source_category: 'menu',
-        menu_id: id,
-      })
-      if (resp.error) {
-        setError("Failed to upload document: " + resp.error)
-        return
-      }
-      // Refresh sources list
-      await loadSources()
-      setSuccess("Document uploaded and queued for processing")
-      setTimeout(() => setSuccess(""), 3000)
-    } catch (err) {
-      console.error("Error uploading document:", err)
-      setError("Failed to upload document")
-    } finally {
-      setUploadingSource(false)
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    }
-  }, [id, menuData?.restaurant?.id, loadSources])
-
-  // Version History tab callbacks
+  // Version History tab callbacks (defined early so source handlers can reference them)
   const loadVersions = useCallback(async () => {
     if (!id) return
     setLoadingVersions(true)
@@ -291,6 +183,158 @@ export default function EditMenuPage() {
       setDraftVersion(null)
     }
   }, [id])
+
+  const handleProcessSource = useCallback(async (sourceId: string) => {
+    setProcessingSourceId(sourceId)
+    setError("")
+    try {
+      const resp = await apiClient.processSource(sourceId)
+      if (resp.error) {
+        setError("Failed to re-process source: " + resp.error)
+        return
+      }
+      // Update status in local state
+      setSources((prev) => prev.map((s) => s.id === sourceId ? { ...s, status: 'pending' } : s))
+      setSuccess("Source queued for re-processing")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error processing source:", err)
+      setError("Failed to re-process source")
+    } finally {
+      setProcessingSourceId(null)
+    }
+  }, [])
+
+  const handleDeleteSource = useCallback(async (sourceId: string) => {
+    setDeletingSourceId(sourceId)
+    setError("")
+    try {
+      const resp = await apiClient.deleteSource(sourceId)
+      if (resp.error) {
+        setError("Failed to delete source: " + resp.error)
+        return
+      }
+      // Remove from local state
+      setSources((prev) => prev.filter((s) => s.id !== sourceId))
+      setSuccess("Source deleted — menu will be recompiled from remaining sources")
+      setTimeout(() => setSuccess(""), 3000)
+      // Refresh draft and versions immediately
+      await checkForDraft()
+      await loadVersions()
+      // Also refresh after a delay to catch async recompilation result
+      setTimeout(async () => {
+        await checkForDraft()
+        await loadVersions()
+      }, 5000)
+    } catch (err) {
+      console.error("Error deleting source:", err)
+      setError("Failed to delete source")
+    } finally {
+      setDeletingSourceId(null)
+    }
+  }, [checkForDraft, loadVersions])
+
+  const handleAddSource = useCallback(async () => {
+    if (!addSourceUrl.trim() || !menuData?.restaurant?.id) return
+    setAddingSource(true)
+    setError("")
+    try {
+      const data: CreateSourceRequest = {
+        url: addSourceUrl.trim(),
+        source_category: 'menu',
+        menu_id: id,
+        label: addSourceLabel.trim() || undefined,
+      }
+      const resp = await apiClient.createSource(menuData.restaurant.id, data)
+      if (resp.error) {
+        setError("Failed to add source: " + resp.error)
+        return
+      }
+      // Add to local state
+      if (resp.data) {
+        setSources((prev) => [...prev, resp.data!])
+      }
+      // Dispatch processing
+      if (resp.data?.id) {
+        await apiClient.processSource(resp.data.id)
+      }
+      // Refresh sources to get updated status from server
+      await loadSources()
+      setAddSourceDialogOpen(false)
+      setAddSourceUrl("")
+      setAddSourceLabel("")
+      setSuccess("Source added and queued for processing — menu will be recompiled")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error adding source:", err)
+      setError("Failed to add source")
+    } finally {
+      setAddingSource(false)
+    }
+  }, [id, addSourceUrl, addSourceLabel, menuData?.restaurant?.id, loadSources])
+
+  const handleUploadSourceFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !menuData?.restaurant?.id) return
+    setUploadingSource(true)
+    setError("")
+    try {
+      const resp = await apiClient.uploadSourceDocument(menuData.restaurant.id, file, {
+        source_category: 'menu',
+        menu_id: id,
+      })
+      if (resp.error) {
+        setError("Failed to upload document: " + resp.error)
+        return
+      }
+      // Dispatch processing for the uploaded document
+      if (resp.data?.id) {
+        await apiClient.processSource(resp.data.id)
+      }
+      // Refresh sources list
+      await loadSources()
+      setSuccess("Document uploaded and queued for processing — menu will be recompiled")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      console.error("Error uploading document:", err)
+      setError("Failed to upload document")
+    } finally {
+      setUploadingSource(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }, [id, menuData?.restaurant?.id, loadSources])
+
+  const handleCompileSources = useCallback(async () => {
+    if (!id) return
+    setCompilingSources(true)
+    setError("")
+    try {
+      const resp = await apiClient.compileSources(id)
+      if (resp.error) {
+        setError("Failed to recompile: " + resp.error)
+        return
+      }
+      setSuccess("Recompilation started — a new draft will be created")
+      setTimeout(() => setSuccess(""), 3000)
+      // Refresh after delays to catch Celery task completion
+      setTimeout(async () => {
+        await checkForDraft()
+        await loadVersions()
+      }, 5000)
+      setTimeout(async () => {
+        await checkForDraft()
+        await loadVersions()
+      }, 15000)
+    } catch (err) {
+      console.error("Error compiling sources:", err)
+      setError("Failed to recompile menu from sources")
+    } finally {
+      setCompilingSources(false)
+    }
+  }, [id, checkForDraft, loadVersions])
 
   const handleAcceptDraft = useCallback(async () => {
     if (!id) return
@@ -379,7 +423,7 @@ export default function EditMenuPage() {
         setPreviewVersionId(null)
         return
       }
-      setPreviewItems(resp.data?.items || [])
+      setPreviewItems(resp.data || [])
     } catch (err) {
       console.error("Error loading version items:", err)
       setError("Failed to load version items")
@@ -598,6 +642,8 @@ export default function EditMenuPage() {
     (s) => s.status === "pending" || s.status === "processing"
   ).length
 
+  const prevPendingCountRef = useRef(pendingSourceCount)
+
   useEffect(() => {
     if (!pendingSourceCount || !id) return
 
@@ -614,6 +660,16 @@ export default function EditMenuPage() {
 
     return () => clearInterval(interval)
   }, [id, pendingSourceCount])
+
+  // When all sources finish processing, refresh draft and versions
+  useEffect(() => {
+    if (prevPendingCountRef.current > 0 && pendingSourceCount === 0 && id) {
+      // Sources just finished processing — check for new draft
+      checkForDraft()
+      loadVersions()
+    }
+    prevPendingCountRef.current = pendingSourceCount
+  }, [pendingSourceCount, id, checkForDraft, loadVersions])
 
   useEffect(() => {
     void loadDesignTemplates()
@@ -1098,7 +1154,13 @@ export default function EditMenuPage() {
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(tab) => {
+          setActiveTab(tab)
+          if (tab === "versions") {
+            loadVersions()
+            checkForDraft()
+          }
+        }} className="space-y-6">
           <TabsList>
             <TabsTrigger value="items">Menu Items</TabsTrigger>
             <TabsTrigger value="image-matching">Image Matching</TabsTrigger>
@@ -1599,6 +1661,19 @@ export default function EditMenuPage() {
                     />
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={handleCompileSources}
+                      disabled={compilingSources || sources.filter(s => s.status === 'completed').length === 0}
+                    >
+                      {compilingSources ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Recompile
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="ghost"
                       onClick={loadSources}
                       disabled={loadingSources}
@@ -1712,7 +1787,7 @@ export default function EditMenuPage() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Source</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this source? This will remove the source but menu items already extracted will remain.
+                                      Are you sure you want to delete this source? The menu will be recompiled from the remaining sources.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -1797,10 +1872,19 @@ export default function EditMenuPage() {
                                   Draft
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                                 <span>{version.item_count} items</span>
                                 <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
                               </div>
+                              {version.source_ids && version.source_ids.length > 0 && (
+                                <div className="text-xs text-muted-foreground mb-3">
+                                  <span className="font-medium">Sources: </span>
+                                  {version.source_ids.map((sid: string) => {
+                                    const source = sources.find(s => s.id === sid)
+                                    return source ? (source.label || source.url || source.file_name || 'Source') : 'Deleted source'
+                                  }).join(', ')}
+                                </div>
+                              )}
                               {/* Item count comparison with active version */}
                               {(() => {
                                 const activeVersion = versions.find(v => v.status === 'active')
@@ -1906,6 +1990,15 @@ export default function EditMenuPage() {
                                 )}
                                 <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
                               </div>
+                              {version.source_ids && version.source_ids.length > 0 && (
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  <span className="font-medium">Sources: </span>
+                                  {version.source_ids.map((sid: string) => {
+                                    const source = sources.find(s => s.id === sid)
+                                    return source ? (source.label || source.url || source.file_name || 'Source') : 'Deleted source'
+                                  }).join(', ')}
+                                </div>
+                              )}
                             </div>
                             <Button
                               size="sm"
@@ -1940,6 +2033,15 @@ export default function EditMenuPage() {
                                 )}
                                 <span>Created: {new Date(version.created_at).toLocaleDateString()}</span>
                               </div>
+                              {version.source_ids && version.source_ids.length > 0 && (
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  <span className="font-medium">Sources: </span>
+                                  {version.source_ids.map((sid: string) => {
+                                    const source = sources.find(s => s.id === sid)
+                                    return source ? (source.label || source.url || source.file_name || 'Source') : 'Deleted source'
+                                  }).join(', ')}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
