@@ -254,7 +254,9 @@ export default function RestaurantsPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{restaurant.name}</CardTitle>
+                      <Link href={`/dashboard/restaurants/${restaurant.id}`}>
+                        <CardTitle className="text-lg hover:underline cursor-pointer">{restaurant.name}</CardTitle>
+                      </Link>
                       <CardDescription className="mt-1">{restaurant.description}</CardDescription>
                     </div>
                     <DropdownMenu>

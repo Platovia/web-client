@@ -438,8 +438,12 @@ export default function MenusPage() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{menu.name}</CardTitle>
-                    <p className="text-sm text-blue-600 font-medium">{menu.restaurant?.name}</p>
+                    <Link href={`/dashboard/menus/${menu.id}/edit`}>
+                      <CardTitle className="text-lg hover:underline cursor-pointer">{menu.name}</CardTitle>
+                    </Link>
+                    <Link href={`/dashboard/restaurants/${menu.restaurant_id}`}>
+                      <p className="text-sm text-blue-600 font-medium hover:underline cursor-pointer">{menu.restaurant?.name}</p>
+                    </Link>
                     <CardDescription className="mt-1">{menu.restaurant?.description}</CardDescription>
                   </div>
                   <DropdownMenu>

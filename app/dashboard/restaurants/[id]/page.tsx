@@ -759,7 +759,9 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     </div>
                   </div>
                   <CardHeader>
-                    <CardTitle className="text-lg">{menu.name}</CardTitle>
+                    <Link href={`/dashboard/menus/${menu.id}/edit`}>
+                      <CardTitle className="text-lg hover:underline cursor-pointer">{menu.name}</CardTitle>
+                    </Link>
                     <CardDescription>
                       {restaurant?.description || "Restaurant menu"}
                     </CardDescription>
