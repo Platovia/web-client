@@ -91,17 +91,17 @@ export default function EditMenuPage() {
   const [uploadingSource, setUploadingSource] = useState(false)
   const [compilingSources, setCompilingSources] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastLoadedVersionIdRef = useRef<string | null>(null)
   // Version History tab state
   const [versions, setVersions] = useState<MenuVersion[]>([])
   const [loadingVersions, setLoadingVersions] = useState(false)
-  const [acceptingDraft, setAcceptingDraft] = useState(false)
-  const [discardingDraft, setDiscardingDraft] = useState(false)
+  const [acceptingVersionId, setAcceptingVersionId] = useState<string | null>(null)
+  const [discardingVersionId, setDiscardingVersionId] = useState<string | null>(null)
   const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null)
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null)
   const [previewItems, setPreviewItems] = useState<MenuItem[]>([])
   const [loadingPreviewItems, setLoadingPreviewItems] = useState(false)
-  // Draft banner state
-  const [draftVersion, setDraftVersion] = useState<MenuVersion | null>(null)
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("items")
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
@@ -113,6 +113,11 @@ export default function EditMenuPage() {
     }
     return false
   }
+
+  const draftCount = versions.filter(v => v.status === "draft").length
+  const activeVersion = versions.find(v => v.status === "active") || null
+  const selectedVersion = versions.find(v => v.id === selectedVersionId) || null
+  const isVersionReadOnly = selectedVersion?.status === "archived"
 
   const refreshTemplates = useCallback(async () => {
     if (!id) return
@@ -167,22 +172,13 @@ export default function EditMenuPage() {
     }
   }, [id])
 
-  // Check for draft version (for the banner)
-  const checkForDraft = useCallback(async () => {
-    if (!id) return
-    try {
-      const resp = await apiClient.getDraftVersion(id)
-      if (resp.error) {
-        // 404 means no draft exists - this is expected, not an error
-        setDraftVersion(null)
-        return
-      }
-      setDraftVersion(resp.data || null)
-    } catch (err) {
-      // No draft exists
-      setDraftVersion(null)
-    }
-  }, [id])
+  useEffect(() => {
+    if (!versions.length) return
+    const stillExists = selectedVersionId && versions.some(v => v.id === selectedVersionId)
+    if (stillExists) return
+    const fallback = activeVersion ?? versions[0]
+    setSelectedVersionId(fallback ? fallback.id : null)
+  }, [versions, selectedVersionId, activeVersion])
 
   const handleProcessSource = useCallback(async (sourceId: string) => {
     setProcessingSourceId(sourceId)
@@ -219,11 +215,9 @@ export default function EditMenuPage() {
       setSuccess("Source deleted — menu will be recompiled from remaining sources")
       setTimeout(() => setSuccess(""), 3000)
       // Refresh draft and versions immediately
-      await checkForDraft()
       await loadVersions()
       // Also refresh after a delay to catch async recompilation result
       setTimeout(async () => {
-        await checkForDraft()
         await loadVersions()
       }, 5000)
     } catch (err) {
@@ -232,7 +226,7 @@ export default function EditMenuPage() {
     } finally {
       setDeletingSourceId(null)
     }
-  }, [checkForDraft, loadVersions])
+  }, [loadVersions])
 
   const handleAddSource = useCallback(async () => {
     if (!addSourceUrl.trim() || !menuData?.restaurant?.id) return
@@ -321,11 +315,9 @@ export default function EditMenuPage() {
       setTimeout(() => setSuccess(""), 3000)
       // Refresh after delays to catch Celery task completion
       setTimeout(async () => {
-        await checkForDraft()
         await loadVersions()
       }, 5000)
       setTimeout(async () => {
-        await checkForDraft()
         await loadVersions()
       }, 15000)
     } catch (err) {
@@ -334,54 +326,48 @@ export default function EditMenuPage() {
     } finally {
       setCompilingSources(false)
     }
-  }, [id, checkForDraft, loadVersions])
+  }, [id, loadVersions])
 
-  const handleAcceptDraft = useCallback(async () => {
+  const handleAcceptVersion = useCallback(async (versionId: string) => {
     if (!id) return
-    setAcceptingDraft(true)
+    setAcceptingVersionId(versionId)
     setError("")
     try {
-      const resp = await apiClient.acceptDraft(id)
+      const resp = await apiClient.acceptVersion(id, versionId)
       if (resp.error) {
         setError("Failed to accept draft: " + resp.error)
         return
       }
       setSuccess("Draft accepted and set as active version")
       setTimeout(() => setSuccess(""), 3000)
-      setDraftVersion(null) // Clear draft banner
+      setSelectedVersionId(versionId)
       await loadVersions()
-      // Refresh menu items to show the new active version's items
-      const itemsResp = await apiClient.getMenuItems(id)
-      if (itemsResp.data) {
-        setMenuData((prev) => prev ? { ...prev, items: itemsResp.data?.items || [] } : prev)
-      }
     } catch (err) {
       console.error("Error accepting draft:", err)
       setError("Failed to accept draft")
     } finally {
-      setAcceptingDraft(false)
+      setAcceptingVersionId(null)
     }
   }, [id, loadVersions])
 
-  const handleDiscardDraft = useCallback(async () => {
+  const handleDiscardVersion = useCallback(async (versionId: string) => {
     if (!id) return
-    setDiscardingDraft(true)
+    setDiscardingVersionId(versionId)
     setError("")
     try {
-      const resp = await apiClient.discardDraft(id)
+      const resp = await apiClient.discardVersion(id, versionId)
       if (resp.error) {
         setError("Failed to discard draft: " + resp.error)
         return
       }
       setSuccess("Draft discarded")
       setTimeout(() => setSuccess(""), 3000)
-      setDraftVersion(null) // Clear draft banner
       await loadVersions()
     } catch (err) {
       console.error("Error discarding draft:", err)
       setError("Failed to discard draft")
     } finally {
-      setDiscardingDraft(false)
+      setDiscardingVersionId(null)
     }
   }, [id, loadVersions])
 
@@ -397,12 +383,8 @@ export default function EditMenuPage() {
       }
       setSuccess("Version restored as active")
       setTimeout(() => setSuccess(""), 3000)
+      setSelectedVersionId(versionId)
       await loadVersions()
-      // Refresh menu items to show the restored version's items
-      const itemsResp = await apiClient.getMenuItems(id)
-      if (itemsResp.data) {
-        setMenuData((prev) => prev ? { ...prev, items: itemsResp.data?.items || [] } : prev)
-      }
     } catch (err) {
       console.error("Error restoring version:", err)
       setError("Failed to restore version")
@@ -543,11 +525,33 @@ export default function EditMenuPage() {
     }
   }, [id, fromUpload, refreshTemplates])
 
+  const loadMenuItemsForVersion = useCallback(async (versionId: string | null) => {
+    if (!id) return
+    try {
+      const itemsResp = await apiClient.getMenuItems(id, versionId || undefined)
+      if (itemsResp.error) {
+        setError((prev) => prev || "Failed to load menu items: " + itemsResp.error)
+        return
+      }
+      setMenuData((prev) => prev ? { ...prev, items: itemsResp.data?.items || [] } : prev)
+      lastLoadedVersionIdRef.current = versionId || null
+    } catch (err) {
+      console.error("Error loading menu items:", err)
+      setError("Failed to load menu items")
+    }
+  }, [id])
+
   useEffect(() => {
     if (id) {
       loadMenuData()
     }
   }, [id, loadMenuData])
+
+  useEffect(() => {
+    if (!id || !menuData || !selectedVersionId) return
+    if (lastLoadedVersionIdRef.current === selectedVersionId) return
+    loadMenuItemsForVersion(selectedVersionId)
+  }, [id, menuData, selectedVersionId, loadMenuItemsForVersion])
 
   // Load sources for the Sources tab
   useEffect(() => {
@@ -562,13 +566,6 @@ export default function EditMenuPage() {
       loadVersions()
     }
   }, [id, loadVersions])
-
-  // Check for draft version (for the banner)
-  useEffect(() => {
-    if (id) {
-      checkForDraft()
-    }
-  }, [id, checkForDraft])
 
   // Unified polling: handles both OCR processing and awaiting-items states
   useEffect(() => {
@@ -605,7 +602,7 @@ export default function EditMenuPage() {
         } else {
           // Completed — refresh items
           try {
-            const itemsResponse = await apiClient.getMenuItems(id)
+            const itemsResponse = await apiClient.getMenuItems(id, selectedVersionId || undefined)
             if (isActive && itemsResponse.data) {
               const newItems = itemsResponse.data.items || []
               setMenuData((prev) => prev ? { ...prev, items: newItems } : prev)
@@ -659,17 +656,16 @@ export default function EditMenuPage() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [id, pendingSourceCount])
+  }, [id, pendingSourceCount, selectedVersionId, fromUpload, awaitingItems, processing])
 
   // When all sources finish processing, refresh draft and versions
   useEffect(() => {
     if (prevPendingCountRef.current > 0 && pendingSourceCount === 0 && id) {
       // Sources just finished processing — check for new draft
-      checkForDraft()
       loadVersions()
     }
     prevPendingCountRef.current = pendingSourceCount
-  }, [pendingSourceCount, id, checkForDraft, loadVersions])
+  }, [pendingSourceCount, id, loadVersions])
 
   useEffect(() => {
     void loadDesignTemplates()
@@ -943,7 +939,10 @@ export default function EditMenuPage() {
     if (!menuData) return
 
     try {
-      const response = await apiClient.createMenuItem(id, itemData)
+      const response = await apiClient.createMenuItem(id, {
+        ...itemData,
+        version_id: selectedVersionId || undefined,
+      })
       if (response.error) {
         setError("Failed to add item: " + response.error)
       } else {
@@ -1011,6 +1010,7 @@ export default function EditMenuPage() {
   }
 
   const isMenuLocked = Boolean(processing) || awaitingItems
+  const isItemsLocked = isMenuLocked || Boolean(isVersionReadOnly)
 
   return (
     <DashboardLayout>
@@ -1100,12 +1100,12 @@ export default function EditMenuPage() {
         )}
 
         {/* Draft banner - visible across all tabs */}
-        {draftVersion && (
+        {draftCount > 0 && (
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <AlertTriangle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800 flex items-center justify-between flex-wrap gap-4">
               <span>
-                A new menu draft (v{draftVersion.version_number}) is available from recently processed sources.
+                You have {draftCount} draft version{draftCount > 1 ? 's' : ''} ready for review.
               </span>
               <div className="flex gap-2">
                 <Button
@@ -1114,41 +1114,8 @@ export default function EditMenuPage() {
                   className="bg-blue-600 hover:bg-blue-700"
                   onClick={() => setActiveTab("versions")}
                 >
-                  Review & Accept
+                  Review Drafts
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-700 border-blue-300 hover:bg-blue-100"
-                      disabled={discardingDraft}
-                    >
-                      {discardingDraft ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Discard"
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Discard Draft</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to discard this draft? This action cannot be undone and the draft version will be permanently deleted.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDiscardDraft}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Discard
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
             </AlertDescription>
           </Alert>
@@ -1158,7 +1125,6 @@ export default function EditMenuPage() {
           setActiveTab(tab)
           if (tab === "versions") {
             loadVersions()
-            checkForDraft()
           }
         }} className="space-y-6">
           <TabsList>
@@ -1177,6 +1143,41 @@ export default function EditMenuPage() {
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800">
                   This menu is currently processing. Editing is temporarily disabled. Please check back shortly.
+                </AlertDescription>
+              </Alert>
+            )}
+            {versions.length > 0 && (
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="w-64">
+                  <Label htmlFor="version-select">Menu Version</Label>
+                  <Select value={selectedVersionId || ""} onValueChange={setSelectedVersionId}>
+                    <SelectTrigger id="version-select">
+                      <SelectValue placeholder="Select a version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {versions.map((version) => (
+                        <SelectItem key={version.id} value={version.id}>
+                          v{version.version_number} · {version.status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedVersion && (
+                  <Badge variant="outline" className="capitalize">
+                    {selectedVersion.status}
+                  </Badge>
+                )}
+                {isVersionReadOnly && (
+                  <Badge variant="secondary">Read-only</Badge>
+                )}
+              </div>
+            )}
+            {isVersionReadOnly && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  This version is archived and read-only. Editing is disabled.
                 </AlertDescription>
               </Alert>
             )}
@@ -1229,7 +1230,7 @@ export default function EditMenuPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{category}</CardTitle>
-                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={isMenuLocked}>
+                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={isItemsLocked}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Item
                     </Button>
@@ -1298,14 +1299,14 @@ export default function EditMenuPage() {
                               variant={item.is_available ? "outline" : "default"}
                               size="sm"
                               onClick={() => toggleItemAvailability(item.id)}
-                              disabled={isMenuLocked}
+                              disabled={isItemsLocked}
                             >
                               {item.is_available ? "Available" : "Unavailable"}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={isMenuLocked}>
+                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={isItemsLocked}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={isMenuLocked}>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={isItemsLocked}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1372,7 +1373,40 @@ export default function EditMenuPage() {
           </TabsContent>
 
           <TabsContent value="image-matching">
-            <ImageMatchingTabContent menuId={id} />
+            <div className="space-y-4">
+              {versions.length > 0 && (
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="w-64">
+                    <Label htmlFor="version-select-images">Menu Version</Label>
+                    <Select value={selectedVersionId || ""} onValueChange={setSelectedVersionId}>
+                      <SelectTrigger id="version-select-images">
+                        <SelectValue placeholder="Select a version" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {versions.map((version) => (
+                          <SelectItem key={version.id} value={version.id}>
+                            v{version.version_number} · {version.status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedVersion && (
+                    <Badge variant="outline" className="capitalize">
+                      {selectedVersion.status}
+                    </Badge>
+                  )}
+                  {isVersionReadOnly && (
+                    <Badge variant="secondary">Read-only</Badge>
+                  )}
+                </div>
+              )}
+              <ImageMatchingTabContent
+                menuId={id}
+                versionId={selectedVersionId}
+                readOnly={Boolean(isVersionReadOnly)}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="analytics">
@@ -1920,10 +1954,10 @@ export default function EditMenuPage() {
                                 size="sm"
                                 variant="default"
                                 className="bg-green-600 hover:bg-green-700"
-                                onClick={handleAcceptDraft}
-                                disabled={acceptingDraft}
+                                onClick={() => handleAcceptVersion(version.id)}
+                                disabled={acceptingVersionId === version.id}
                               >
-                                {acceptingDraft ? (
+                                {acceptingVersionId === version.id ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -1932,19 +1966,19 @@ export default function EditMenuPage() {
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-destructive hover:text-destructive"
-                                    disabled={discardingDraft}
-                                  >
-                                    {discardingDraft ? (
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                    )}
-                                    Discard
-                                  </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-destructive hover:text-destructive"
+                                      disabled={discardingVersionId === version.id}
+                                    >
+                                      {discardingVersionId === version.id ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                      )}
+                                      Discard
+                                    </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
@@ -1955,12 +1989,12 @@ export default function EditMenuPage() {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleDiscardDraft}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Discard
-                                    </AlertDialogAction>
+                                      <AlertDialogAction
+                                        onClick={() => handleDiscardVersion(version.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Discard
+                                      </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

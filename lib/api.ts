@@ -277,6 +277,7 @@ interface AutoMatchImagesResponse {
 }
 
 interface MenuItemCreateRequest {
+  version_id?: string;
   name: string;
   description?: string;
   price?: number;
@@ -900,8 +901,9 @@ class ApiClient {
     });
   }
 
-  async getMenuStats(menuId: string): Promise<ApiResponse<MenuStats>> {
-    return this.makeRequest<MenuStats>(`/menus/${menuId}/stats`);
+  async getMenuStats(menuId: string, versionId?: string): Promise<ApiResponse<MenuStats>> {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.makeRequest<MenuStats>(`/menus/${menuId}/stats${params}`);
   }
 
   async processMenu(menuId: string): Promise<ApiResponse<{ job_id: string; message: string }>> {
@@ -932,8 +934,9 @@ class ApiClient {
     });
   }
 
-  async getMenuItems(menuId: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
-    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/items`);
+  async getMenuItems(menuId: string, versionId?: string): Promise<ApiResponse<{ items: MenuItem[]; total: number }>> {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.makeRequest<{ items: MenuItem[]; total: number }>(`/menus/${menuId}/items${params}`);
   }
 
   async getMenuItem(menuId: string, itemId: string): Promise<ApiResponse<MenuItem>> {
@@ -980,8 +983,9 @@ class ApiClient {
     });
   }
 
-  async getMenuItemCategories(menuId: string): Promise<ApiResponse<{ categories: string[] }>> {
-    return this.makeRequest<{ categories: string[] }>(`/menus/${menuId}/items/categories`);
+  async getMenuItemCategories(menuId: string, versionId?: string): Promise<ApiResponse<{ categories: string[] }>> {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.makeRequest<{ categories: string[] }>(`/menus/${menuId}/items/categories${params}`);
   }
 
   // QR Code management endpoints
@@ -1269,14 +1273,16 @@ class ApiClient {
     });
   }
 
-  async autoMatchImages(menuId: string): Promise<ApiResponse<AutoMatchImagesResponse>> {
-    return this.makeRequest<AutoMatchImagesResponse>(`/menus/${menuId}/auto-match-images`, {
+  async autoMatchImages(menuId: string, versionId?: string): Promise<ApiResponse<AutoMatchImagesResponse>> {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.makeRequest<AutoMatchImagesResponse>(`/menus/${menuId}/auto-match-images${params}`, {
       method: 'POST',
     });
   }
 
-  async triggerImageExtraction(menuId: string): Promise<ApiResponse<{ success: boolean; message: string; extracted_count: number }>> {
-    return this.makeRequest<{ success: boolean; message: string; extracted_count: number }>(`/menus/${menuId}/extract-images`, {
+  async triggerImageExtraction(menuId: string, versionId?: string): Promise<ApiResponse<{ success: boolean; message: string; extracted_count: number }>> {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.makeRequest<{ success: boolean; message: string; extracted_count: number }>(`/menus/${menuId}/extract-images${params}`, {
       method: 'POST',
     });
   }
@@ -1446,6 +1452,12 @@ class ApiClient {
     });
   }
 
+  async acceptVersion(menuId: string, versionId: string): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/${versionId}/accept`, {
+      method: 'POST',
+    });
+  }
+
   async restoreVersion(menuId: string, versionId: string): Promise<ApiResponse<MenuVersion>> {
     return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/${versionId}/restore`, {
       method: 'POST',
@@ -1454,6 +1466,12 @@ class ApiClient {
 
   async discardDraft(menuId: string): Promise<ApiResponse<void>> {
     return this.makeRequest<void>(`/menus/${menuId}/versions/draft`, {
+      method: 'DELETE',
+    });
+  }
+
+  async discardVersion(menuId: string, versionId: string): Promise<ApiResponse<void>> {
+    return this.makeRequest<void>(`/menus/${menuId}/versions/${versionId}`, {
       method: 'DELETE',
     });
   }

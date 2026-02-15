@@ -36,9 +36,11 @@ import { resolveImageUrl } from "@/lib/utils"
 
 interface ImageMatchingTabContentProps {
   menuId: string
+  versionId?: string | null
+  readOnly?: boolean
 }
 
-export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabContentProps) {
+export default function ImageMatchingTabContent({ menuId, versionId, readOnly }: ImageMatchingTabContentProps) {
   const [extractedImages, setExtractedImages] = useState<ExtractedMenuImage[]>([])
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -59,12 +61,13 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
   const [warningAction, setWarningAction] = useState<(() => void) | null>(null)
   const [itemSearch, setItemSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("All")
+  const isReadOnly = Boolean(readOnly)
 
   useEffect(() => {
     if (menuId) {
       loadData()
     }
-  }, [menuId])
+  }, [menuId, versionId])
 
   const loadData = async () => {
     setIsLoading(true)
@@ -85,7 +88,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
       }
 
       // Load menu items
-      const itemsResponse = await apiClient.getMenuItems(menuId)
+      const itemsResponse = await apiClient.getMenuItems(menuId, versionId || undefined)
       if (itemsResponse.error) {
         setError(itemsResponse.error)
       } else if (itemsResponse.data) {
@@ -105,7 +108,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
     setSuccess("")
 
     try {
-      const response = await apiClient.triggerImageExtraction(menuId)
+      const response = await apiClient.triggerImageExtraction(menuId, versionId || undefined)
       if (response.error) {
         setError(response.error)
       } else if (response.data) {
@@ -127,7 +130,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
     setSuccess("")
 
     try {
-      const response = await apiClient.autoMatchImages(menuId)
+      const response = await apiClient.autoMatchImages(menuId, versionId || undefined)
       if (response.error) {
         setError(response.error)
       } else if (response.data) {
@@ -348,7 +351,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
           <Button 
             variant="outline" 
             onClick={handleTriggerExtraction}
-            disabled={isExtracting}
+            disabled={isReadOnly || isExtracting}
           >
             {isExtracting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -359,7 +362,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
           </Button>
           <Button 
             onClick={handleAutoMatch}
-            disabled={isAutoMatching || extractedImages.length === 0}
+            disabled={isReadOnly || isAutoMatching || extractedImages.length === 0}
           >
             {isAutoMatching ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -386,6 +389,15 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {isReadOnly && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            This version is archived and read-only. Image matching actions are disabled.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -486,6 +498,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             size="sm"
                             onClick={() => handleUnassignImage(image.id)}
                             className="text-xs h-7 px-2"
+                            disabled={isReadOnly}
                           >
                             <Unlink className="h-3 w-3 mr-1" />
                             Unassign
@@ -502,6 +515,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                           size="sm"
                           onClick={() => openDeleteConfirm(image.id)}
                           className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          disabled={isReadOnly}
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
                           Delete Image
@@ -602,6 +616,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             variant="outline"
                             size="sm"
                             onClick={() => handleRemoveImage(item.id)}
+                            disabled={isReadOnly}
                           >
                             <Unlink className="h-4 w-4 mr-1" />
                             Unassign
@@ -611,6 +626,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             size="sm"
                             onClick={() => handleAssignImage(item.id)}
                             title="Reassign or upload"
+                            disabled={isReadOnly}
                           >
                             <RefreshCw className="h-4 w-4" />
                           </Button>
@@ -619,6 +635,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             size="sm"
                             onClick={() => handleAssignImage(item.id)}
                             title="Upload a custom image"
+                            disabled={isReadOnly}
                           >
                             <Upload className="h-4 w-4 mr-1" />
                             Upload
@@ -639,7 +656,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                           variant="outline"
                           size="sm"
                           onClick={() => handleGenerateImage(item.id)}
-                          disabled={isGeneratingImage[item.id]}
+                          disabled={isReadOnly || isGeneratingImage[item.id]}
                           className="w-full"
                           title="Generate new image"
                         >
@@ -663,6 +680,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                             variant="outline"
                             size="sm"
                             onClick={() => handleAssignImage(item.id)}
+                            disabled={isReadOnly}
                           >
                             <Link2 className="h-4 w-4 mr-1" />
                             Assign / Upload
@@ -683,7 +701,7 @@ export default function ImageMatchingTabContent({ menuId }: ImageMatchingTabCont
                           variant="default"
                           size="sm"
                           onClick={() => handleGenerateImage(item.id)}
-                          disabled={isGeneratingImage[item.id]}
+                          disabled={isReadOnly || isGeneratingImage[item.id]}
                           className="bg-purple-600 hover:bg-purple-700"
                         >
                           {isGeneratingImage[item.id] ? (
