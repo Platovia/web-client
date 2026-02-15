@@ -557,6 +557,7 @@ interface MenuVersion {
   id: string;
   menu_id: string;
   version_number: number;
+  name?: string;
   status: string;
   source_ids?: any[];
   notes?: string;
@@ -1473,6 +1474,13 @@ class ApiClient {
   async discardVersion(menuId: string, versionId: string): Promise<ApiResponse<void>> {
     return this.makeRequest<void>(`/menus/${menuId}/versions/${versionId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateVersion(menuId: string, versionId: string, data: { name?: string }): Promise<ApiResponse<MenuVersion>> {
+    return this.makeRequest<MenuVersion>(`/menus/${menuId}/versions/${versionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     });
   }
 

@@ -98,6 +98,8 @@ export default function EditMenuPage() {
   const [acceptingVersionId, setAcceptingVersionId] = useState<string | null>(null)
   const [discardingVersionId, setDiscardingVersionId] = useState<string | null>(null)
   const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null)
+  const [editingVersionNameId, setEditingVersionNameId] = useState<string | null>(null)
+  const [editingVersionName, setEditingVersionName] = useState("")
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null)
   const [previewItems, setPreviewItems] = useState<MenuItem[]>([])
   const [loadingPreviewItems, setLoadingPreviewItems] = useState(false)
@@ -414,6 +416,24 @@ export default function EditMenuPage() {
       setLoadingPreviewItems(false)
     }
   }, [id])
+
+  const handleSaveVersionName = useCallback(async (versionId: string) => {
+    if (!id) return
+    try {
+      const resp = await apiClient.updateVersion(id, versionId, { name: editingVersionName.trim() || undefined })
+      if (resp.error) {
+        setError("Failed to update version name: " + resp.error)
+        return
+      }
+      setVersions(prev => prev.map(v => v.id === versionId ? { ...v, name: editingVersionName.trim() || undefined } : v))
+    } catch (err) {
+      console.error("Error updating version name:", err)
+      setError("Failed to update version name")
+    } finally {
+      setEditingVersionNameId(null)
+      setEditingVersionName("")
+    }
+  }, [id, editingVersionName])
 
   const loadDesignTemplates = useCallback(async () => {
     if (!menuData?.restaurant?.company_id) return
@@ -1157,7 +1177,7 @@ export default function EditMenuPage() {
                     <SelectContent>
                       {versions.map((version) => (
                         <SelectItem key={version.id} value={version.id}>
-                          v{version.version_number} · {version.status}
+                          v{version.version_number}{version.name ? ` · ${version.name}` : ''} · {version.status}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1905,6 +1925,39 @@ export default function EditMenuPage() {
                                 <Badge className="bg-amber-100 text-amber-800 border-amber-300">
                                   Draft
                                 </Badge>
+                                {editingVersionNameId === version.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      value={editingVersionName}
+                                      onChange={(e) => setEditingVersionName(e.target.value)}
+                                      placeholder="Version name"
+                                      className="h-7 w-40 text-sm"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveVersionName(version.id)
+                                        if (e.key === 'Escape') { setEditingVersionNameId(null); setEditingVersionName("") }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => handleSaveVersionName(version.id)}>
+                                      <CheckCircle className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setEditingVersionNameId(null); setEditingVersionName("") }}>
+                                      <XCircle className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {version.name && <span className="text-sm text-muted-foreground">{version.name}</span>}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-1"
+                                      onClick={() => { setEditingVersionNameId(version.id); setEditingVersionName(version.name || "") }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                                 <span>{version.item_count} items</span>
@@ -2016,6 +2069,39 @@ export default function EditMenuPage() {
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Active
                                 </Badge>
+                                {editingVersionNameId === version.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      value={editingVersionName}
+                                      onChange={(e) => setEditingVersionName(e.target.value)}
+                                      placeholder="Version name"
+                                      className="h-7 w-40 text-sm"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveVersionName(version.id)
+                                        if (e.key === 'Escape') { setEditingVersionNameId(null); setEditingVersionName("") }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => handleSaveVersionName(version.id)}>
+                                      <CheckCircle className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setEditingVersionNameId(null); setEditingVersionName("") }}>
+                                      <XCircle className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {version.name && <span className="text-sm text-muted-foreground">{version.name}</span>}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-1"
+                                      onClick={() => { setEditingVersionNameId(version.id); setEditingVersionName(version.name || "") }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <span>{version.item_count} items</span>
@@ -2059,6 +2145,39 @@ export default function EditMenuPage() {
                                   <Archive className="h-3 w-3 mr-1" />
                                   Archived
                                 </Badge>
+                                {editingVersionNameId === version.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      value={editingVersionName}
+                                      onChange={(e) => setEditingVersionName(e.target.value)}
+                                      placeholder="Version name"
+                                      className="h-7 w-40 text-sm"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveVersionName(version.id)
+                                        if (e.key === 'Escape') { setEditingVersionNameId(null); setEditingVersionName("") }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => handleSaveVersionName(version.id)}>
+                                      <CheckCircle className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setEditingVersionNameId(null); setEditingVersionName("") }}>
+                                      <XCircle className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {version.name && <span className="text-sm text-muted-foreground">{version.name}</span>}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-1"
+                                      onClick={() => { setEditingVersionNameId(version.id); setEditingVersionName(version.name || "") }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <span>{version.item_count} items</span>
