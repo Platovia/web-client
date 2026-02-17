@@ -341,16 +341,23 @@ export default function UploadMenuPage() {
     )
   }
 
-  const processContextFile = async (file: File, fileId: string, restaurantId: string) => {
+  const processSourceFile = async (
+    file: File,
+    fileId: string,
+    restaurantId: string,
+    sourceCategory: "menu" | "context",
+    menuId?: string
+  ) => {
     try {
       // Update to uploading state
       setUploadedFiles(prev => prev.map(f =>
         f.id === fileId ? { ...f, status: "uploading", progress: 30 } : f
       ))
 
-      // Upload as context source
+      // Upload as restaurant source
       const response = await apiClient.uploadSourceDocument(restaurantId, file, {
-        source_category: "context"
+        source_category: sourceCategory,
+        menu_id: menuId,
       })
 
       if (response.error) {
@@ -372,7 +379,7 @@ export default function UploadMenuPage() {
         f.id === fileId ? { ...f, status: "completed", progress: 100 } : f
       ))
     } catch (err: any) {
-      console.error("Error processing context file:", err)
+      console.error("Error processing source file:", err)
       setUploadedFiles(prev => prev.map(f =>
         f.id === fileId ? {
           ...f,
@@ -404,19 +411,19 @@ export default function UploadMenuPage() {
         }
       }
 
-      // Process all files in parallel
+      // Process all files in parallel via the unified Source pipeline
       const allPromises: Promise<void>[] = []
 
-      // Process menu files with OCR pipeline
+      // Process menu files as restaurant sources (with menu_id)
       if (menu) {
         menuFiles.forEach(file => {
-          allPromises.push(processFile(file.file, file.id, menu!.id))
+          allPromises.push(processSourceFile(file.file, file.id, selectedRestaurant, "menu", menu!.id))
         })
       }
 
       // Process context files as restaurant sources
       contextFiles.forEach(file => {
-        allPromises.push(processContextFile(file.file, file.id, selectedRestaurant))
+        allPromises.push(processSourceFile(file.file, file.id, selectedRestaurant, "context"))
       })
 
       await Promise.all(allPromises)
