@@ -409,6 +409,25 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
     }
   }, [activeTab, contextSourcesLoaded, resolvedParams?.id, loadContextSources])
 
+  // Poll for context source status updates while any source is processing
+  const hasProcessingSources = contextSources.some(
+    (s) => s.status === "processing" || s.status === "pending"
+  )
+  const pollRestaurantIdRef = useRef(resolvedParams?.id)
+  pollRestaurantIdRef.current = resolvedParams?.id
+
+  useEffect(() => {
+    if (!hasProcessingSources || activeTab !== "context") return
+
+    const interval = setInterval(() => {
+      if (pollRestaurantIdRef.current) {
+        loadContextSources(pollRestaurantIdRef.current)
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [hasProcessingSources, activeTab, loadContextSources])
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
