@@ -94,32 +94,32 @@ export default function BillingPage() {
 
   const handleSelectPlan = async (priceId: string) => {
     try {
-      const res = await apiClient.createCheckout({ price_id: priceId })
+      const res = await apiClient.createCheckout({
+        price_id: priceId,
+        success_url: window.location.href,
+      })
       if (res.error) {
         toast({ title: "Checkout failed", description: res.error })
         return
       }
 
-      // Initialize Paddle if not already
-      if (window.Paddle) {
+      // Use Paddle.js overlay if available, otherwise redirect
+      const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+      if (window.Paddle && clientToken) {
         const paddleEnv = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox"
         window.Paddle.Environment.set(paddleEnv)
+        window.Paddle.Initialize({ token: clientToken })
 
-        // Open overlay checkout
-        if (res.data?.client_token) {
-          window.Paddle.Initialize({ token: res.data.client_token })
-        }
-
+        // Open checkout with the server-created transaction
         window.Paddle.Checkout.open({
-          items: [{ priceId, quantity: 1 }],
+          transactionId: res.data?.client_token,
           settings: {
             displayMode: "overlay",
             successUrl: window.location.href,
           },
-          customer: user?.email ? { email: user.email } : undefined,
         })
       } else if (res.data?.checkout_url) {
-        // Fallback to redirect checkout
+        // Fallback to redirect checkout URL from Paddle
         window.location.href = res.data.checkout_url
       } else {
         toast({ title: "Checkout unavailable", description: "Paddle.js is not loaded. Please refresh and try again." })
