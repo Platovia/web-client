@@ -13,9 +13,10 @@ import { ArrowLeft, MapPin, Clock, AlertCircle, Loader2, Camera, Upload, Phone, 
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, type RestaurantCreateRequest, type Currency } from "@/lib/api"
+import { apiClient, type RestaurantCreateRequest, type Currency, type BillingUsage } from "@/lib/api"
 import { fetchPopularCurrencies } from "@/lib/currency"
 import { LocaleSelect } from "@/components/ui/locale-select"
+import { LimitWarning } from "@/components/billing/limit-warning"
 
 const cuisineTypes = [
   "American", "Italian", "Chinese", "Japanese", "Mexican", "Indian", "Thai", "French", 
@@ -36,6 +37,8 @@ export default function NewRestaurantPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [currencies, setCurrencies] = useState<Currency[]>([])
+  const [usageData, setUsageData] = useState<BillingUsage | null>(null)
+  const [limitReached, setLimitReached] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -62,7 +65,24 @@ export default function NewRestaurantPage() {
 
   useEffect(() => {
     loadCurrencies()
+    checkLimits()
   }, [])
+
+  const checkLimits = async () => {
+    try {
+      const res = await apiClient.getUsage()
+      if (res.data) {
+        setUsageData(res.data)
+        const limit = res.data.limits.restaurants ?? -1
+        const used = res.data.usage.restaurants ?? 0
+        if (limit !== -1 && used >= limit) {
+          setLimitReached(true)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check plan limits:", err)
+    }
+  }
 
   const loadCurrencies = async () => {
     try {
@@ -173,6 +193,15 @@ export default function NewRestaurantPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {limitReached && usageData && (
+            <LimitWarning
+              resourceName="restaurant"
+              used={usageData.usage.restaurants ?? 0}
+              limit={usageData.limits.restaurants ?? 0}
+              tier={usageData.tier}
+            />
+          )}
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -450,7 +479,7 @@ export default function NewRestaurantPage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || limitReached}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Restaurant
             </Button>

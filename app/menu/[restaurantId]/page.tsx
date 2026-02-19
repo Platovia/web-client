@@ -53,6 +53,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
+  const [sessionError, setSessionError] = useState<string | null>(null)
   const [restaurantId, setRestaurantId] = useState<string>("")
   const [currentStatus, setCurrentStatus] = useState<any>(null)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
@@ -250,11 +251,12 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
           setChatMessages([welcomeMessage])
           setTimeout(() => scrollToBottom(), 100)
         }
-      } else {
-        console.error("Failed to create chat session:", response.error)
+      } else if (response.error) {
+        setSessionError("This restaurant's chat is temporarily unavailable. Please try again later.")
       }
     } catch (err) {
       console.error("Error creating chat session:", err)
+      setSessionError("This restaurant's chat is temporarily unavailable. Please try again later.")
     } finally {
       setIsCreatingSession(false)
     }
@@ -596,7 +598,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
             {!isChatMinimized && (
               <>
                 <div ref={chatMessagesRef} className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
-                  {isCreatingSession && (
+                  {isCreatingSession && !sessionError && (
                     <div className="text-center text-gray-500 py-6">
                       <div className="flex space-x-1 justify-center mb-3">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
@@ -610,6 +612,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                         ></div>
                       </div>
                       <p className="text-sm">Connecting to menu assistant...</p>
+                    </div>
+                  )}
+
+                  {sessionError && (
+                    <div className="text-center py-6 px-4">
+                      <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">{sessionError}</p>
                     </div>
                   )}
 
@@ -660,16 +669,16 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                 <div className="p-3 border-t bg-gray-50 rounded-b-lg">
                   <div className="flex gap-2">
                     <Input
-                      placeholder={isCreatingSession ? "Connecting..." : "Ask about our menu..."}
+                      placeholder={sessionError ? "Chat unavailable" : isCreatingSession ? "Connecting..." : "Ask about our menu..."}
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                      disabled={isChatLoading || isCreatingSession || !chatSession}
+                      disabled={isChatLoading || isCreatingSession || !chatSession || !!sessionError}
                       className="text-sm"
                     />
-                    <Button 
-                      onClick={sendMessage} 
-                      disabled={isChatLoading || isCreatingSession || !chatSession || !chatInput.trim()}
+                    <Button
+                      onClick={sendMessage}
+                      disabled={isChatLoading || isCreatingSession || !chatSession || !chatInput.trim() || !!sessionError}
                       size="sm"
                       className="bg-orange-600 hover:bg-orange-700"
                     >

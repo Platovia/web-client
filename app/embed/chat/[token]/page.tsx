@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { MessageCircle, ChevronUp, Minus, RotateCcw, X, Send } from "lucide-react"
+import { MessageCircle, ChevronUp, Minus, RotateCcw, X, Send, AlertCircle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import ChatStatus, { ChatStatusStream } from "@/components/ui/chat-status"
 import { apiClient, type ChatMessage, type ChatSession, type ChatMessageResponse } from "@/lib/api"
@@ -29,6 +29,7 @@ export default function EmbeddedChatPage() {
   const [chatInput, setChatInput] = useState("")
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [isResettingChat, setIsResettingChat] = useState(false)
+  const [sessionError, setSessionError] = useState<string | null>(null)
   const [currentStatus, setCurrentStatus] = useState<any>(null)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
 
@@ -68,6 +69,8 @@ export default function EmbeddedChatPage() {
       // initial welcome
       setChatMessages([{ role: "assistant", content: welcome }])
       setTimeout(() => scrollToBottom(), 100)
+    } else if (resp.error) {
+      setSessionError("This restaurant's chat is temporarily unavailable. Please try again later.")
     }
     setIsCreatingSession(false)
   }
@@ -238,8 +241,16 @@ export default function EmbeddedChatPage() {
           {!isChatMinimized && (
             <>
               <div ref={chatMessagesRef} className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
-                {!chatSession && isCreatingSession && (
+                {!chatSession && isCreatingSession && !sessionError && (
                   <div className="text-center text-gray-500 py-6">Connecting to menu assistant...</div>
+                )}
+                {sessionError && (
+                  <div className="text-center py-6 px-4">
+                    <div className="text-red-500 mb-2">
+                      <AlertCircle className="h-8 w-8 mx-auto" />
+                    </div>
+                    <p className="text-sm text-gray-600">{sessionError}</p>
+                  </div>
                 )}
                 {chatMessages.map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -265,8 +276,8 @@ export default function EmbeddedChatPage() {
               </div>
               <div className="p-3 border-t bg-gray-50 rounded-b-lg">
                 <div className="flex gap-2">
-                  <Input placeholder={!chatSession ? "Connecting..." : "Ask about our menu..."} value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} disabled={!chatSession || isChatLoading || isCreatingSession} className="text-sm" />
-                  <Button onClick={sendMessage} disabled={!chatSession || isChatLoading || !chatInput.trim()} size="sm" style={{ backgroundColor: accent }} className="text-white">
+                  <Input placeholder={sessionError ? "Chat unavailable" : !chatSession ? "Connecting..." : "Ask about our menu..."} value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} disabled={!chatSession || isChatLoading || isCreatingSession || !!sessionError} className="text-sm" />
+                  <Button onClick={sendMessage} disabled={!chatSession || isChatLoading || !chatInput.trim() || !!sessionError} size="sm" style={{ backgroundColor: accent }} className="text-white">
                     <Send className="h-3 w-3" />
                   </Button>
                 </div>

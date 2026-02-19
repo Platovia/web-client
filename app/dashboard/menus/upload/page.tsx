@@ -16,6 +16,7 @@ import { ArrowLeft, Upload, FileImage, Loader2, CheckCircle, X, Link2, Plus } fr
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { apiClient, type Restaurant, type Menu, type OCRJobResponse, type CreateSourceRequest } from "@/lib/api"
+import { LimitWarning } from "@/components/billing/limit-warning"
 
 interface PendingUrl {
   id: string
@@ -60,6 +61,8 @@ export default function UploadMenuPage() {
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true)
   const [error, setError] = useState("")
   const [createdMenu, setCreatedMenu] = useState<Menu | null>(null)
+  const [menuLimitReached, setMenuLimitReached] = useState(false)
+  const [menuUsage, setMenuUsage] = useState<{ used: number; limit: number; tier: string } | null>(null)
   // URL sources
   const [urlInput, setUrlInput] = useState("")
   const [urlCategory, setUrlCategory] = useState<"menu" | "context">("menu")
@@ -68,7 +71,41 @@ export default function UploadMenuPage() {
 
   useEffect(() => {
     loadRestaurants()
+    if (preselectedRestaurant) {
+      checkMenuLimit(preselectedRestaurant)
+    }
   }, [])
+
+  const checkMenuLimit = async (restaurantId: string) => {
+    setMenuLimitReached(false)
+    setMenuUsage(null)
+    try {
+      const [usageRes, menusRes] = await Promise.all([
+        apiClient.getUsage(),
+        apiClient.getRestaurantMenus(restaurantId),
+      ])
+      if (usageRes.data && menusRes.data) {
+        const limit = usageRes.data.limits.menus_per_restaurant ?? -1
+        const used = menusRes.data.menus.length
+        if (limit !== -1 && used >= limit) {
+          setMenuLimitReached(true)
+          setMenuUsage({ used, limit, tier: usageRes.data.tier })
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check menu limits:", err)
+    }
+  }
+
+  const handleRestaurantChange = (value: string) => {
+    setSelectedRestaurant(value)
+    if (value) {
+      checkMenuLimit(value)
+    } else {
+      setMenuLimitReached(false)
+      setMenuUsage(null)
+    }
+  }
 
   const loadRestaurants = async () => {
     setIsLoadingRestaurants(true)
@@ -495,6 +532,15 @@ export default function UploadMenuPage() {
           </Alert>
         )}
 
+        {menuLimitReached && menuUsage && (
+          <LimitWarning
+            resourceName="menu"
+            used={menuUsage.used}
+            limit={menuUsage.limit}
+            tier={menuUsage.tier}
+          />
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Menu Details */}
           <Card>
@@ -506,9 +552,9 @@ export default function UploadMenuPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="restaurant">Restaurant</Label>
-                  <Select 
-                    value={selectedRestaurant} 
-                    onValueChange={setSelectedRestaurant}
+                  <Select
+                    value={selectedRestaurant}
+                    onValueChange={handleRestaurantChange}
                     disabled={isLoadingRestaurants || createdMenu !== null}
                   >
                     <SelectTrigger>
@@ -805,7 +851,7 @@ export default function UploadMenuPage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" disabled={!canSubmit || isProcessing}>
+            <Button type="submit" disabled={!canSubmit || isProcessing || menuLimitReached}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isProcessing 
                 ? "Processing uploads & starting AI extraction..." 
