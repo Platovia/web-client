@@ -497,6 +497,19 @@ interface CheckoutResponse {
   client_token?: string;
 }
 
+interface UpdatePlanRequest {
+  price_id: string;
+  proration_billing_mode?: string;
+}
+
+interface UpdatePlanResponse {
+  action: 'updated' | 'checkout_required' | 'canceled' | 'no_change';
+  tier?: string;
+  message: string;
+  checkout_url?: string;
+  client_token?: string;
+}
+
 // Onboarding interfaces
 interface OnboardingSourceInput {
   url: string;
@@ -1523,6 +1536,13 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  async updatePlan(data: UpdatePlanRequest): Promise<ApiResponse<UpdatePlanResponse>> {
+    return this.makeRequest<UpdatePlanResponse>('/billing/update-plan', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Currency-related interfaces
@@ -1600,5 +1620,7 @@ export type {
   BillingUsage,
   BillingPlan,
   CheckoutRequest,
-  CheckoutResponse
+  CheckoutResponse,
+  UpdatePlanRequest,
+  UpdatePlanResponse
 }; 

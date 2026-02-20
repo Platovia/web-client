@@ -94,38 +94,49 @@ export default function BillingPage() {
 
   const handleSelectPlan = async (priceId: string) => {
     try {
-      const res = await apiClient.createCheckout({
-        price_id: priceId,
-        success_url: window.location.href,
-      })
+      const res = await apiClient.updatePlan({ price_id: priceId })
       if (res.error) {
-        toast({ title: "Checkout failed", description: res.error })
+        toast({ title: "Plan change failed", description: res.error })
         return
       }
 
-      // Use Paddle.js overlay if available, otherwise redirect
-      const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
-      if (window.Paddle && clientToken) {
-        const paddleEnv = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox"
-        window.Paddle.Environment.set(paddleEnv)
-        window.Paddle.Initialize({ token: clientToken })
+      const data = res.data
+      if (!data) {
+        toast({ title: "Error", description: "No response from server" })
+        return
+      }
 
-        // Open checkout with the server-created transaction
-        window.Paddle.Checkout.open({
-          transactionId: res.data?.client_token,
-          settings: {
-            displayMode: "overlay",
-            successUrl: window.location.href,
-          },
-        })
-      } else if (res.data?.checkout_url) {
-        // Fallback to redirect checkout URL from Paddle
-        window.location.href = res.data.checkout_url
-      } else {
-        toast({ title: "Checkout unavailable", description: "Paddle.js is not loaded. Please refresh and try again." })
+      if (data.action === "checkout_required") {
+        // Free -> Paid: open Paddle checkout overlay
+        const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+        if (window.Paddle && clientToken) {
+          const paddleEnv = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox"
+          window.Paddle.Environment.set(paddleEnv)
+          window.Paddle.Initialize({ token: clientToken })
+
+          window.Paddle.Checkout.open({
+            transactionId: data.client_token,
+            settings: {
+              displayMode: "overlay",
+              successUrl: window.location.href,
+            },
+          })
+        } else if (data.checkout_url) {
+          window.location.href = data.checkout_url
+        } else {
+          toast({ title: "Checkout unavailable", description: "Paddle.js is not loaded. Please refresh and try again." })
+        }
+      } else if (data.action === "updated") {
+        toast({ title: "Plan Updated", description: data.message })
+        await fetchBillingData()
+      } else if (data.action === "canceled") {
+        toast({ title: "Downgrade Scheduled", description: data.message })
+        await fetchBillingData()
+      } else if (data.action === "no_change") {
+        toast({ title: "No Change", description: data.message })
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to start checkout" })
+      toast({ title: "Error", description: "Failed to update plan" })
     }
   }
 
@@ -303,6 +314,7 @@ export default function BillingPage() {
                     currentTier={subscription?.tier || "free"}
                     plans={plans}
                     onSelectPlan={handleSelectPlan}
+                    cancelAtPeriodEnd={subscription?.cancel_at_period_end}
                   />
                 ) : (
                   <p className="text-muted-foreground">No plans available</p>

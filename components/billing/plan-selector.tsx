@@ -3,12 +3,24 @@
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import type { BillingPlan } from "@/lib/api"
 
 interface PlanSelectorProps {
   currentTier: string
   plans: BillingPlan[]
   onSelectPlan: (priceId: string) => void
+  cancelAtPeriodEnd?: boolean
   className?: string
 }
 
@@ -27,6 +39,7 @@ export function PlanSelector({
   currentTier,
   plans,
   onSelectPlan,
+  cancelAtPeriodEnd = false,
   className,
 }: PlanSelectorProps) {
   const currentTierIndex = TIER_ORDER.indexOf(currentTier)
@@ -94,6 +107,32 @@ export function PlanSelector({
                   <Button variant="outline" className="w-full" disabled>
                     Current Plan
                   </Button>
+                ) : isFree && isDowngrade && cancelAtPeriodEnd ? (
+                  <Button variant="outline" className="w-full text-amber-600" disabled>
+                    Cancellation Scheduled
+                  </Button>
+                ) : isFree && isDowngrade ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full">
+                        Downgrade to Free
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Downgrade to Free?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You will lose access to your current plan features at the end of your billing period. This action schedules a cancellation.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onSelectPlan("free")}>
+                          Yes, Downgrade
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 ) : isFree ? (
                   <Button variant="outline" className="w-full" disabled>
                     Free Tier
