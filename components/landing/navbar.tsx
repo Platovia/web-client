@@ -4,16 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { QrCode, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 
 const navLinks = [
   { label: "Features", href: "/features" },
   { label: "How it Works", href: "/#how-it-works" },
   { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/#about" },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -41,12 +42,20 @@ export default function Navbar() {
 
         {/* Desktop auth buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" asChild>
-            <Link href="/auth/login">Log In</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/auth/register">Start Free</Link>
-          </Button>
+          {!isLoading && isAuthenticated ? (
+            <Button asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/auth/login">Log In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/auth/register">Start Free</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -75,12 +84,20 @@ export default function Navbar() {
             ))}
           </div>
           <div className="flex flex-col gap-2 pt-4 border-t mt-4">
-            <Button variant="ghost" asChild>
-              <Link href="/auth/login">Log In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth/register">Start Free</Link>
-            </Button>
+            {!isLoading && isAuthenticated ? (
+              <Button asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/auth/login">Log In</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/auth/register">Start Free</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
