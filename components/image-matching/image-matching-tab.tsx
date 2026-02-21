@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { 
-  Images, 
-  RefreshCw, 
-  Sparkles, 
-  CheckCircle, 
-  AlertTriangle, 
-  Eye,
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Images,
+  RefreshCw,
+  Sparkles,
+  CheckCircle,
+  AlertTriangle,
   Link2,
   Unlink,
   Loader2,
@@ -22,17 +22,19 @@ import {
   Trash2,
   Wand2,
   Search,
-  Upload
+  Upload,
+  Info
 } from "lucide-react"
-import { 
-  apiClient, 
-  type ExtractedMenuImage, 
+import {
+  apiClient,
+  type ExtractedMenuImage,
   type ExtractedImagesResponse,
   type AutoMatchImagesResponse,
   type MenuItem
 } from "@/lib/api"
 import ImageAssignmentModal from "./image-assignment-modal"
 import { resolveImageUrl } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 interface ImageMatchingTabContentProps {
   menuId: string
@@ -48,10 +50,11 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
   const [isAutoMatching, setIsAutoMatching] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [stats, setStats] = useState({ total: 0, assigned: 0, unassigned: 0 })
-  
+
   // New state for image generation and deletion
   const [isGeneratingImage, setIsGeneratingImage] = useState<Record<string, boolean>>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -72,7 +75,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
   const loadData = async () => {
     setIsLoading(true)
     setError("")
-    
+
     try {
       // Load extracted images
       const imagesResponse = await apiClient.getExtractedImages(menuId)
@@ -113,7 +116,6 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
         setError(response.error)
       } else if (response.data) {
         setSuccess(`${response.data.extracted_count} images extracted successfully!`)
-        // Reload data to show new images
         await loadData()
       }
     } catch (err) {
@@ -135,7 +137,6 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
         setError(response.error)
       } else if (response.data) {
         setSuccess(response.data.message)
-        // Reload data to show updated assignments
         await loadData()
       }
     } catch (err) {
@@ -181,7 +182,6 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
     setSuccess("")
 
     try {
-      // Find the assigned item for this image
       const image = extractedImages.find(img => img.id === imageId)
       if (!image || !image.assigned_to_item_id) {
         setError("Image is not assigned to any item")
@@ -204,20 +204,18 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
   const getAssignedMenuItem = (imageId: string) => {
     const image = extractedImages.find(img => img.id === imageId)
     if (!image || !image.assigned_to_item_id) return null
-    
     return menuItems.find(item => item.id === image.assigned_to_item_id)
   }
 
-  // New handler functions for AI image generation and deletion
   const handleGenerateImage = async (itemId: string) => {
     setError("")
     setSuccess("")
-    
+
     setIsGeneratingImage(prev => ({ ...prev, [itemId]: true }))
 
     try {
       const response = await apiClient.generateImageForItem(menuId, itemId)
-      
+
       if (response.error) {
         if (response.error.includes("already has an image assigned")) {
           setWarningMessage(response.error)
@@ -243,12 +241,12 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
     setSuccess("")
     setWarningModalOpen(false)
     setWarningAction(null)
-    
+
     setIsGeneratingImage(prev => ({ ...prev, [itemId]: true }))
 
     try {
       const response = await apiClient.regenerateImageForItem(menuId, itemId)
-      
+
       if (response.error) {
         setError(response.error)
       } else {
@@ -271,7 +269,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
 
     try {
       const response = await apiClient.deleteExtractedImage(menuId, imageId)
-      
+
       if (response.error) {
         setError(response.error)
       } else {
@@ -291,7 +289,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
 
   const getConfidenceBadge = (confidence?: number) => {
     if (!confidence) return null
-    
+
     if (confidence >= 0.8) {
       return <Badge variant="default" className="bg-green-600">🟢 {Math.round(confidence * 100)}%</Badge>
     } else if (confidence >= 0.6) {
@@ -330,6 +328,13 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
     return matchesSearch && matchesCategory
   })
 
+  const focusedItem = focusedItemId ? menuItems.find(i => i.id === focusedItemId) : null
+
+  // Get images relevant to the focused item
+  const getImagesForItem = (itemId: string) => {
+    return extractedImages.filter(img => img.assigned_to_item_id === itemId)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -345,11 +350,11 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-medium">Image Matching</h3>
-          <p className="text-sm text-gray-600">Extract and assign individual food images to menu items</p>
+          <p className="text-sm text-muted-foreground">Extract and assign individual food images to menu items</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleTriggerExtraction}
             disabled={isReadOnly || isExtracting}
           >
@@ -360,7 +365,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
             )}
             Extract Images
           </Button>
-          <Button 
+          <Button
             onClick={handleAutoMatch}
             disabled={isReadOnly || isAutoMatching || extractedImages.length === 0}
           >
@@ -406,9 +411,9 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Images className="h-5 w-5 text-blue-600" />
+              <Images className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm text-gray-600">Total Images</p>
+                <p className="text-sm text-muted-foreground">Total Images</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
             </div>
@@ -419,7 +424,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
             <div className="flex items-center gap-2">
               <Link2 className="h-5 w-5 text-green-600" />
               <div>
-                <p className="text-sm text-gray-600">Assigned</p>
+                <p className="text-sm text-muted-foreground">Assigned</p>
                 <p className="text-2xl font-bold">{stats.assigned}</p>
               </div>
             </div>
@@ -430,7 +435,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
             <div className="flex items-center gap-2">
               <Unlink className="h-5 w-5 text-orange-600" />
               <div>
-                <p className="text-sm text-gray-600">Unassigned</p>
+                <p className="text-sm text-muted-foreground">Unassigned</p>
                 <p className="text-2xl font-bold">{stats.unassigned}</p>
               </div>
             </div>
@@ -438,292 +443,288 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Extracted Images */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Images className="h-5 w-5" />
-              Extracted Images
-            </CardTitle>
-            <CardDescription>
-              AI-extracted food item images from your menu
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {extractedImages.length === 0 ? (
-              <div className="text-center py-8">
-                <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 mb-2">No images extracted yet</h4>
-                <p className="text-gray-600 mb-4">Click "Extract Images" to identify food items in your menu photos.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {extractedImages.map((image) => (
-                  <div key={image.id} className="border rounded-lg p-3">
-                    <div className="aspect-square relative mb-2 bg-gray-100 rounded overflow-hidden">
-                      <img 
-                        src={resolveImageUrl(image.image_url) || "/placeholder.jpg"} 
-                        alt={image.ai_description || "Food item"}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2">
-                        {image.is_assigned ? (
-                          <Badge variant="default" className="bg-green-600">
-                            <Link2 className="h-3 w-3 mr-1" />
-                            Assigned
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            Available
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 mb-2">{image.ai_description}</p>
-                    {getConfidenceBadge(image.extraction_confidence)}
-                    
-                    {/* Show assigned item info */}
-                    {image.is_assigned && (
-                      <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-green-800">Assigned to:</p>
-                            <p className="text-sm font-semibold text-green-900">
-                              {getAssignedMenuItem(image.id)?.name || "Unknown Item"}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUnassignImage(image.id)}
-                            className="text-xs h-7 px-2"
-                            disabled={isReadOnly}
-                          >
-                            <Unlink className="h-3 w-3 mr-1" />
-                            Unassign
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Delete button for unassigned images */}
-                    {!image.is_assigned && (
-                      <div className="mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteConfirm(image.id)}
-                          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                          disabled={isReadOnly}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete Image
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+      {/* Two-Panel Layout */}
+      <div className="flex gap-6 h-[600px]">
+        {/* Left Panel — Menu Items List */}
+        <div className="w-[350px] flex-shrink-0 flex flex-col border rounded-lg bg-card">
+          <div className="p-4 border-b space-y-3">
+            <h3 className="font-semibold text-foreground">Extracted Items</h3>
+            <Input
+              placeholder="Search items..."
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+              className="h-9"
+            />
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {filteredMenuItems.length === 0 && (
+              <div className="text-sm text-muted-foreground p-4 text-center">
+                No items match your search/filter.
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Menu Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Menu Items
-            </CardTitle>
-            <CardDescription>
-              Assign images to your menu items
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-3 mb-4">
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700" htmlFor="match-item-search">Search items</label>
-                <Input
-                  id="match-item-search"
-                  placeholder="Search by name or description"
-                  value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700" htmlFor="match-item-category">Filter by category</label>
-                <select
-                  id="match-item-category"
-                  className="w-full p-2 border rounded-md"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
+            {filteredMenuItems.map((item) => {
+              const isMatched = Boolean(item.image_url)
+              const isFocused = focusedItemId === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFocusedItemId(isFocused ? null : item.id)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors",
+                    isFocused
+                      ? "bg-primary/10 border-l-2 border-l-primary"
+                      : "hover:bg-muted/50"
+                  )}
                 >
-                  <option value="All">All</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {filteredMenuItems.length === 0 && (
-                <div className="text-sm text-muted-foreground border rounded-md p-3 border-dashed">
-                  No items match your search/filter.
-                </div>
-              )}
-              {filteredMenuItems.map((item) => (
-                <div key={item.id} className="flex items-start gap-4 p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
-                  {/* Thumbnail Section */}
-                  <div className="flex-shrink-0">
-                    {item.image_url ? (
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border">
-                        <img 
-                          src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg border flex items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                      {item.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {item.category}
-                        </Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground truncate">{item.name}</p>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                      )}
+                      {item.price != null && (
+                        <p className="text-sm font-medium text-green-600 mt-0.5">
+                          ${typeof item.price === "number" ? item.price.toFixed(2) : item.price}
+                        </p>
                       )}
                     </div>
-                    {item.description && (
-                      <p className="text-sm text-gray-600">{item.description}</p>
-                    )}
+                    <Badge
+                      variant={isMatched ? "default" : "secondary"}
+                      className={cn(
+                        "flex-shrink-0 text-xs",
+                        isMatched ? "bg-green-600 hover:bg-green-600" : ""
+                      )}
+                    >
+                      {isMatched ? "Matched" : "Unmatched"}
+                    </Badge>
                   </div>
-                  
-                  {/* Action Buttons Section */}
-                  <div className="flex-shrink-0">
-                    {item.image_url ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveImage(item.id)}
-                            disabled={isReadOnly}
-                          >
-                            <Unlink className="h-4 w-4 mr-1" />
-                            Unassign
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAssignImage(item.id)}
-                            title="Reassign or upload"
-                            disabled={isReadOnly}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAssignImage(item.id)}
-                            title="Upload a custom image"
-                            disabled={isReadOnly}
-                          >
-                            <Upload className="h-4 w-4 mr-1" />
-                            Upload
-                          </Button>
-                          <Button asChild variant="outline" size="sm">
-                            <a
-                              href={buildGoogleImageSearchUrl(item)}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`Search Google Images for ${item.name}`}
-                            >
-                              <Search className="h-4 w-4 mr-1" />
-                              Search
-                            </a>
-                          </Button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleGenerateImage(item.id)}
-                          disabled={isReadOnly || isGeneratingImage[item.id]}
-                          className="w-full"
-                          title="Generate new image"
-                        >
-                          {isGeneratingImage[item.id] ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Wand2 className="h-4 w-4 mr-1" />
-                              Regenerate
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAssignImage(item.id)}
-                            disabled={isReadOnly}
-                          >
-                            <Link2 className="h-4 w-4 mr-1" />
-                            Assign / Upload
-                          </Button>
-                          <Button asChild variant="outline" size="sm">
-                            <a
-                              href={buildGoogleImageSearchUrl(item)}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`Search Google Images for ${item.name}`}
-                            >
-                              <Search className="h-4 w-4 mr-1" />
-                              Search
-                            </a>
-                          </Button>
-                        </div>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleGenerateImage(item.id)}
-                          disabled={isReadOnly || isGeneratingImage[item.id]}
-                          className="bg-purple-600 hover:bg-purple-700"
-                        >
-                          {isGeneratingImage[item.id] ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Wand2 className="h-4 w-4 mr-1" />
-                              Generate Image
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right Panel — Image Gallery */}
+        <div className="flex-1 flex flex-col border rounded-lg bg-card">
+          <div className="p-4 border-b flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">Image Gallery</h3>
+              <span className="text-sm text-muted-foreground">({extractedImages.length})</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-2">
+              {focusedItem && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAssignImage(focusedItem.id)}
+                    disabled={isReadOnly}
+                  >
+                    <Link2 className="h-4 w-4 mr-1" />
+                    Assign / Upload
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateImage(focusedItem.id)}
+                    disabled={isReadOnly || isGeneratingImage[focusedItem.id]}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isGeneratingImage[focusedItem.id] ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        {focusedItem.image_url ? "Regenerate" : "Generate"}
+                      </>
+                    )}
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={buildGoogleImageSearchUrl(focusedItem)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Search Google Images for ${focusedItem.name}`}
+                    >
+                      <Search className="h-4 w-4 mr-1" />
+                      Search
+                    </a>
+                  </Button>
+                </>
+              )}
+              {!focusedItem && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (filteredMenuItems.length > 0) {
+                      setFocusedItemId(filteredMenuItems[0].id)
+                      setSelectedItemId(filteredMenuItems[0].id)
+                      setAssignModalOpen(true)
+                    }
+                  }}
+                  disabled={isReadOnly || filteredMenuItems.length === 0}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* Show context for focused item */}
+            {focusedItem && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Info className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-medium text-foreground">
+                    AI Suggestions for &ldquo;{focusedItem.name}&rdquo;
+                  </h4>
+                </div>
+                {focusedItem.image_url && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 mb-4">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border bg-muted flex-shrink-0">
+                      <img
+                        src={resolveImageUrl(focusedItem.image_url) || "/placeholder.jpg"}
+                        alt={focusedItem.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Current image assigned</p>
+                      <p className="text-xs text-muted-foreground truncate">{focusedItem.name}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveImage(focusedItem.id)}
+                      disabled={isReadOnly}
+                      className="text-xs"
+                    >
+                      <Unlink className="h-3 w-3 mr-1" />
+                      Unassign
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Image Grid */}
+            {extractedImages.length === 0 ? (
+              <div className="text-center py-12">
+                <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-foreground mb-2">No images extracted yet</h4>
+                <p className="text-muted-foreground mb-4">Click &ldquo;Extract Images&rdquo; to identify food items in your menu photos.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {extractedImages.map((image) => {
+                  const assignedItem = getAssignedMenuItem(image.id)
+                  const isAssignedToFocused = focusedItem && image.assigned_to_item_id === focusedItem.id
+                  return (
+                    <div
+                      key={image.id}
+                      className={cn(
+                        "border rounded-lg overflow-hidden group transition-all",
+                        isAssignedToFocused && "ring-2 ring-primary border-primary"
+                      )}
+                    >
+                      <div className="aspect-square relative bg-muted">
+                        <img
+                          src={resolveImageUrl(image.image_url) || "/placeholder.jpg"}
+                          alt={image.ai_description || "Food item"}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-1.5 right-1.5">
+                          {image.is_assigned ? (
+                            <Badge variant="default" className="bg-green-600 text-xs">
+                              <Link2 className="h-3 w-3 mr-1" />
+                              Assigned
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Available
+                            </Badge>
+                          )}
+                        </div>
+                        {image.extraction_confidence && image.extraction_confidence >= 0.8 && (
+                          <div className="absolute top-1.5 left-1.5">
+                            <Badge className="bg-purple-600 text-xs">
+                              <Sparkles className="h-3 w-3 mr-0.5" />
+                              AI
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{image.ai_description}</p>
+                        {getConfidenceBadge(image.extraction_confidence)}
+                        {assignedItem && (
+                          <p className="text-xs font-medium text-foreground mt-1 truncate">
+                            → {assignedItem.name}
+                          </p>
+                        )}
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {image.is_assigned ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs flex-1"
+                              onClick={() => handleUnassignImage(image.id)}
+                              disabled={isReadOnly}
+                            >
+                              <Unlink className="h-3 w-3 mr-1" />
+                              Unassign
+                            </Button>
+                          ) : (
+                            <>
+                              {focusedItem && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs flex-1"
+                                  onClick={() => handleAssignImage(focusedItem.id)}
+                                  disabled={isReadOnly}
+                                >
+                                  <Link2 className="h-3 w-3 mr-1" />
+                                  Assign
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-red-600 hover:text-red-700"
+                                onClick={() => openDeleteConfirm(image.id)}
+                                disabled={isReadOnly}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Image Assignment Modal */}
@@ -752,8 +753,8 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => imageToDelete && handleDeleteImage(imageToDelete)}
             >
               Delete
@@ -775,7 +776,7 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
             <Button variant="outline" onClick={() => setWarningModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => warningAction && warningAction()}
               className="bg-purple-600 hover:bg-purple-700"
             >
