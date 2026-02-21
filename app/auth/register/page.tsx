@@ -96,15 +96,15 @@ export default function RegisterPage() {
   const loading = isLoading || authLoading
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <QrCode className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
+            <span className="text-2xl font-bold text-foreground">MenuAI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h1>
-          <p className="text-gray-600">Start your free trial today</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Create your account</h1>
+          <p className="text-muted-foreground">Start your free trial today</p>
         </div>
 
         <Card>
@@ -205,9 +205,9 @@ export default function RegisterPage() {
 
                   const label = ["Weak", "Weak", "Fair", "Good", "Strong"][capped]
                   const barColors = [
-                    ["bg-gray-200", "bg-gray-200", "bg-gray-200"],
-                    ["bg-red-500", "bg-gray-200", "bg-gray-200"],
-                    ["bg-yellow-500", "bg-yellow-500", "bg-gray-200"],
+                    ["bg-muted", "bg-muted", "bg-muted"],
+                    ["bg-red-500", "bg-muted", "bg-muted"],
+                    ["bg-yellow-500", "bg-yellow-500", "bg-muted"],
                     ["bg-yellow-500", "bg-yellow-500", "bg-green-400"],
                     ["bg-green-500", "bg-green-500", "bg-green-500"],
                   ][capped]
@@ -226,7 +226,7 @@ export default function RegisterPage() {
                         <div className={`h-1 w-full rounded ${barColors[1]}`} />
                         <div className={`h-1 w-full rounded ${barColors[2]}`} />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {label} password
                         {capped < 4 && hints.length > 0 && ` — add ${hints.join(", ")}`}
                       </p>
@@ -279,11 +279,11 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link 
                   href="/auth/login" 
-                  className="text-blue-600 hover:underline"
+                  className="text-primary hover:underline"
                   tabIndex={loading ? -1 : 0}
                 >
                   Sign in

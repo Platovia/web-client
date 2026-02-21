@@ -37,12 +37,12 @@ export default function ForgotPasswordPage() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
-              <QrCode className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
+              <span className="text-2xl font-bold text-foreground">MenuAI</span>
             </Link>
           </div>
 
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
             <CardContent className="space-y-4">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
+                  <Mail className="h-5 w-5 text-primary" />
                   <h4 className="font-medium text-blue-900">What's next?</h4>
                 </div>
                 <ul className="text-sm text-blue-800 space-y-1">
@@ -71,14 +71,14 @@ export default function ForgotPasswordPage() {
               </div>
 
               <div className="text-center space-y-2">
-                <p className="text-sm text-gray-600">Didn't receive the email?</p>
+                <p className="text-sm text-muted-foreground">Didn't receive the email?</p>
                 <Button variant="outline" onClick={() => setIsSuccess(false)}>
                   Try again
                 </Button>
               </div>
 
               <div className="text-center">
-                <Link href="/auth/login" className="text-sm text-blue-600 hover:underline">
+                <Link href="/auth/login" className="text-sm text-primary hover:underline">
                   Back to sign in
                 </Link>
               </div>
@@ -90,15 +90,15 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <QrCode className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
+            <span className="text-2xl font-bold text-foreground">MenuAI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset your password</h1>
-          <p className="text-gray-600">Enter your email and we'll send you a reset link</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Reset your password</h1>
+          <p className="text-muted-foreground">Enter your email and we'll send you a reset link</p>
         </div>
 
         <Card>
@@ -132,7 +132,7 @@ export default function ForgotPasswordPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:underline">
+              <Link href="/auth/login" className="inline-flex items-center text-sm text-primary hover:underline">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to sign in
               </Link>

@@ -57,15 +57,15 @@ export default function LoginPage() {
   const loading = isLoading || authLoading
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <QrCode className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
+            <span className="text-2xl font-bold text-foreground">MenuAI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-600">Sign in to your account to continue</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back</h1>
+          <p className="text-muted-foreground">Sign in to your account to continue</p>
         </div>
 
         <Card>
@@ -122,7 +122,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <Link 
                   href="/auth/forgot-password" 
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-primary hover:underline"
                   tabIndex={loading ? -1 : 0}
                 >
                   Forgot password?
@@ -136,11 +136,11 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <Link 
                   href="/auth/register" 
-                  className="text-blue-600 hover:underline"
+                  className="text-primary hover:underline"
                   tabIndex={loading ? -1 : 0}
                 >
                   Sign up
