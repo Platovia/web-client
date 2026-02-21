@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Store, Menu, QrCode, MessageCircle, TrendingUp, Eye, Plus, ArrowUpRight } from "lucide-react"
+import { Store, Menu, QrCode, MessageCircle, Eye, Plus, ArrowUpRight } from "lucide-react"
+import { StatCard } from "@/components/dashboard/stat-card"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { useAuth } from "@/contexts/auth-context"
@@ -18,7 +19,6 @@ const initialDashboardStats = {
   totalChatInteractions: 0,
 }
 
-const recentActivity: { action: string; restaurant: string; time: string }[] = []
 
 export default function DashboardPage() {
   const { user, companies } = useAuth()
@@ -104,6 +104,10 @@ export default function DashboardPage() {
   const firstName = user?.first_name || "there"
   const companyName = primaryCompany?.name || "your company"
 
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
+  const formattedDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -129,64 +133,45 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Welcome back! Here's what's happening with {companyName}.</p>
+            <h1 className="text-3xl font-bold text-foreground">{greeting}, {firstName}</h1>
+            <p className="text-muted-foreground">{formattedDate} &middot; Here&apos;s what&apos;s happening with {companyName}.</p>
           </div>
           <Link href="/dashboard/restaurants/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Add Restaurant
+              + Create New Restaurant
             </Button>
           </Link>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Restaurants</CardTitle>
-              <Store className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {isLoading ? "..." : recentRestaurants.length}
-              </div>
-              <p className="text-xs text-muted-foreground">Restaurants created</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Menus</CardTitle>
-              <Menu className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalMenus}</div>
-              <p className="text-xs text-muted-foreground">Total active menus</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">QR Code Scans</CardTitle>
-              <QrCode className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalQRScans.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Total QR scans</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Chat Interactions</CardTitle>
-              <MessageCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalChatInteractions}</div>
-              <p className="text-xs text-muted-foreground">+18% from last month</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Total Restaurants"
+            value={isLoading ? "..." : dashboardStats.totalRestaurants}
+            icon={Store}
+            sparklineData={[1, 1, 2, 2, 3, 3, 4]}
+          />
+          <StatCard
+            title="Active Menus"
+            value={dashboardStats.totalMenus}
+            icon={Menu}
+            trend={{ value: "Active", positive: true }}
+            sparklineData={[2, 3, 3, 4, 5, 5, 6]}
+          />
+          <StatCard
+            title="Total QR Scans"
+            value={dashboardStats.totalQRScans.toLocaleString()}
+            icon={QrCode}
+            sparklineData={[10, 18, 15, 22, 28, 25, 35]}
+          />
+          <StatCard
+            title="AI Chat Interactions"
+            value={dashboardStats.totalChatInteractions}
+            icon={MessageCircle}
+            trend={{ value: "+18%", positive: true }}
+            sparklineData={[3, 5, 4, 7, 6, 8, 12]}
+          />
         </div>
 
           {/* Recent Restaurants */}
@@ -207,18 +192,18 @@ export default function DashboardPage() {
                 Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-4 bg-muted rounded w-1/2"></div>
+                      <div className="h-3 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/4"></div>
                     </div>
-                    <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                    <div className="h-8 w-8 bg-muted rounded"></div>
                   </div>
                 ))
               ) : recentRestaurants.length === 0 ? (
                 <div className="text-center py-8">
-                  <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No restaurants yet</h3>
-                  <p className="text-gray-600 mb-4">Get started by adding your first restaurant location</p>
+                  <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No restaurants yet</h3>
+                  <p className="text-muted-foreground mb-4">Get started by adding your first restaurant location</p>
                   <Link href="/dashboard/restaurants/new">
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
@@ -228,17 +213,25 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 recentRestaurants.map((restaurant) => (
-                  <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium">{restaurant.name}</h4>
                         <Badge variant={restaurant.is_active ? "default" : "secondary"}>
-                          {restaurant.is_active ? "active" : "inactive"}
+                          {restaurant.is_active ? "Online" : "Offline"}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{restaurant.description}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <p className="text-sm text-muted-foreground mb-2">{restaurant.description}</p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Created {new Date(restaurant.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <Link href={`/dashboard/restaurants/${restaurant.id}?tab=menus`} className="text-xs text-primary hover:underline font-medium">
+                          Menu
+                        </Link>
+                        <Link href={`/dashboard/restaurants/${restaurant.id}?tab=analytics`} className="text-xs text-primary hover:underline font-medium">
+                          Analytics
+                        </Link>
                       </div>
                     </div>
                     <Link href={`/dashboard/restaurants/${restaurant.id}`}>
@@ -251,37 +244,6 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
-
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks to get you started</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link href="/dashboard/restaurants/new">
-                <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent">
-                  <Store className="h-6 w-6" />
-                  Add New Restaurant
-                </Button>
-              </Link>
-              <Link href="/dashboard/menus/upload">
-                <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent">
-                  <Menu className="h-6 w-6" />
-                  Upload Menu
-                </Button>
-              </Link>
-              <Link href="/dashboard/analytics">
-                <Button variant="outline" className="h-20 flex-col gap-2 bg-transparent">
-                  <TrendingUp className="h-6 w-6" />
-                  View Analytics
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   )
