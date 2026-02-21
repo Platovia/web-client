@@ -239,7 +239,8 @@ export default function RestaurantsPage() {
             </div>
           ) : (
             filteredRestaurants.map((restaurant) => (
-              <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
+              <Card key={restaurant.id} className="hover:shadow-lg transition-shadow relative group">
+                <Link href={`/dashboard/restaurants/${restaurant.id}`} className="absolute inset-0 z-10" aria-label={`View ${restaurant.name}`} />
                 <div className="aspect-video relative overflow-hidden rounded-t-lg">
                   <div className="w-full h-full bg-muted flex items-center justify-center">
                     <Store className="h-12 w-12 text-muted-foreground" />
@@ -254,14 +255,12 @@ export default function RestaurantsPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <Link href={`/dashboard/restaurants/${restaurant.id}`}>
-                        <CardTitle className="text-lg hover:underline cursor-pointer">{restaurant.name}</CardTitle>
-                      </Link>
+                      <CardTitle className="text-lg group-hover:underline">{restaurant.name}</CardTitle>
                       <CardDescription className="mt-1">{restaurant.description}</CardDescription>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="relative z-20">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -282,7 +281,7 @@ export default function RestaurantsPage() {
                           <QrCode className="mr-2 h-4 w-4" />
                           Generate QR Code
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteRestaurant(restaurant)}
                         >
@@ -315,7 +314,7 @@ export default function RestaurantsPage() {
                     </span>
                   </div>
 
-                  <div className="flex gap-2 pt-2 border-t">
+                  <div className="flex gap-2 pt-2 border-t relative z-20">
                     <Link href={`/dashboard/restaurants/${restaurant.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full">
                         <Eye className="h-4 w-4 mr-1" />

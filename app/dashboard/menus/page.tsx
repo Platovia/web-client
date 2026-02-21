@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu, Clock, Copy, Check, Sparkles } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu, Clock, Copy, Check, Sparkles, Code, Info } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
@@ -61,7 +61,7 @@ export default function MenusPage() {
     totalViews: 0,
     totalScans: 0
   })
-  const [embedCopied, setEmbedCopied] = useState(false)
+
 
   useEffect(() => {
     loadMenus()
@@ -346,38 +346,17 @@ export default function MenusPage() {
           </Alert>
         )}
 
-        {/* Embed Code Banner */}
+        {/* Embed Code Info Banner */}
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start gap-3">
+              <Code className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-foreground">Get Your Embed Code</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">Paste this snippet before the closing &lt;/body&gt; tag on your website.</p>
+                <h3 className="font-semibold text-foreground">Embed Your Menu Chatbot</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Each menu has its own embed code. Use the menu dropdown or visit the menu&apos;s embed page to get a customizable code snippet.
+                </p>
               </div>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">Ready to deploy</Badge>
-            </div>
-            <div className="relative rounded-lg bg-slate-900 p-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-800"
-                onClick={() => {
-                  const restaurantId = menus[0]?.restaurant_id || "YOUR_RESTAURANT_ID"
-                  const code = `<!-- MenuAI Widget -->\n<script src="https://widget.menuai.com/loader.js" data-restaurant-id="${restaurantId}" async></script>`
-                  navigator.clipboard.writeText(code)
-                  setEmbedCopied(true)
-                  setTimeout(() => setEmbedCopied(false), 2000)
-                }}
-              >
-                {embedCopied ? (
-                  <><Check className="h-4 w-4 mr-1" /> Copied!</>
-                ) : (
-                  <><Copy className="h-4 w-4 mr-1" /> Copy Code</>
-                )}
-              </Button>
-              <pre className="text-sm text-green-400 font-mono overflow-x-auto pr-24">
-                <code>{`<!-- MenuAI Widget -->\n<script\n  src="https://widget.menuai.com/loader.js"\n  data-restaurant-id="${menus[0]?.restaurant_id || 'YOUR_RESTAURANT_ID'}"\n  async\n></script>`}</code>
-              </pre>
             </div>
           </CardContent>
         </Card>
@@ -450,7 +429,8 @@ export default function MenusPage() {
         {/* Menus Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMenus.map((menu) => (
-            <Card key={menu.id} className="hover:shadow-lg transition-shadow">
+            <Card key={menu.id} className="hover:shadow-lg transition-shadow relative group">
+              <Link href={`/dashboard/menus/${menu.id}/edit`} className="absolute inset-0 z-10" aria-label={`Edit ${menu.name}`} />
               <div className="aspect-video relative overflow-hidden rounded-t-lg">
                 {menu.image ? (
                   <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
@@ -475,17 +455,15 @@ export default function MenusPage() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <Link href={`/dashboard/menus/${menu.id}/edit`}>
-                      <CardTitle className="text-lg hover:underline cursor-pointer">{menu.name}</CardTitle>
-                    </Link>
-                    <Link href={`/dashboard/restaurants/${menu.restaurant_id}`}>
+                    <CardTitle className="text-lg group-hover:underline">{menu.name}</CardTitle>
+                    <Link href={`/dashboard/restaurants/${menu.restaurant_id}`} className="relative z-20">
                       <p className="text-sm text-primary font-medium hover:underline cursor-pointer">{menu.restaurant?.name}</p>
                     </Link>
                     <CardDescription className="mt-1">{menu.restaurant?.description}</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="relative z-20">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -508,6 +486,12 @@ export default function MenusPage() {
                         <QrCode className="mr-2 h-4 w-4" />
                         View QR Code
                       </DropdownMenuItem>
+                      <Link href={`/dashboard/menus/${menu.id}/embed`}>
+                        <DropdownMenuItem>
+                          <Code className="mr-2 h-4 w-4" />
+                          Embed Code
+                        </DropdownMenuItem>
+                      </Link>
                       <DropdownMenuItem
                         onClick={() => handleToggleMenuStatus(menu.id, menu.is_active)}
                       >
@@ -523,7 +507,7 @@ export default function MenusPage() {
                           </>
                         )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => handleDeleteMenu(menu.id)}
                       >
@@ -565,9 +549,9 @@ export default function MenusPage() {
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-2">
-                  <Link 
-                    href={validTokens[menu.id] ? `/menu/${menu.restaurant_id}?token=${validTokens[menu.id]}` : `/dashboard/menus/${menu.id}/qr`} 
+                <div className="flex gap-2 pt-2 relative z-20">
+                  <Link
+                    href={validTokens[menu.id] ? `/menu/${menu.restaurant_id}?token=${validTokens[menu.id]}` : `/dashboard/menus/${menu.id}/qr`}
                     className="flex-1"
                     target={validTokens[menu.id] ? "_blank" : "_self"}
                   >

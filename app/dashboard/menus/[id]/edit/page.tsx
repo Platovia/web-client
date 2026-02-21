@@ -13,7 +13,7 @@ import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive, Info, Copy } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive, Info, Copy, Code } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -107,7 +107,6 @@ export default function EditMenuPage() {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("items")
   const [aiChatbotEnabled, setAiChatbotEnabled] = useState(true)
-  const [embedCopied, setEmbedCopied] = useState(false)
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
   const isUnavailable = (value: any) => {
@@ -1090,6 +1089,12 @@ export default function EditMenuPage() {
                 QR Code
               </Button>
             </Link>
+            <Link href={`/dashboard/menus/${id}/embed`}>
+              <Button variant="outline">
+                <Code className="h-4 w-4 mr-2" />
+                Embed
+              </Button>
+            </Link>
             <Link href={activeToken ? `/menu/${menuData.restaurant?.id}?token=${activeToken}` : `/dashboard/menus/${id}/qr`} target={activeToken ? "_blank" : "_self"}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
@@ -1435,27 +1440,20 @@ export default function EditMenuPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Embed Menu</h3>
-                  <p className="text-sm text-muted-foreground">Copy the code below to embed this menu directly onto your website.</p>
+                  <p className="text-sm text-muted-foreground">Add the menu chatbot widget to your website.</p>
                 </div>
-                <div className="relative rounded-lg bg-slate-900 p-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-800"
-                    onClick={() => {
-                      const code = `<!-- MenuAI Widget -->\n<script src="https://widget.menuai.com/loader.js" data-restaurant-id="${menuData.restaurant?.id || ''}" async></script>`
-                      navigator.clipboard.writeText(code)
-                      setEmbedCopied(true)
-                      setTimeout(() => setEmbedCopied(false), 2000)
-                    }}
-                  >
-                    <Copy className="h-4 w-4 mr-1" />
-                    {embedCopied ? "Copied!" : "Copy Code"}
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-blue-800">Configure the widget color, position, and welcome message, then copy the embed code.</p>
+                  </div>
+                </div>
+                <Link href={`/dashboard/menus/${id}/embed`}>
+                  <Button variant="outline">
+                    <Code className="h-4 w-4 mr-2" />
+                    Get Embed Code
                   </Button>
-                  <pre className="text-sm text-green-400 font-mono overflow-x-auto pr-24">
-                    <code>{`<!-- MenuAI Widget -->\n<script\n  src="https://widget.menuai.com/loader.js"\n  data-restaurant-id="${menuData.restaurant?.id || ''}"\n  async\n></script>`}</code>
-                  </pre>
-                </div>
+                </Link>
               </div>
             </div>
           </TabsContent>

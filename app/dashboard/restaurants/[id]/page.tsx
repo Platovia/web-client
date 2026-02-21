@@ -42,6 +42,8 @@ import {
   Clock,
   Menu as MenuIcon,
   MessageCircle,
+  MessagesSquare,
+  Users,
   BarChart3,
   CheckCircle,
   Trash2,
@@ -70,6 +72,8 @@ import {
 import { StatCard } from "@/components/dashboard/stat-card"
 import { PhonePreview } from "@/components/dashboard/phone-preview"
 import { apiClient, type Restaurant, type RestaurantSource } from "@/lib/api"
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
+import { Progress } from "@/components/ui/progress"
 
 interface MenuWithDetails {
   id: string;
@@ -101,6 +105,38 @@ interface MenuWithDetails {
   image?: string;
 }
 
+interface ChatAnalyticsData {
+  total_conversations: number
+  total_messages: number
+  avg_messages_per_conversation: number
+  unique_visitors: number
+  conversations_over_time: Array<{ date: string; count: number }>
+  peak_chat_hours: Array<{ hour: number; count: number }>
+  popular_questions: Array<{ question: string; count: number }>
+}
+
+const formatChartDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const formatHour = (hour: number) => {
+  if (hour === 0) return '12 AM'
+  if (hour < 12) return `${hour} AM`
+  if (hour === 12) return '12 PM'
+  return `${hour - 12} PM`
+}
+
+const getHourIntensityClass = (count: number, maxCount: number) => {
+  if (maxCount === 0) return 'bg-primary/5 text-primary'
+  const intensity = count / maxCount
+  if (intensity === 0) return 'bg-primary/5 text-primary'
+  if (intensity < 0.25) return 'bg-primary/10 text-primary'
+  if (intensity < 0.5) return 'bg-primary/20 text-primary'
+  if (intensity < 0.75) return 'bg-primary/60 text-primary-foreground'
+  return 'bg-primary text-primary-foreground'
+}
+
 export default function RestaurantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -110,6 +146,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menus, setMenus] = useState<MenuWithDetails[]>([])
   const [analytics, setAnalytics] = useState({ qrScans: 0, totalViews: 0, chatSessions: 0 })
+  const [chatAnalytics, setChatAnalytics] = useState<ChatAnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMenus, setIsLoadingMenus] = useState(false)
   const [error, setError] = useState("")
@@ -166,17 +203,19 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
         
         // Load analytics for this restaurant
         try {
-          const [analyticsResponse, chatResponse] = await Promise.all([
+          const [analyticsResponse, chatAnalyticsResponse] = await Promise.all([
             apiClient.getAnalyticsOverview(restaurantId),
-            apiClient.getChatAnalytics()
+            apiClient.getRestaurantChatAnalytics(restaurantId)
           ])
-          
+
+          const chatData = chatAnalyticsResponse.data?.data || null
+          setChatAnalytics(chatData)
+
           if (analyticsResponse.data?.data) {
-            const chatData = chatResponse.data?.data || {}
             setAnalytics({
               qrScans: analyticsResponse.data.data.total_qr_scans,
               totalViews: analyticsResponse.data.data.total_views,
-              chatSessions: chatData.total_sessions || 0
+              chatSessions: chatData?.total_conversations || 0
             })
           }
         } catch (analyticsError) {
@@ -1023,7 +1062,8 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Views</CardTitle>
@@ -1031,10 +1071,10 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{analytics.totalViews.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">Menu views for this restaurant</p>
+                  <p className="text-xs text-muted-foreground">Menu views</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">QR Scans</CardTitle>
@@ -1045,23 +1085,111 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                   <p className="text-xs text-muted-foreground">Total QR code scans</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Chat Sessions</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
                   <MessageCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{analytics.chatSessions.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">Customer chat interactions</p>
+                  <div className="text-2xl font-bold">{(chatAnalytics?.total_conversations || 0).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Chat interactions</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{(chatAnalytics?.unique_visitors || 0).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Distinct chatbot users</p>
                 </CardContent>
               </Card>
             </div>
-            
+
+            {/* Conversations Over Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversations Over Time</CardTitle>
+                <CardDescription>Daily conversation counts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!chatAnalytics?.conversations_over_time?.some(d => d.count > 0) ? (
+                  <div className="text-center py-12 text-muted-foreground">No conversation data yet</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chatAnalytics?.conversations_over_time}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tickFormatter={formatChartDate} />
+                      <YAxis />
+                      <Tooltip labelFormatter={formatChartDate} />
+                      <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Popular Questions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Popular Questions</CardTitle>
+                  <CardDescription>Most frequently asked questions</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!chatAnalytics?.popular_questions?.length ? (
+                    <div className="text-center py-8 text-muted-foreground">No questions asked yet</div>
+                  ) : (
+                    chatAnalytics.popular_questions.map((q, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                            <p className="text-sm font-medium truncate max-w-[300px]" title={q.question}>{q.question}</p>
+                          </div>
+                          <Badge variant="secondary">{q.count}</Badge>
+                        </div>
+                        <Progress value={(q.count / Math.max(...(chatAnalytics?.popular_questions?.map(pq => pq.count) || []), 1)) * 100} className="h-2" />
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Peak Chat Hours */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Peak Chat Hours</CardTitle>
+                  <CardDescription>When customers chat the most</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!chatAnalytics?.peak_chat_hours?.some(h => h.count > 0) ? (
+                    <div className="text-center py-8 text-muted-foreground">No chat hour data yet</div>
+                  ) : (
+                    <div className="grid grid-cols-6 gap-2">
+                      {chatAnalytics.peak_chat_hours.map((h) => (
+                        <div
+                          key={h.hour}
+                          className={`p-2 rounded text-center ${getHourIntensityClass(h.count, Math.max(...(chatAnalytics?.peak_chat_hours?.map(ph => ph.count) || []), 1))}`}
+                        >
+                          <div className="text-xs font-medium">{formatHour(h.hour)}</div>
+                          <div className="text-sm font-bold">{h.count}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Performance Overview */}
             <Card>
               <CardHeader>
                 <CardTitle>Performance Overview</CardTitle>
-                <CardDescription>Analytics for {restaurant.name}</CardDescription>
+                <CardDescription>Summary for {restaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1077,6 +1205,18 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     <span className="text-sm font-medium">Average Views per Menu</span>
                     <span className="text-sm text-muted-foreground">
                       {menus.length > 0 ? Math.round(analytics.totalViews / menus.length).toLocaleString() : 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Avg Messages / Conversation</span>
+                    <span className="text-sm text-muted-foreground">
+                      {chatAnalytics?.avg_messages_per_conversation?.toFixed(1) || "0.0"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Total Messages</span>
+                    <span className="text-sm text-muted-foreground">
+                      {(chatAnalytics?.total_messages || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>

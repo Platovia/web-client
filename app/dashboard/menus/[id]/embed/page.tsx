@@ -226,26 +226,23 @@ export default function MenuEmbedSnippetPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="snippet">Copy this code and paste it before the closing &lt;/body&gt; tag on your website:</Label>
-                  <div className="relative">
-                    <Textarea
-                      id="snippet"
-                      readOnly
-                      className="font-mono text-xs bg-muted min-h-[120px] pr-12"
-                      value={scriptSnippet}
-                    />
+                  <div className="relative rounded-lg bg-slate-900 p-4">
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="absolute top-2 right-2"
+                      variant="ghost"
+                      className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-800"
                       onClick={copyToClipboard}
                       disabled={!token}
                     >
                       {copied ? (
-                        <Check className="h-4 w-4" />
+                        <><Check className="h-4 w-4 mr-1" /> Copied!</>
                       ) : (
-                        <Copy className="h-4 w-4" />
+                        <><Copy className="h-4 w-4 mr-1" /> Copy Code</>
                       )}
                     </Button>
+                    <pre className="text-sm text-green-400 font-mono overflow-x-auto pr-24 whitespace-pre-wrap">
+                      <code>{scriptSnippet}</code>
+                    </pre>
                   </div>
                 </div>
 
