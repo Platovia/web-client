@@ -503,7 +503,7 @@ interface UpdatePlanRequest {
 }
 
 interface UpdatePlanResponse {
-  action: 'updated' | 'checkout_required' | 'canceled' | 'no_change';
+  action: 'updated' | 'checkout_required' | 'canceled' | 'no_change' | 'resumed';
   tier?: string;
   message: string;
   checkout_url?: string;

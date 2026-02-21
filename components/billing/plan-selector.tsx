@@ -103,85 +103,135 @@ export function PlanSelector({
                 </li>
               </ul>
               <div className="mt-4">
-                {isCurrentPlan ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Current Plan
-                  </Button>
-                ) : isFree && isDowngrade && cancelAtPeriodEnd ? (
-                  <Button variant="outline" className="w-full text-amber-600" disabled>
-                    Cancellation Scheduled
-                  </Button>
-                ) : isFree && isDowngrade ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="w-full">
-                        Downgrade to Free
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Downgrade to Free?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          You will lose access to your current plan features at the end of your billing period. This action schedules a cancellation.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onSelectPlan("free")}>
-                          Yes, Downgrade
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : isFree ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Free Tier
-                  </Button>
-                ) : isUpgrade ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="w-full" disabled={!plan.paddle_price_id}>
-                        Upgrade
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Upgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          You will be upgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. Your billing will be adjusted with proration.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
-                          Yes, Upgrade
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : isDowngrade ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="secondary" className="w-full" disabled={!plan.paddle_price_id}>
-                        Downgrade
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Downgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          You will be downgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. You may lose access to features available on your current plan.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
-                          Yes, Downgrade
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : null}
+                {cancelAtPeriodEnd ? (
+                  // Cancellation is scheduled — show contextual buttons
+                  isCurrentPlan ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="w-full">
+                          Resume Subscription
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Resume Subscription?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel your pending cancellation and keep you on the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Cancellation</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                            Yes, Resume
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : isFree ? (
+                    <Button variant="outline" className="w-full text-amber-600" disabled>
+                      Cancellation Scheduled
+                    </Button>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="w-full" disabled={!plan.paddle_price_id}>
+                          Subscribe
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Switch to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel your pending cancellation and switch you to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. Billing will be adjusted with proration.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                            Yes, Subscribe
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )
+                ) : (
+                  // Normal state — no pending cancellation
+                  isCurrentPlan ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      Current Plan
+                    </Button>
+                  ) : isFree && isDowngrade ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full">
+                          Downgrade to Free
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Downgrade to Free?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You will lose access to your current plan features at the end of your billing period. This action schedules a cancellation.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onSelectPlan("free")}>
+                            Yes, Downgrade
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : isFree ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      Free Tier
+                    </Button>
+                  ) : isUpgrade ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="w-full" disabled={!plan.paddle_price_id}>
+                          Upgrade
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Upgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You will be upgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. Your billing will be adjusted with proration.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                            Yes, Upgrade
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : isDowngrade ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="secondary" className="w-full" disabled={!plan.paddle_price_id}>
+                          Downgrade
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Downgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You will be downgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. You may lose access to features available on your current plan.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                            Yes, Downgrade
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null
+                )}
               </div>
             </CardContent>
           </Card>

@@ -132,6 +132,9 @@ export default function BillingPage() {
       } else if (data.action === "canceled") {
         toast({ title: "Downgrade Scheduled", description: data.message })
         await fetchBillingData()
+      } else if (data.action === "resumed") {
+        toast({ title: "Subscription Resumed", description: data.message })
+        await fetchBillingData()
       } else if (data.action === "no_change") {
         toast({ title: "No Change", description: data.message })
       }
