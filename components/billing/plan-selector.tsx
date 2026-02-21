@@ -138,26 +138,49 @@ export function PlanSelector({
                     Free Tier
                   </Button>
                 ) : isUpgrade ? (
-                  <Button
-                    className="w-full"
-                    onClick={() =>
-                      plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)
-                    }
-                    disabled={!plan.paddle_price_id}
-                  >
-                    Upgrade
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="w-full" disabled={!plan.paddle_price_id}>
+                        Upgrade
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Upgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You will be upgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. Your billing will be adjusted with proration.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                          Yes, Upgrade
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 ) : isDowngrade ? (
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() =>
-                      plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)
-                    }
-                    disabled={!plan.paddle_price_id}
-                  >
-                    Downgrade
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="secondary" className="w-full" disabled={!plan.paddle_price_id}>
+                        Downgrade
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Downgrade to {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You will be downgraded to the {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} plan at {formatPrice(plan.price)}/month. You may lose access to features available on your current plan.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Current Plan</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => plan.paddle_price_id && onSelectPlan(plan.paddle_price_id)}>
+                          Yes, Downgrade
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 ) : null}
               </div>
             </CardContent>
