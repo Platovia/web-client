@@ -33,7 +33,7 @@ export function UsageBar({ label, used, limit, className }: UsageBarProps) {
           {used.toLocaleString()} / {formatLimit()}
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={cn("h-full transition-all", getBarColor())}
           style={{ width: isUnlimited ? "100%" : `${percentage}%` }}

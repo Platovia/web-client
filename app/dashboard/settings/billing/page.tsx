@@ -172,7 +172,7 @@ export default function BillingPage() {
       past_due: "bg-amber-100 text-amber-800",
       trialing: "bg-blue-100 text-blue-800",
     }
-    return statusColors[status] || "bg-gray-100 text-gray-800"
+    return statusColors[status] || "bg-muted text-foreground"
   }
 
   const isPaidTier = subscription && subscription.tier !== "free"
@@ -181,8 +181,8 @@ export default function BillingPage() {
     <DashboardLayout>
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Billing & Usage</h1>
-          <p className="text-gray-600">Manage your subscription and view usage</p>
+          <h1 className="text-3xl font-bold text-foreground">Billing & Usage</h1>
+          <p className="text-muted-foreground">Manage your subscription and view usage</p>
         </div>
 
         {error && (
@@ -229,17 +229,17 @@ export default function BillingPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-lg font-semibold capitalize">{subscription.tier} Plan</p>
-                        <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(subscription.status)}`}>
+                        <p className="text-2xl font-bold capitalize">{subscription.tier} Plan</p>
+                        <span className="inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           {subscription.status}
                         </span>
                       </div>
                       {isPaidTier && !subscription.cancel_at_period_end && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={isCanceling}>
+                            <span className="text-red-600 hover:text-red-700 text-sm cursor-pointer">
                               {isCanceling ? "Canceling..." : "Cancel Subscription"}
-                            </Button>
+                            </span>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
