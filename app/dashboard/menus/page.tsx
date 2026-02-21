@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu, Clock } from "lucide-react"
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Upload, QrCode, Download, Loader2, ToggleLeft, ToggleRight, Menu, Clock, Copy, Check, Sparkles } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
@@ -61,6 +61,7 @@ export default function MenusPage() {
     totalViews: 0,
     totalScans: 0
   })
+  const [embedCopied, setEmbedCopied] = useState(false)
 
   useEffect(() => {
     loadMenus()
@@ -303,8 +304,8 @@ export default function MenusPage() {
         <div className="p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Menus</h1>
-              <p className="text-gray-600">Manage all your restaurant menus</p>
+              <h1 className="text-3xl font-bold text-foreground">Menus</h1>
+              <p className="text-muted-foreground">Manage all your restaurant menus</p>
             </div>
             <Link href="/dashboard/menus/upload">
               <Button>
@@ -328,8 +329,8 @@ export default function MenusPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Menus</h1>
-            <p className="text-gray-600">Manage all your restaurant menus</p>
+            <h1 className="text-3xl font-bold text-foreground">Menus</h1>
+            <p className="text-muted-foreground">Manage all your restaurant menus</p>
           </div>
           <Link href="/dashboard/menus/upload">
             <Button>
@@ -345,10 +346,46 @@ export default function MenusPage() {
           </Alert>
         )}
 
+        {/* Embed Code Banner */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-foreground">Get Your Embed Code</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">Paste this snippet before the closing &lt;/body&gt; tag on your website.</p>
+              </div>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">Ready to deploy</Badge>
+            </div>
+            <div className="relative rounded-lg bg-slate-900 p-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-800"
+                onClick={() => {
+                  const restaurantId = menus[0]?.restaurant_id || "YOUR_RESTAURANT_ID"
+                  const code = `<!-- MenuAI Widget -->\n<script src="https://widget.menuai.com/loader.js" data-restaurant-id="${restaurantId}" async></script>`
+                  navigator.clipboard.writeText(code)
+                  setEmbedCopied(true)
+                  setTimeout(() => setEmbedCopied(false), 2000)
+                }}
+              >
+                {embedCopied ? (
+                  <><Check className="h-4 w-4 mr-1" /> Copied!</>
+                ) : (
+                  <><Copy className="h-4 w-4 mr-1" /> Copy Code</>
+                )}
+              </Button>
+              <pre className="text-sm text-green-400 font-mono overflow-x-auto pr-24">
+                <code>{`<!-- MenuAI Widget -->\n<script\n  src="https://widget.menuai.com/loader.js"\n  data-restaurant-id="${menus[0]?.restaurant_id || 'YOUR_RESTAURANT_ID'}"\n  async\n></script>`}</code>
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Search and Stats */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search menus..."
               value={searchQuery}
@@ -367,7 +404,7 @@ export default function MenusPage() {
                   <span className="text-white text-xs">📋</span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Menus</p>
+                  <p className="text-sm text-muted-foreground">Total Menus</p>
                   <p className="text-2xl font-bold">{stats.totalMenus}</p>
                 </div>
               </div>
@@ -380,7 +417,7 @@ export default function MenusPage() {
                   <span className="text-white text-xs">✓</span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Active Menus</p>
+                  <p className="text-sm text-muted-foreground">Active Menus</p>
                   <p className="text-2xl font-bold">{stats.activeMenus}</p>
                 </div>
               </div>
@@ -391,7 +428,7 @@ export default function MenusPage() {
               <div className="flex items-center gap-2">
                 <Eye className="h-5 w-5 text-purple-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Views</p>
+                  <p className="text-sm text-muted-foreground">Total Views</p>
                   <p className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</p>
                 </div>
               </div>
@@ -402,7 +439,7 @@ export default function MenusPage() {
               <div className="flex items-center gap-2">
                 <QrCode className="h-5 w-5 text-orange-600" />
                 <div>
-                  <p className="text-sm text-gray-600">QR Scans</p>
+                  <p className="text-sm text-muted-foreground">QR Scans</p>
                   <p className="text-2xl font-bold">{stats.totalScans.toLocaleString()}</p>
                 </div>
               </div>
@@ -418,8 +455,8 @@ export default function MenusPage() {
                 {menu.image ? (
                   <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <Menu className="h-12 w-12 text-gray-400" />
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <Menu className="h-12 w-12 text-muted-foreground" />
                   </div>
                 )}
                 <div className="absolute top-2 right-2 flex gap-2">
@@ -442,7 +479,7 @@ export default function MenusPage() {
                       <CardTitle className="text-lg hover:underline cursor-pointer">{menu.name}</CardTitle>
                     </Link>
                     <Link href={`/dashboard/restaurants/${menu.restaurant_id}`}>
-                      <p className="text-sm text-blue-600 font-medium hover:underline cursor-pointer">{menu.restaurant?.name}</p>
+                      <p className="text-sm text-primary font-medium hover:underline cursor-pointer">{menu.restaurant?.name}</p>
                     </Link>
                     <CardDescription className="mt-1">{menu.restaurant?.description}</CardDescription>
                   </div>
@@ -500,20 +537,20 @@ export default function MenusPage() {
 
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">
+                  <span className="text-muted-foreground">
                     {menu.stats?.total_items || 0} items
                   </span>
-                  <span className="text-gray-500">Updated {formatDate(menu.updated_at)}</span>
+                  <span className="text-muted-foreground">Updated {formatDate(menu.updated_at)}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                   <div className="text-center">
                     <p className="text-lg font-semibold">{menu.analytics?.total_views?.toLocaleString() || '0'}</p>
-                    <p className="text-xs text-gray-600">Views</p>
+                    <p className="text-xs text-muted-foreground">Views</p>
                   </div>
                   <div className="text-center">
                     <p className="text-lg font-semibold">{menu.analytics?.qr_scans?.toLocaleString() || '0'}</p>
-                    <p className="text-xs text-gray-600">QR Scans</p>
+                    <p className="text-xs text-muted-foreground">QR Scans</p>
                   </div>
                 </div>
 
@@ -553,9 +590,9 @@ export default function MenusPage() {
 
         {filteredMenus.length === 0 && (
           <div className="text-center py-12">
-            <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No menus found</h3>
-            <p className="text-gray-600 mb-4">
+            <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No menus found</h3>
+            <p className="text-muted-foreground mb-4">
               {searchQuery ? "Try adjusting your search terms" : "Get started by uploading your first menu"}
             </p>
             <Link href="/dashboard/menus/upload">
@@ -566,6 +603,22 @@ export default function MenusPage() {
             </Link>
           </div>
         )}
+
+        {/* Make Your AI Smarter */}
+        <Card className="border-dashed">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Make Your AI Smarter</h3>
+              <p className="text-sm text-muted-foreground">Add context sources like your About Us page or chef&apos;s bio to give the chatbot more personality.</p>
+            </div>
+            <Link href={menus[0] ? `/dashboard/restaurants/${menus[0].restaurant_id}/context` : "/dashboard/restaurants"}>
+              <Button variant="outline">Manage Context Sources →</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   )
