@@ -13,7 +13,8 @@ import { TagList } from "@/components/ui/tag-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive, Info } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, Edit, Eye, DollarSign, Loader2, CheckCircle, AlertTriangle, QrCode, Clock, Palette, LayoutTemplate, Link2, Upload, RefreshCw, FileText, XCircle, History, RotateCcw, Archive, Info, Copy } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import ImageMatchingTabContent from "@/components/image-matching/image-matching-tab"
@@ -105,6 +106,8 @@ export default function EditMenuPage() {
   const [loadingPreviewItems, setLoadingPreviewItems] = useState(false)
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("items")
+  const [aiChatbotEnabled, setAiChatbotEnabled] = useState(true)
+  const [embedCopied, setEmbedCopied] = useState(false)
   const [itemCategoryFilter, setItemCategoryFilter] = useState("All")
   const [itemAvailabilityFilter, setItemAvailabilityFilter] = useState<"All" | "Available" | "Unavailable">("All")
   const isUnavailable = (value: any) => {
@@ -1319,57 +1322,142 @@ export default function EditMenuPage() {
           </TabsContent>
 
           <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Menu Settings</CardTitle>
-                <CardDescription>Configure your menu details and preferences</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="menuName">Menu Name</Label>
-                    <Input
-                      id="menuName"
-                      value={menuData.menu.name}
-                      onChange={(e) => setMenuData((prev) => prev ? ({
-                        ...prev,
-                        menu: { ...prev.menu, name: e.target.value }
-                      }) : prev)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <select
-                      id="status"
-                      value={menuData.menu.is_active ? "active" : "inactive"}
-                      onChange={(e) => setMenuData((prev) => prev ? ({
-                        ...prev,
-                        menu: { ...prev.menu, is_active: e.target.value === "active" }
-                      }) : prev)}
-                      className="w-full p-2 border rounded-md"
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
+            <div className="space-y-8">
+              {/* Section 1 — General Settings */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">General Settings</h3>
+                  <p className="text-sm text-muted-foreground">Manage the basic information about this menu.</p>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={menuData.restaurant?.description || ""}
+                  <Label htmlFor="menuName">Menu Name</Label>
+                  <Input
+                    id="menuName"
+                    value={menuData.menu.name}
                     onChange={(e) => setMenuData((prev) => prev ? ({
                       ...prev,
-                      restaurant: prev.restaurant ? { ...prev.restaurant, description: e.target.value } : undefined
+                      menu: { ...prev.menu, name: e.target.value }
                     }) : prev)}
-                    rows={3}
-                    placeholder="Menu description (controlled by restaurant settings)"
-                    disabled
                   />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Restaurant</Label>
+                    <Select value={menuData.restaurant?.id || ""} disabled>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No restaurant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {menuData.restaurant && (
+                          <SelectItem value={menuData.restaurant.id}>{menuData.restaurant.name}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Active Version</Label>
+                    <Select
+                      value={menuData.menu.is_active ? "active" : "inactive"}
+                      onValueChange={(val) => setMenuData((prev) => prev ? ({
+                        ...prev,
+                        menu: { ...prev.menu, is_active: val === "active" }
+                      }) : prev)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Primary Language</Label>
+                    <Select defaultValue="en">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="pt">Portuguese</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select defaultValue={menuData.restaurant?.currency_code || "NGN"}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                        <SelectItem value="GBP">GBP (£)</SelectItem>
+                        <SelectItem value="NGN">NGN (₦)</SelectItem>
+                        <SelectItem value="CAD">CAD ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-b" />
+
+              {/* Section 2 — AI Chatbot */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">AI Chatbot</h3>
+                    <p className="text-sm text-muted-foreground">Allow customers to ask questions about ingredients and allergens.</p>
+                  </div>
+                  <Switch checked={aiChatbotEnabled} onCheckedChange={setAiChatbotEnabled} />
+                </div>
+                {aiChatbotEnabled && (
+                  <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-green-800">AI Assistant is Active</p>
+                      <p className="text-sm text-green-700 mt-0.5">Customers can chat with your menu. <Link href={`/dashboard/analytics/chat`} className="underline hover:text-green-900">View chatbot stats →</Link></p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-b" />
+
+              {/* Section 3 — Embed Menu */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Embed Menu</h3>
+                  <p className="text-sm text-muted-foreground">Copy the code below to embed this menu directly onto your website.</p>
+                </div>
+                <div className="relative rounded-lg bg-slate-900 p-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-800"
+                    onClick={() => {
+                      const code = `<!-- MenuAI Widget -->\n<script src="https://widget.menuai.com/loader.js" data-restaurant-id="${menuData.restaurant?.id || ''}" async></script>`
+                      navigator.clipboard.writeText(code)
+                      setEmbedCopied(true)
+                      setTimeout(() => setEmbedCopied(false), 2000)
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    {embedCopied ? "Copied!" : "Copy Code"}
+                  </Button>
+                  <pre className="text-sm text-green-400 font-mono overflow-x-auto pr-24">
+                    <code>{`<!-- MenuAI Widget -->\n<script\n  src="https://widget.menuai.com/loader.js"\n  data-restaurant-id="${menuData.restaurant?.id || ''}"\n  async\n></script>`}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="image-matching">
