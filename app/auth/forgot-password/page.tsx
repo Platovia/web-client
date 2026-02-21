@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { QrCode, ArrowLeft, Mail, CheckCircle } from "lucide-react"
+import { apiClient } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -28,11 +29,18 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Simulate password reset email
-    setTimeout(() => {
-      setIsSuccess(true)
+    try {
+      const response = await apiClient.forgotPassword(email)
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setIsSuccess(true)
+      }
+    } catch {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   if (isSuccess) {

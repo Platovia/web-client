@@ -735,6 +735,12 @@ class ApiClient {
     });
   }
 
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/auth/forgot-password?email=${encodeURIComponent(email)}`, {
+      method: 'POST',
+    });
+  }
+
   async logout(): Promise<void> {
     this.clearTokens();
   }
