@@ -90,8 +90,8 @@ export default function SettingsPage() {
     <DashboardLayout>
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your account preferences</p>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground">Manage your account preferences</p>
         </div>
 
         <Card>
@@ -161,7 +161,7 @@ export default function SettingsPage() {
               <CardDescription>Manage your subscription and view usage</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 View your current plan, usage statistics, and upgrade or manage your subscription.
               </p>
             </CardContent>

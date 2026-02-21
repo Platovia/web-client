@@ -95,8 +95,8 @@ export default function RestaurantsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Restaurants</h1>
-            <p className="text-gray-600">Manage all your restaurant locations</p>
+            <h1 className="text-3xl font-bold text-foreground">Restaurants</h1>
+            <p className="text-muted-foreground">Manage all your restaurant locations</p>
           </div>
           <Link href="/dashboard/restaurants/new">
             <Button>
@@ -109,7 +109,7 @@ export default function RestaurantsPage() {
         {/* Search and Filters */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search restaurants..."
               value={searchQuery}
@@ -130,9 +130,9 @@ export default function RestaurantsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Store className="h-5 w-5 text-blue-600" />
+                <Store className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Restaurants</p>
+                  <p className="text-sm text-muted-foreground">Total Restaurants</p>
                   {isLoading ? (
                     <Skeleton className="h-8 w-16" />
                   ) : (
@@ -147,7 +147,7 @@ export default function RestaurantsPage() {
               <div className="flex items-center gap-2">
                 <Menu className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Active Restaurants</p>
+                  <p className="text-sm text-muted-foreground">Active Restaurants</p>
                   {isLoading ? (
                     <Skeleton className="h-8 w-16" />
                   ) : (
@@ -162,7 +162,7 @@ export default function RestaurantsPage() {
               <div className="flex items-center gap-2">
                 <QrCode className="h-5 w-5 text-purple-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Created This Month</p>
+                  <p className="text-sm text-muted-foreground">Created This Month</p>
                   {isLoading ? (
                     <Skeleton className="h-8 w-16" />
                   ) : (
@@ -185,7 +185,7 @@ export default function RestaurantsPage() {
                   <span className="text-white text-xs">📊</span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Inactive</p>
+                  <p className="text-sm text-muted-foreground">Inactive</p>
                   {isLoading ? (
                     <Skeleton className="h-8 w-16" />
                   ) : (
@@ -203,7 +203,7 @@ export default function RestaurantsPage() {
             // Loading skeletons
             Array.from({ length: 3 }).map((_, index) => (
               <Card key={index} className="animate-pulse">
-                <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+                <div className="aspect-video bg-muted rounded-t-lg"></div>
                 <CardHeader>
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full" />
@@ -219,11 +219,11 @@ export default function RestaurantsPage() {
             ))
           ) : filteredRestaurants.length === 0 ? (
             <div className="col-span-full text-center py-12">
-              <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 {searchQuery ? "No restaurants found" : "No restaurants yet"}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 {searchQuery 
                   ? "Try adjusting your search terms" 
                   : "Get started by adding your first restaurant location"}
@@ -241,8 +241,8 @@ export default function RestaurantsPage() {
             filteredRestaurants.map((restaurant) => (
               <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <Store className="h-12 w-12 text-gray-400" />
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <Store className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <div className="absolute top-2 right-2">
                     <Badge variant={restaurant.is_active ? "default" : "secondary"}>
@@ -295,13 +295,13 @@ export default function RestaurantsPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     <span className="truncate">
                       {restaurant.address?.street || "No address provided"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Phone className="h-4 w-4" />
                     <span>{restaurant.contact_info?.phone || "No phone provided"}</span>
                   </div>
@@ -310,7 +310,7 @@ export default function RestaurantsPage() {
                     <Badge variant="outline">
                       {restaurant.contact_info?.cuisine || "Cuisine not specified"}
                     </Badge>
-                    <span className="text-gray-500">
+                    <span className="text-muted-foreground">
                       Created {new Date(restaurant.created_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -336,9 +336,9 @@ export default function RestaurantsPage() {
 
         {filteredRestaurants.length === 0 && (
           <div className="text-center py-12">
-            <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No restaurants found</h3>
-            <p className="text-gray-600 mb-4">
+            <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No restaurants found</h3>
+            <p className="text-muted-foreground mb-4">
               {searchQuery ? "Try adjusting your search terms" : "Get started by adding your first restaurant"}
             </p>
             <Link href="/dashboard/restaurants/new">

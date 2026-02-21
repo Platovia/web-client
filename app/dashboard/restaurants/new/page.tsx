@@ -187,8 +187,8 @@ export default function NewRestaurantPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Add New Restaurant</h1>
-            <p className="text-gray-600">Create a new restaurant location</p>
+            <h1 className="text-3xl font-bold text-foreground">Add New Restaurant</h1>
+            <p className="text-muted-foreground">Create a new restaurant location</p>
           </div>
         </div>
 
@@ -290,9 +290,9 @@ export default function NewRestaurantPage() {
 
               <div className="space-y-2">
                 <Label>Restaurant Logo</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-sm text-gray-600 mb-2">Upload your restaurant logo</p>
+                <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
+                  <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground mb-2">Upload your restaurant logo</p>
                   <Button type="button" variant="outline" size="sm">
                     <Upload className="h-4 w-4 mr-2" />
                     Choose File
@@ -433,7 +433,7 @@ export default function NewRestaurantPage() {
                         disabled={hours.closed}
                         className="w-32"
                       />
-                      <span className="text-gray-500">to</span>
+                      <span className="text-muted-foreground">to</span>
                       <Input
                         type="time"
                         value={hours.close}

@@ -265,7 +265,7 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">Welcome to MenuAI!</h2>
-              <p className="text-gray-600">Let's set up your first restaurant</p>
+              <p className="text-muted-foreground">Let's set up your first restaurant</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="name">Restaurant Name <span className="text-red-500">*</span></Label>
@@ -302,7 +302,7 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">Contact Information</h2>
-              <p className="text-gray-600">Add your restaurant's contact details (all optional)</p>
+              <p className="text-muted-foreground">Add your restaurant's contact details (all optional)</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
@@ -339,14 +339,14 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">Add Your Links</h2>
-              <p className="text-gray-600">Provide URLs to your menu or restaurant info</p>
+              <p className="text-muted-foreground">Provide URLs to your menu or restaurant info</p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-              <p className="text-blue-800">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm">
+              <p className="text-primary">
                 <strong>Menu:</strong> Links to your menu pages or PDFs for the AI chatbot to learn your dishes.
               </p>
-              <p className="text-blue-800 mt-1">
+              <p className="text-primary mt-1">
                 <strong>General Info:</strong> Links to pages about hours, location, policies, etc.
               </p>
             </div>
@@ -382,7 +382,7 @@ export default function OnboardingPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeLink(link.id)}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-muted-foreground hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -400,7 +400,7 @@ export default function OnboardingPage() {
               Add another link
             </Button>
 
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               This step is optional. You can add more links later from your dashboard.
             </p>
           </div>
@@ -414,7 +414,7 @@ export default function OnboardingPage() {
                 <AlertTriangle className="h-8 w-8 text-red-600" />
               </div>
               <h2 className="text-2xl font-bold mb-2">Setup Failed</h2>
-              <p className="text-gray-600">{error}</p>
+              <p className="text-muted-foreground">{error}</p>
               <Button onClick={handleRetry} className="mt-4">
                 Try Again
               </Button>
@@ -426,9 +426,9 @@ export default function OnboardingPage() {
         if (isLoading) {
           return (
             <div className="space-y-4 text-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
               <h2 className="text-xl font-bold">Setting up your restaurant...</h2>
-              <p className="text-gray-600">This will only take a moment</p>
+              <p className="text-muted-foreground">This will only take a moment</p>
             </div>
           )
         }
@@ -439,13 +439,13 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-2">Processing Your Links</h2>
-                <p className="text-gray-600">We're extracting information from your sources</p>
+                <p className="text-muted-foreground">We're extracting information from your sources</p>
               </div>
               <SourceProgress
                 sourceIds={sourceIds}
                 onAllComplete={handleSourcesComplete}
               />
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-muted-foreground text-center">
                 You can wait or proceed to the next step
               </p>
               <Button onClick={() => setProcessingComplete(true)} variant="outline" className="w-full">
@@ -463,7 +463,7 @@ export default function OnboardingPage() {
                 <Check className="h-8 w-8 text-green-600" />
               </div>
               <h2 className="text-2xl font-bold mb-2">Your Chatbot is Ready!</h2>
-              <p className="text-gray-600">Embed it on your website with the code below</p>
+              <p className="text-muted-foreground">Embed it on your website with the code below</p>
             </div>
 
             {hasFailedSources && (
@@ -478,7 +478,7 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label>Embed Code</Label>
               <div className="relative">
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto">
                   <code>{embedSnippet}</code>
                 </pre>
                 <Button
@@ -523,17 +523,17 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <QrCode className="h-8 w-8 text-blue-600 mx-auto mb-4" />
-          <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
+          <span className="text-2xl font-bold text-foreground">MenuAI</span>
         </div>
 
         <Card>
           <CardHeader>
             <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>
                   Step {currentStep} of {totalSteps}
                 </span>
