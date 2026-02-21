@@ -43,6 +43,7 @@ import {
   LogOut,
   User,
   Bell,
+  CreditCard,
 } from "lucide-react"
 
 import ProtectedRoute from "@/components/auth/protected-route"
@@ -68,6 +69,12 @@ const navigation = [
     items: [
       { title: "All Menus", url: "/dashboard/menus", icon: Menu },
       { title: "Upload Menu", url: "/dashboard/menus/upload", icon: Upload },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      { title: "Billing & Usage", url: "/dashboard/settings/billing", icon: CreditCard },
     ],
   },
 ]
@@ -99,10 +106,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-2 px-4 py-2">
-              <QrCode className="h-8 w-8 text-blue-600" />
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                <QrCode className="h-5 w-5 text-primary-foreground" />
+              </div>
               <div>
-                <span className="text-lg font-bold text-gray-900">MenuAI</span>
-                <p className="text-xs text-gray-600">
+                <span className="text-lg font-bold text-foreground">MenuAI</span>
+                <p className="text-xs text-muted-foreground">
                   {primaryCompany?.name || "Loading..."}
                 </p>
               </div>
@@ -146,7 +155,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <span className="text-sm font-medium truncate">
                           {user?.full_name || "Loading..."}
                         </span>
-                        <span className="text-xs text-gray-500 truncate">
+                        <span className="text-xs text-muted-foreground truncate">
                           {primaryCompany?.name || "Loading..."}
                         </span>
                       </div>
