@@ -31,7 +31,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
-  ArrowLeft,
   Edit,
   QrCode,
   Eye,
@@ -53,10 +52,20 @@ import {
   Loader2,
   XCircle,
   Info,
+  Settings,
 } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { StatCard } from "@/components/dashboard/stat-card"
 import { apiClient, type Restaurant, type RestaurantSource } from "@/lib/api"
 
 interface MenuWithDetails {
@@ -519,36 +528,40 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
           </Alert>
         )}
 
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-4">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard/restaurants">All Restaurants</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{restaurant.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard/restaurants">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Restaurants
-              </Button>
-            </Link>
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900">{restaurant.name}</h1>
-                <Badge variant={restaurant.is_active ? "default" : "secondary"}>
-                  {restaurant.is_active ? "active" : "inactive"}
-                </Badge>
-              </div>
-              <p className="text-gray-600">{restaurant.description}</p>
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-foreground">{restaurant.name}</h1>
+              <Badge variant={restaurant.is_active ? "default" : "secondary"}>
+                {restaurant.is_active ? "Online" : "Offline"}
+              </Badge>
             </div>
+            <p className="text-muted-foreground">{restaurant.description}</p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href={`/dashboard/menus?restaurant=${restaurant.id}`}>
-              <Button variant="outline">
-                <Eye className="h-4 w-4 mr-2" />
-                View Menus
+            <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
               </Button>
             </Link>
-            <Button onClick={generateQRCode}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Download QR
+            <Button>
+              <MessageCircle className="h-4 w-4 mr-2" />
+              + New Live Chat
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -585,50 +598,30 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <MenuIcon className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Active Menus</p>
-                      <p className="text-2xl font-bold">{menus.filter(m => m.is_active).length}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">QR Scans</p>
-                      <p className="text-2xl font-bold">{analytics.qrScans.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5 text-purple-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Chat Sessions</p>
-                      <p className="text-2xl font-bold">{analytics.chatSessions.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-orange-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Total Views</p>
-                      <p className="text-2xl font-bold">{analytics.totalViews.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="Active Menus"
+                value={menus.filter(m => m.is_active).length}
+                icon={MenuIcon}
+                trend={{ value: "Active", positive: true }}
+              />
+              <StatCard
+                title="QR Scans"
+                value={analytics.qrScans.toLocaleString()}
+                icon={QrCode}
+                sparklineData={[5, 8, 12, 10, 15, 18, 22]}
+              />
+              <StatCard
+                title="Chat Sessions"
+                value={analytics.chatSessions.toLocaleString()}
+                icon={MessageCircle}
+                sparklineData={[2, 4, 3, 6, 5, 8, 7]}
+              />
+              <StatCard
+                title="Total Views"
+                value={analytics.totalViews.toLocaleString()}
+                icon={Eye}
+                sparklineData={[10, 15, 12, 20, 18, 25, 30]}
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -639,10 +632,10 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Address</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {restaurant.address?.street || "No address provided"}
                         {restaurant.address?.city && `, ${restaurant.address.city}`}
                         {restaurant.address?.state && `, ${restaurant.address.state}`}
@@ -651,18 +644,18 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-gray-400" />
+                    <Phone className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Phone</p>
-                      <p className="text-sm text-gray-600">{restaurant.contact_info?.phone || "No phone provided"}</p>
+                      <p className="text-sm text-muted-foreground">{restaurant.contact_info?.phone || "No phone provided"}</p>
                     </div>
                   </div>
                   {restaurant.contact_info?.website && (
                     <div className="flex items-center gap-3">
-                      <Globe className="h-5 w-5 text-gray-400" />
+                      <Globe className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Website</p>
-                        <a href={restaurant.contact_info.website} className="text-sm text-blue-600 hover:underline">
+                        <a href={restaurant.contact_info.website} className="text-sm text-primary hover:underline">
                           {restaurant.contact_info.website}
                         </a>
                       </div>
@@ -670,18 +663,18 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                   )}
                   {restaurant.contact_info?.email && (
                     <div className="flex items-center gap-3">
-                      <span className="h-5 w-5 text-gray-400">✉️</span>
+                      <span className="h-5 w-5 text-muted-foreground">✉️</span>
                       <div>
                         <p className="font-medium">Email</p>
-                        <p className="text-sm text-gray-600">{restaurant.contact_info.email}</p>
+                        <p className="text-sm text-muted-foreground">{restaurant.contact_info.email}</p>
                       </div>
                     </div>
                   )}
                   <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-gray-400" />
+                    <Clock className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Created</p>
-                      <p className="text-sm text-gray-600">{new Date(restaurant.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(restaurant.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -728,7 +721,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Menus</h3>
-                <p className="text-gray-600">Manage your restaurant's menus</p>
+                <p className="text-muted-foreground">Manage your restaurant's menus</p>
               </div>
               <Link href={`/dashboard/menus/upload?restaurant=${restaurant.id}`}>
                 <Button>
@@ -741,14 +734,14 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {isLoadingMenus ? (
                 <div className="col-span-full text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-600 mt-2">Loading menus...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading menus...</p>
                 </div>
               ) : menus.length === 0 ? (
                 <div className="col-span-full text-center py-8">
-                  <MenuIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No menus found</h3>
-                  <p className="text-gray-600 mb-4">This restaurant doesn't have any menus yet.</p>
+                  <MenuIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No menus found</h3>
+                  <p className="text-muted-foreground mb-4">This restaurant doesn't have any menus yet.</p>
                   <Link href={`/dashboard/menus/upload?restaurant=${restaurant?.id}`}>
                     <Button>
                       <Upload className="h-4 w-4 mr-2" />
@@ -767,8 +760,8 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                         className="w-full h-full object-cover" 
                       />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <MenuIcon className="h-12 w-12 text-gray-400" />
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <MenuIcon className="h-12 w-12 text-muted-foreground" />
                       </div>
                     )}
                     <div className="absolute top-2 right-2">
@@ -786,7 +779,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                       <span>{menu.stats?.total_items || 0} items</span>
                       <span>Updated {new Date(menu.updated_at).toLocaleDateString()}</span>
                     </div>
@@ -815,7 +808,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Restaurant Context</h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   These sources help your chatbot answer general questions about your restaurant (hours, location, policies, etc.)
                 </p>
               </div>
@@ -921,9 +914,9 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
             ) : contextSources.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No context sources yet</h3>
-                  <p className="text-gray-600 mb-4">
+                  <Info className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No context sources yet</h3>
+                  <p className="text-muted-foreground mb-4">
                     Add URLs or upload documents to help your chatbot answer questions about your restaurant.
                   </p>
                 </CardContent>
@@ -937,9 +930,9 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {source.source_type === "url" ? (
-                              <Link2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             ) : (
-                              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             )}
                             <span className="font-medium truncate">
                               {source.label || source.url || source.file_name || "Unknown source"}
@@ -948,12 +941,12 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                           </div>
 
                           {source.url && (
-                            <p className="text-sm text-gray-500 truncate mb-2">{source.url}</p>
+                            <p className="text-sm text-muted-foreground truncate mb-2">{source.url}</p>
                           )}
 
                           {source.raw_content && (
                             <div className="bg-gray-50 rounded p-3 mt-2">
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                 {source.raw_content.length > 200
                                   ? source.raw_content.substring(0, 200) + "..."
                                   : source.raw_content}
@@ -965,7 +958,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                             <p className="text-sm text-red-500 mt-2">{source.error_message}</p>
                           )}
 
-                          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                             {source.last_processed_at && (
                               <span>
                                 Last processed: {new Date(source.last_processed_at).toLocaleString()}
@@ -1065,15 +1058,15 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Active Menus</span>
-                    <span className="text-sm text-gray-600">{menus.filter(m => m.is_active).length}</span>
+                    <span className="text-sm text-muted-foreground">{menus.filter(m => m.is_active).length}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Total Menus</span>
-                    <span className="text-sm text-gray-600">{menus.length}</span>
+                    <span className="text-sm text-muted-foreground">{menus.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Average Views per Menu</span>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       {menus.length > 0 ? Math.round(analytics.totalViews / menus.length).toLocaleString() : 0}
                     </span>
                   </div>
@@ -1089,7 +1082,7 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
                 <CardDescription>Configure settings for {restaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Settings panel coming soon...</p>
+                <p className="text-muted-foreground">Settings panel coming soon...</p>
               </CardContent>
             </Card>
           </TabsContent>
