@@ -521,8 +521,8 @@ export default function UploadMenuPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Upload Menu</h1>
-            <p className="text-gray-600">Upload menu images and let AI extract items automatically</p>
+            <h1 className="text-3xl font-bold text-foreground">Upload Menu</h1>
+            <p className="text-muted-foreground">Upload menu images and let AI extract items automatically</p>
           </div>
         </div>
 
@@ -612,7 +612,7 @@ export default function UploadMenuPage() {
               <CardDescription>
                 Upload clear photos of your menu pages or PDF files (max 10 pages). Our AI will automatically extract items, prices, and descriptions.
               </CardDescription>
-              <div className="mt-3 grid gap-2 text-sm text-gray-700 md:grid-cols-2">
+              <div className="mt-3 grid gap-2 text-sm text-foreground md:grid-cols-2">
                 <div className="rounded-md border bg-muted/40 p-3">
                   <p className="font-medium">Best results: real dish photos</p>
                   <p className="text-muted-foreground text-xs mt-1">
@@ -630,10 +630,10 @@ export default function UploadMenuPage() {
             <CardContent>
               <div className="space-y-4">
                 {/* Upload Area */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-                  <FileImage className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-700 mb-2">Upload Menu Files</p>
-                  <p className="text-sm text-gray-500 mb-4">Drag and drop images or PDF files here, or click to select</p>
+                <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                  <FileImage className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-lg font-medium text-foreground mb-2">Upload Menu Files</p>
+                  <p className="text-sm text-muted-foreground mb-4">Drag and drop images or PDF files here, or click to select</p>
                   <Input
                     type="file"
                     multiple
@@ -685,7 +685,7 @@ export default function UploadMenuPage() {
                               {/* Category selector */}
                               {file.status === "pending" && (
                                 <div className="space-y-1">
-                                  <Label className="text-xs text-gray-500">Category</Label>
+                                  <Label className="text-xs text-muted-foreground">Category</Label>
                                   <Select
                                     value={file.category}
                                     onValueChange={(value: "menu" | "context") => updateFileCategory(file.id, value)}
@@ -702,7 +702,7 @@ export default function UploadMenuPage() {
                               )}
 
                               {/* Show file type and PDF info */}
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span className="capitalize">{file.fileType}</span>
                                 {file.fileType === "pdf" && file.pdfInfo && (
                                   <span>• {file.pdfInfo.pageCount > 0 ? `${file.pdfInfo.pageCount} pages` : 'Processing...'}</span>
@@ -722,7 +722,7 @@ export default function UploadMenuPage() {
 
                               {file.status === "processing" && (
                                 <div className="space-y-1">
-                                  <div className="flex items-center gap-2 text-sm text-blue-600">
+                                  <div className="flex items-center gap-2 text-sm text-primary">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     {file.category === "context"
                                       ? "Processing context document..."

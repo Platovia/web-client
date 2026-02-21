@@ -116,10 +116,10 @@ export default function MenuOCRPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return 'bg-green-100 text-green-800'
-      case 'processing': return 'bg-blue-100 text-blue-800'
+      case 'processing': return 'bg-primary/10 text-primary'
       case 'failed': return 'bg-red-100 text-red-800'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
+      default: return 'bg-muted text-muted-foreground'
     }
   }
 
@@ -135,8 +135,8 @@ export default function MenuOCRPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">OCR Processing</h1>
-              <p className="text-gray-600">Loading OCR data...</p>
+              <h1 className="text-3xl font-bold text-foreground">OCR Processing</h1>
+              <p className="text-muted-foreground">Loading OCR data...</p>
             </div>
           </div>
           <div className="flex items-center justify-center py-12">
@@ -160,8 +160,8 @@ export default function MenuOCRPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">OCR Processing</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold text-foreground">OCR Processing</h1>
+              <p className="text-muted-foreground">
                 OCR jobs for menu: <span className="font-medium">{menu?.name}</span>
               </p>
             </div>
@@ -186,12 +186,12 @@ export default function MenuOCRPage() {
         {ocrJobs.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No OCR Jobs Found</h3>
-              <p className="text-gray-600 mb-4">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No OCR Jobs Found</h3>
+              <p className="text-muted-foreground mb-4">
                 No OCR processing jobs have been created for this menu yet.
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 OCR jobs are automatically created when you upload menu images.
               </p>
             </CardContent>
@@ -243,21 +243,21 @@ export default function MenuOCRPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                       <div>
                         <p className="text-2xl font-bold">{jobData.job.total_images}</p>
-                        <p className="text-sm text-gray-600">Total Images</p>
+                        <p className="text-sm text-muted-foreground">Total Images</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">{jobData.job.processed_images}</p>
-                        <p className="text-sm text-gray-600">Processed</p>
+                        <p className="text-sm text-muted-foreground">Processed</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">{jobData.results.length}</p>
-                        <p className="text-sm text-gray-600">Results</p>
+                        <p className="text-sm text-muted-foreground">Results</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold">
                           {jobData.results.filter(r => r.is_manually_corrected).length}
                         </p>
-                        <p className="text-sm text-gray-600">Corrected</p>
+                        <p className="text-sm text-muted-foreground">Corrected</p>
                       </div>
                     </div>
 
@@ -328,7 +328,7 @@ export default function MenuOCRPage() {
                                       <Textarea
                                         value={result.raw_text || "No text extracted"}
                                         readOnly
-                                        className="mt-1 bg-gray-50"
+                                        className="mt-1 bg-muted"
                                         rows={6}
                                       />
                                     </div>
@@ -343,7 +343,7 @@ export default function MenuOCRPage() {
                                           "No structured data"
                                         }
                                         readOnly
-                                        className="mt-1 bg-gray-50 font-mono text-sm"
+                                        className="mt-1 bg-muted font-mono text-sm"
                                         rows={6}
                                       />
                                     </div>
@@ -352,7 +352,7 @@ export default function MenuOCRPage() {
                                   {result.correction_notes && (
                                     <div>
                                       <Label className="text-sm font-medium">Correction Notes</Label>
-                                      <p className="text-sm text-gray-600 mt-1">{result.correction_notes}</p>
+                                      <p className="text-sm text-muted-foreground mt-1">{result.correction_notes}</p>
                                     </div>
                                   )}
                                 </div>
@@ -364,7 +364,7 @@ export default function MenuOCRPage() {
                         <TabsContent value="corrections">
                           <div className="space-y-4">
                             {jobData.results.filter(r => r.is_manually_corrected).length === 0 ? (
-                              <p className="text-gray-600 text-center py-8">
+                              <p className="text-muted-foreground text-center py-8">
                                 No manual corrections have been made yet.
                               </p>
                             ) : (
@@ -381,7 +381,7 @@ export default function MenuOCRPage() {
                                             <Textarea
                                               value={result.raw_text || ""}
                                               readOnly
-                                              className="mt-1 bg-gray-50"
+                                              className="mt-1 bg-muted"
                                               rows={4}
                                             />
                                           </div>
@@ -390,7 +390,7 @@ export default function MenuOCRPage() {
                                             <Textarea
                                               value={result.corrected_text || ""}
                                               readOnly
-                                              className="mt-1 bg-gray-50"
+                                              className="mt-1 bg-muted"
                                               rows={4}
                                             />
                                           </div>
@@ -398,7 +398,7 @@ export default function MenuOCRPage() {
                                         {result.correction_notes && (
                                           <div>
                                             <Label className="text-sm">Notes</Label>
-                                            <p className="text-sm text-gray-600">{result.correction_notes}</p>
+                                            <p className="text-sm text-muted-foreground">{result.correction_notes}</p>
                                           </div>
                                         )}
                                       </div>
@@ -434,7 +434,7 @@ export default function MenuOCRPage() {
                     <Textarea
                       value={editingResult.raw_text || ""}
                       readOnly
-                      className="mt-1 bg-gray-50"
+                      className="mt-1 bg-muted"
                       rows={8}
                     />
                   </div>

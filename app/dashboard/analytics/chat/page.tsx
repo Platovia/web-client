@@ -32,13 +32,13 @@ const formatHour = (hour: number) => {
 }
 
 const getHourIntensityClass = (count: number, maxCount: number) => {
-  if (maxCount === 0) return 'bg-blue-50 text-blue-900'
+  if (maxCount === 0) return 'bg-primary/5 text-primary'
   const intensity = count / maxCount
-  if (intensity === 0) return 'bg-blue-50 text-blue-900'
-  if (intensity < 0.25) return 'bg-blue-100 text-blue-900'
-  if (intensity < 0.5) return 'bg-blue-200 text-blue-900'
-  if (intensity < 0.75) return 'bg-blue-400 text-white'
-  return 'bg-blue-600 text-white'
+  if (intensity === 0) return 'bg-primary/5 text-primary'
+  if (intensity < 0.25) return 'bg-primary/10 text-primary'
+  if (intensity < 0.5) return 'bg-primary/20 text-primary'
+  if (intensity < 0.75) return 'bg-primary/60 text-primary-foreground'
+  return 'bg-primary text-primary-foreground'
 }
 
 export default function ChatAnalyticsPage() {
@@ -104,11 +104,11 @@ export default function ChatAnalyticsPage() {
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Chat Analytics</h1>
-            <p className="text-gray-600">Insights into your chatbot conversations</p>
+            <h1 className="text-3xl font-bold text-foreground">Chat Analytics</h1>
+            <p className="text-muted-foreground">Insights into your chatbot conversations</p>
           </div>
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </div>
       </DashboardLayout>
@@ -120,8 +120,8 @@ export default function ChatAnalyticsPage() {
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Chat Analytics</h1>
-            <p className="text-gray-600">Insights into your chatbot conversations</p>
+            <h1 className="text-3xl font-bold text-foreground">Chat Analytics</h1>
+            <p className="text-muted-foreground">Insights into your chatbot conversations</p>
           </div>
           <div className="text-center py-12 text-red-600">{error}</div>
         </div>
@@ -134,8 +134,8 @@ export default function ChatAnalyticsPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Chat Analytics</h1>
-          <p className="text-gray-600">Insights into your chatbot conversations</p>
+          <h1 className="text-3xl font-bold text-foreground">Chat Analytics</h1>
+          <p className="text-muted-foreground">Insights into your chatbot conversations</p>
         </div>
 
         {/* Summary Cards */}
@@ -189,7 +189,7 @@ export default function ChatAnalyticsPage() {
           </CardHeader>
           <CardContent>
             {!hasConversationData ? (
-              <div className="text-center py-12 text-gray-500">No conversation data yet</div>
+              <div className="text-center py-12 text-muted-foreground">No conversation data yet</div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={analyticsData?.conversations_over_time}>
@@ -213,13 +213,13 @@ export default function ChatAnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!analyticsData?.popular_questions?.length ? (
-                <div className="text-center py-8 text-gray-500">No questions asked yet</div>
+                <div className="text-center py-8 text-muted-foreground">No questions asked yet</div>
               ) : (
                 analyticsData.popular_questions.map((q, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500 w-6">{index + 1}.</span>
+                        <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
                         <p className="text-sm font-medium truncate max-w-[300px]" title={q.question}>{q.question}</p>
                       </div>
                       <Badge variant="secondary">{q.count}</Badge>
@@ -239,7 +239,7 @@ export default function ChatAnalyticsPage() {
             </CardHeader>
             <CardContent>
               {!analyticsData?.peak_chat_hours?.some(h => h.count > 0) ? (
-                <div className="text-center py-8 text-gray-500">No chat hour data yet</div>
+                <div className="text-center py-8 text-muted-foreground">No chat hour data yet</div>
               ) : (
                 <div className="grid grid-cols-6 gap-2">
                   {analyticsData.peak_chat_hours.map((h) => (

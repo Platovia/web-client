@@ -105,8 +105,8 @@ export default function AnalyticsPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-600">Track performance across all your restaurants</p>
+          <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
+          <p className="text-muted-foreground">Track performance across all your restaurants</p>
         </div>
 
         {/* Overview Stats */}
@@ -167,17 +167,17 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {analyticsData.topRestaurants.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No data available yet</div>
+                <div className="text-center py-8 text-muted-foreground">No data available yet</div>
               ) : (
                 analyticsData.topRestaurants.map((restaurant: any, index: number) => (
                   <div key={restaurant.name} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">#{index + 1}</span>
                       </div>
                       <div>
                         <h4 className="font-medium">{restaurant.name}</h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{restaurant.views} views</span>
                           <span>{restaurant.scans} scans</span>
                           <span>{restaurant.chats} chats</span>
@@ -203,13 +203,13 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="space-y-4">
                 {analyticsData.weeklyStats.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No data available yet</div>
+                  <div className="text-center py-8 text-muted-foreground">No data available yet</div>
                 ) : (
                   analyticsData.weeklyStats.map((day: any) => (
                     <div key={day.day} className="flex items-center justify-between">
                       <span className="text-sm font-medium w-12">{day.day}</span>
                       <div className="flex-1 mx-4">
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             <span>{day.views}</span>
@@ -256,7 +256,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {analyticsData.chatInsights.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No questions asked yet</div>
+                <div className="text-center py-8 text-muted-foreground">No questions asked yet</div>
               ) : (
                 analyticsData.chatInsights.map((insight: any, index: number) => (
                   <div key={insight.question} className="space-y-2">
@@ -279,12 +279,12 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-primary/10 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-medium text-blue-900">Peak Hours</h4>
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h4 className="font-medium text-primary">Peak Hours</h4>
                   </div>
-                  <p className="text-sm text-blue-800">
+                  <p className="text-sm text-primary">
                     {analyticsData.peakHours === "No data available" 
                       ? "Not enough data to determine peak hours" 
                       : `Most activity between ${analyticsData.peakHours}`}

@@ -216,20 +216,20 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
           <div className="flex items-center gap-4">
             <ArrowLeft className="h-6 w-6" />
             <div className="space-y-2">
-              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse" />
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-64 bg-muted rounded animate-pulse" />
             </div>
           </div>
           <Card>
             <CardHeader>
-              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+              <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-48 bg-muted rounded animate-pulse" />
             </CardHeader>
             <CardContent className="space-y-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-2">
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                  <div className="h-10 w-full bg-muted rounded animate-pulse" />
                 </div>
               ))}
             </CardContent>
@@ -245,8 +245,8 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
         <div className="p-6 flex items-center justify-center min-h-96">
           <div className="text-center">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Restaurant</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Error Loading Restaurant</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <div className="space-x-4">
               <Button variant="outline" onClick={() => router.back()}>
                 Go Back
@@ -272,8 +272,8 @@ export default function EditRestaurantPage({ params }: { params: { id: string } 
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Restaurant</h1>
-              <p className="text-gray-600">Update restaurant information and settings</p>
+              <h1 className="text-3xl font-bold text-foreground">Edit Restaurant</h1>
+              <p className="text-muted-foreground">Update restaurant information and settings</p>
             </div>
           </div>
           <Button 

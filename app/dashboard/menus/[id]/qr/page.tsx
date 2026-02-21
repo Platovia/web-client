@@ -120,8 +120,8 @@ export default function MenuQRPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">QR Code</h1>
-              <p className="text-gray-600">Loading menu QR code...</p>
+              <h1 className="text-3xl font-bold text-foreground">QR Code</h1>
+              <p className="text-muted-foreground">Loading menu QR code...</p>
             </div>
           </div>
           <div className="flex items-center justify-center py-12">
@@ -144,8 +144,8 @@ export default function MenuQRPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">QR Code & Embed</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">QR Code & Embed</h1>
+            <p className="text-muted-foreground">
               QR code and embeddable chatbot for menu: <span className="font-medium">{menu?.name}</span>
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function MenuQRPage() {
             <CardContent className="space-y-4">
               {qrInfo ? (
                 <>
-                  <div className="flex justify-center p-6 bg-white border-2 border-gray-200 rounded-lg">
+                  <div className="flex justify-center p-6 bg-white border-2 border-border rounded-lg">
                     <img
                       src={qrInfo.qr_code_url}
                       alt="Menu QR Code"
@@ -212,9 +212,9 @@ export default function MenuQRPage() {
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No QR Code Generated</h3>
-                  <p className="text-gray-600 mb-4">
+                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No QR Code Generated</h3>
+                  <p className="text-muted-foreground mb-4">
                     Generate a QR code for customers to access this menu
                   </p>
                   <Button
@@ -251,13 +251,13 @@ export default function MenuQRPage() {
                 <>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Public Menu URL</label>
+                      <label className="text-sm font-medium text-foreground">Public Menu URL</label>
                       <div className="flex gap-2 mt-1">
                         <input
                           type="text"
                           value={qrInfo.public_menu_url}
                           readOnly
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50"
+                          className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-muted"
                         />
                         <Button
                           size="sm"
@@ -282,13 +282,13 @@ export default function MenuQRPage() {
 
                     {qrInfo.token && (
                       <div>
-                        <label className="text-sm font-medium text-gray-700">Access Token</label>
+                        <label className="text-sm font-medium text-foreground">Access Token</label>
                         <div className="flex gap-2 mt-1">
                           <input
                             type="text"
                             value={qrInfo.token}
                             readOnly
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 font-mono"
+                            className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-muted font-mono"
                           />
                           <Button
                             size="sm"
@@ -307,8 +307,8 @@ export default function MenuQRPage() {
 
                     {qrInfo.expires_at && (
                       <div>
-                        <label className="text-sm font-medium text-gray-700">Expires</label>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <label className="text-sm font-medium text-foreground">Expires</label>
+                        <p className="text-sm text-muted-foreground mt-1">
                           {new Date(qrInfo.expires_at).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -322,8 +322,8 @@ export default function MenuQRPage() {
                   </div>
 
                   <div className="pt-4 border-t">
-                    <h4 className="font-medium text-gray-900 mb-2">Instructions</h4>
-                    <ul className="text-sm text-gray-600 space-y-1">
+                    <h4 className="font-medium text-foreground mb-2">Instructions</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
                       <li>• Print and place the QR code on tables</li>
                       <li>• Customers scan to view the menu instantly</li>
                       <li>• No app download required</li>
@@ -332,7 +332,7 @@ export default function MenuQRPage() {
                   </div>
                 </>
               ) : (
-                <div className="text-gray-500 text-sm">
+                <div className="text-muted-foreground text-sm">
                   Generate a QR code to see detailed information here.
                 </div>
               )}
@@ -354,7 +354,7 @@ export default function MenuQRPage() {
                 <Badge variant={menu?.is_active ? "default" : "secondary"}>
                   {menu?.is_active ? "Active" : "Inactive"}
                 </Badge>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {menu?.is_active 
                     ? "Menu is live and accessible via QR code"
                     : "Menu is inactive and not accessible to customers"

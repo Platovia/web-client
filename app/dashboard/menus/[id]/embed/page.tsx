@@ -95,8 +95,8 @@ export default function MenuEmbedSnippetPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Embed Chatbot</h1>
-              <p className="text-gray-600">Loading embed configuration...</p>
+              <h1 className="text-3xl font-bold text-foreground">Embed Chatbot</h1>
+              <p className="text-muted-foreground">Loading embed configuration...</p>
             </div>
           </div>
         </div>
@@ -116,8 +116,8 @@ export default function MenuEmbedSnippetPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">Embed Chatbot</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Embed Chatbot</h1>
+            <p className="text-muted-foreground">
               Generate an embed code to add the menu chatbot to any website
             </p>
           </div>
@@ -230,7 +230,7 @@ export default function MenuEmbedSnippetPage() {
                     <Textarea
                       id="snippet"
                       readOnly
-                      className="font-mono text-xs bg-gray-50 min-h-[120px] pr-12"
+                      className="font-mono text-xs bg-muted min-h-[120px] pr-12"
                       value={scriptSnippet}
                     />
                     <Button
@@ -249,7 +249,7 @@ export default function MenuEmbedSnippetPage() {
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-600 space-y-1">
+                <div className="text-sm text-muted-foreground space-y-1">
                   <p><strong>Instructions:</strong></p>
                   <ul className="list-disc list-inside space-y-1 ml-4">
                     <li>Copy the code above</li>
@@ -273,7 +273,7 @@ export default function MenuEmbedSnippetPage() {
                     <Input
                       readOnly
                       value={previewUrl}
-                      className="flex-1 text-sm bg-gray-50"
+                      className="flex-1 text-sm bg-muted"
                     />
                     <Button
                       size="sm"
@@ -285,7 +285,7 @@ export default function MenuEmbedSnippetPage() {
                   </div>
                 </div>
                 
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   <p><strong>Note:</strong> The chatbot will use the same menu data and AI responses as your QR code menu. Make sure your menu is active and up-to-date before embedding.</p>
                 </div>
               </CardContent>
