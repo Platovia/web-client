@@ -53,6 +53,8 @@ import {
   XCircle,
   Info,
   Settings,
+  Palette,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -66,6 +68,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { StatCard } from "@/components/dashboard/stat-card"
+import { PhonePreview } from "@/components/dashboard/phone-preview"
 import { apiClient, type Restaurant, type RestaurantSource } from "@/lib/api"
 
 interface MenuWithDetails {
@@ -624,96 +627,102 @@ export default function RestaurantDetailPage({ params }: { params: Promise<{ id:
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Restaurant Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Restaurant Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Address</p>
-                      <p className="text-sm text-muted-foreground">
-                        {restaurant.address?.street || "No address provided"}
-                        {restaurant.address?.city && `, ${restaurant.address.city}`}
-                        {restaurant.address?.state && `, ${restaurant.address.state}`}
-                        {restaurant.address?.zipCode && ` ${restaurant.address.zipCode}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Phone</p>
-                      <p className="text-sm text-muted-foreground">{restaurant.contact_info?.phone || "No phone provided"}</p>
-                    </div>
-                  </div>
-                  {restaurant.contact_info?.website && (
-                    <div className="flex items-center gap-3">
-                      <Globe className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Website</p>
-                        <a href={restaurant.contact_info.website} className="text-sm text-primary hover:underline">
-                          {restaurant.contact_info.website}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {restaurant.contact_info?.email && (
-                    <div className="flex items-center gap-3">
-                      <span className="h-5 w-5 text-muted-foreground">✉️</span>
-                      <div>
-                        <p className="font-medium">Email</p>
-                        <p className="text-sm text-muted-foreground">{restaurant.contact_info.email}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Created</p>
-                      <p className="text-sm text-muted-foreground">{new Date(restaurant.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Management Cards */}
+              <div className="lg:col-span-2 space-y-6">
+                <h3 className="text-lg font-semibold text-foreground">Management</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href={menus.length > 0 ? `/dashboard/menus/${menus[0].id}/edit` : `/dashboard/menus/upload?restaurant=${restaurant.id}`}>
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center mb-3">
+                          <Edit className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="font-semibold">Edit Menu</p>
+                        <p className="text-sm text-muted-foreground">Upload menus, update photos, and organize categories.</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href={`/dashboard/restaurants/${restaurant.id}?tab=context`} onClick={() => setActiveTab("context")}>
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center mb-3">
+                          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="font-semibold">Chatbot Training</p>
+                        <p className="text-sm text-muted-foreground">Feed your chatbot background information for your guests.</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href={menus.length > 0 ? `/dashboard/menus/${menus[0].id}/qr` : "#"}>
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center mb-3">
+                          <QrCode className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="font-semibold">QR Settings</p>
+                        <p className="text-sm text-muted-foreground">Customize QR codes, table tent designs, and sticker templates.</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href={menus.length > 0 ? `/dashboard/menus/${menus[0].id}/edit?tab=design` : "#"}>
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center mb-3">
+                          <Palette className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="font-semibold">Appearance</p>
+                        <p className="text-sm text-muted-foreground">Customize your menu&apos;s visual colors, fonts, and formatting.</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
 
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Link href={`/dashboard/menus/upload?restaurant=${restaurant.id}`}>
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload New Menu
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="w-full justify-start bg-transparent" onClick={generateQRCode}>
+                {/* Coming Soon Card */}
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4 flex items-start gap-4">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold">Marketing Insights</p>
+                        <Badge variant="secondary" className="text-xs">NEW</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">Get AI-powered insights on customer preferences, peak hours, and popular menu items.</p>
+                      <Button variant="outline" size="sm">Notify Me</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Share Link & QR buttons */}
+                <div className="flex gap-3">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const activeMenu = menus.find(m => m.qr_code_data)
+                    if (activeMenu) {
+                      navigator.clipboard.writeText(`${window.location.origin}/menu/${restaurant.id}?token=${activeMenu.qr_code_data}`)
+                    }
+                  }}>
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Share Link
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={generateQRCode}>
                     <QrCode className="h-4 w-4 mr-2" />
-                    Download QR Code
+                    Show QR
                   </Button>
-                  <Link href={`/dashboard/menus?restaurant=${restaurant.id}`}>
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Restaurant Menus
-                    </Button>
-                  </Link>
-                  <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Restaurant Details
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="w-full justify-start bg-transparent" onClick={() => setActiveTab("context")}>
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Manage Knowledge Base
-                  </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+
+              {/* Phone Preview */}
+              <div className="hidden lg:flex justify-center">
+                <PhonePreview
+                  previewUrl={
+                    menus.find(m => m.qr_code_data)
+                      ? `/menu/${restaurant.id}?token=${menus.find(m => m.qr_code_data)?.qr_code_data}`
+                      : undefined
+                  }
+                />
+              </div>
             </div>
           </TabsContent>
 
