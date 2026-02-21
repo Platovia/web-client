@@ -22,7 +22,7 @@ export default function SuccessPage() {
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <QrCode className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-          <span className="text-3xl font-bold text-gray-900">MenuAI</span>
+          <span className="text-3xl font-bold text-gray-900">Platovia</span>
         </div>
 
         <Card className="text-center">
@@ -30,13 +30,13 @@ export default function SuccessPage() {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="h-12 w-12 text-green-600" />
             </div>
-            <CardTitle className="text-3xl mb-4">🎉 Welcome to MenuAI, {userName}!</CardTitle>
+            <CardTitle className="text-3xl mb-4">Welcome to Platovia, {userName}!</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="bg-blue-50 p-6 rounded-lg">
               <h3 className="text-xl font-semibold mb-4">Your account is ready!</h3>
               <p className="text-gray-700 mb-4">
-                <strong>{companyName}</strong> has been successfully set up with MenuAI. You can now:
+                <strong>{companyName}</strong> has been successfully set up with Platovia. You can now:
               </p>
               <div className="grid md:grid-cols-2 gap-4 text-left">
                 <div className="space-y-2">

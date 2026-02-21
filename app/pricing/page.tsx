@@ -216,7 +216,7 @@ export default function PricingPage() {
             Ready to let AI handle menu questions?
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Join hundreds of restaurants already using MenuAI to delight their
+            Join hundreds of restaurants already using Platovia to delight their
             guests.
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">

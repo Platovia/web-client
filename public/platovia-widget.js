@@ -12,7 +12,7 @@
 
   var token = getAttr('data-token');
   if (!token) {
-    console.error('[MenuAI] Missing data-token attribute on script tag');
+    console.error('[Platovia] Missing data-token attribute on script tag');
     return;
   }
 
@@ -48,7 +48,7 @@
   // Create iframe
   var iframe = document.createElement('iframe');
   iframe.src = iframeSrc;
-  iframe.title = 'MenuAI Chatbot';
+  iframe.title = 'Platovia Chatbot';
   iframe.style.border = '0';
   iframe.style.width = '384px'; // 24rem, matches w-96
   iframe.style.height = open ? '500px' : '64px';
@@ -62,7 +62,7 @@
   window.addEventListener('message', function (ev) {
     if (!ev || !ev.data) return;
     try {
-      if (ev.data.type === 'menuai:height') {
+      if (ev.data.type === 'platovia:height') {
         var h = parseInt(ev.data.height, 10);
         if (!isNaN(h) && h > 40 && h < 900) {
           iframe.style.height = h + 'px';

@@ -183,7 +183,7 @@ export const PRICING_FAQ: PricingFAQ[] = [
   {
     question: "Is there a free trial for paid plans?",
     answer:
-      "The Free plan lets you try MenuAI with no time limit. For paid plans, we offer a 14-day money-back guarantee — if you're not satisfied, contact us for a full refund.",
+      "The Free plan lets you try Platovia with no time limit. For paid plans, we offer a 14-day money-back guarantee — if you're not satisfied, contact us for a full refund.",
   },
   {
     question: "What happens if I exceed my conversation limit?",

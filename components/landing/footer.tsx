@@ -60,7 +60,7 @@ export default function Footer() {
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <QrCode className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold">MenuAI</span>
+                <span className="text-xl font-bold">Platovia</span>
               </Link>
               <p className="text-sm text-muted-foreground">
                 AI-powered restaurant website chat for modern hospitality.
@@ -119,7 +119,7 @@ export default function Footer() {
           {/* Bottom bar */}
           <div className="border-t mt-8 pt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              &copy; 2026 MenuAI Inc. All rights reserved.
+              &copy; 2026 Platovia Inc. All rights reserved.
             </p>
           </div>
         </div>

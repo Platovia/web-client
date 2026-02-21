@@ -264,7 +264,7 @@ export default function OnboardingPage() {
         return (
           <div className="space-y-4">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold mb-2">Welcome to MenuAI!</h2>
+              <h2 className="text-2xl font-bold mb-2">Welcome to Platovia!</h2>
               <p className="text-muted-foreground">Let's set up your first restaurant</p>
             </div>
             <div className="space-y-2">
@@ -527,7 +527,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
-          <span className="text-2xl font-bold text-foreground">MenuAI</span>
+          <span className="text-2xl font-bold text-foreground">Platovia</span>
         </div>
 
         <Card>

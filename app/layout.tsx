@@ -6,9 +6,9 @@ import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'MenuAI - Smart QR Menu System',
+  title: 'Platovia - Smart QR Menu System',
   description: 'Create smart QR menus with AI-powered chatbot for restaurants',
-  generator: 'MenuAI',
+  generator: 'Platovia',
 }
 
 export default function RootLayout({

@@ -23,7 +23,7 @@ export default function Navbar() {
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <QrCode className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">MenuAI</span>
+          <span className="text-xl font-bold">Platovia</span>
         </Link>
 
         {/* Desktop nav links */}

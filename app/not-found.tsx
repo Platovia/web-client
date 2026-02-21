@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="text-center max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <QrCode className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+          <span className="text-2xl font-bold text-gray-900">Platovia</span>
         </div>
 
         <h1 className="text-8xl font-bold text-blue-600 mb-4">404</h1>

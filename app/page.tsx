@@ -127,7 +127,7 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Everything you need for smarter service</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              From menu digitization to intelligent conversations, MenuAI gives you the tools to delight every guest.
+              From menu digitization to intelligent conversations, Platovia gives you the tools to delight every guest.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">

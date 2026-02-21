@@ -115,7 +115,7 @@ export default function DashboardPage() {
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-2">🎉 Welcome to MenuAI, {firstName}!</h2>
+                <h2 className="text-2xl font-bold mb-2">Welcome to Platovia, {firstName}!</h2>
                 <p className="text-blue-100">
                   Your account has been set up successfully. You can now start uploading menus and generating QR codes.
                 </p>

@@ -50,7 +50,7 @@ export default function MenuEmbedSnippetPage() {
     if (!token) return ""
     
     const attrs = [
-      `src="${appUrl}/menuai-widget.js"`,
+      `src="${appUrl}/platovia-widget.js"`,
       `data-token="${token}"`,
       `data-color="${color}"`,
       `data-position="${position}"`,

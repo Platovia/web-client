@@ -30,7 +30,7 @@ export default function FeaturesPage() {
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             From OCR-powered menu digitization to context-aware AI
-            conversations, discover the technology that makes MenuAI the
+            conversations, discover the technology that makes Platovia the
             smartest restaurant assistant on the web.
           </p>
         </div>
@@ -126,9 +126,9 @@ export default function FeaturesPage() {
           <div className="max-w-3xl mx-auto mb-12">
             <div className="bg-slate-900 rounded-lg p-6 overflow-x-auto">
               <pre className="text-green-400 text-sm font-mono">
-                <code>{`<!-- MenuAI Widget -->
+                <code>{`<!-- Platovia Widget -->
 <script
-  src="https://widget.menuai.com/loader.js"
+  src="https://widget.platovia.com/loader.js"
   data-restaurant-id="YOUR_RESTAURANT_ID"
   async>
 </script>`}</code>
@@ -176,7 +176,7 @@ export default function FeaturesPage() {
                 More Than Keywords. True Understanding.
               </h2>
               <p className="text-muted-foreground mb-6">
-                MenuAI doesn&apos;t just match keywords — it understands intent,
+                Platovia doesn&apos;t just match keywords — it understands intent,
                 dietary needs, and preferences to deliver answers that feel
                 like talking to a knowledgeable server.
               </p>
@@ -258,11 +258,11 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* Section 4 — The Future of MenuAI */}
+      {/* Section 4 — The Future of Platovia */}
       <section className="py-16 md:py-20 bg-navy text-navy-foreground">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">The Future of MenuAI</h2>
+            <h2 className="text-3xl font-bold mb-4">The Future of Platovia</h2>
             <p className="opacity-80 max-w-2xl mx-auto">
               We&apos;re building the most complete restaurant AI platform.
               Here&apos;s what&apos;s coming next.

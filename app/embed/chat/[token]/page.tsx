@@ -42,7 +42,7 @@ export default function EmbeddedChatPage() {
     // notify parent about widget height for optional auto-resize
     const height = isChatMinimized ? 64 : showChat ? 520 : 64
     try {
-      window.parent?.postMessage({ type: "menuai:height", height }, "*")
+      window.parent?.postMessage({ type: "platovia:height", height }, "*")
     } catch {}
   }, [showChat, isChatMinimized])
 

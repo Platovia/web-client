@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <QrCode className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <span className="text-lg font-bold text-foreground">MenuAI</span>
+                <span className="text-lg font-bold text-foreground">Platovia</span>
                 <p className="text-xs text-muted-foreground">
                   {primaryCompany?.name || "Loading..."}
                 </p>

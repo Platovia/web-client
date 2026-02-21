@@ -62,7 +62,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center"><QrCode className="h-5 w-5 text-primary-foreground" /></div>
-            <span className="text-2xl font-bold text-foreground">MenuAI</span>
+            <span className="text-2xl font-bold text-foreground">Platovia</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back</h1>
           <p className="text-muted-foreground">Sign in to your account to continue</p>

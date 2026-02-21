@@ -21,7 +21,7 @@ export default function Error({
       <div className="text-center max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <QrCode className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900">MenuAI</span>
+          <span className="text-2xl font-bold text-gray-900">Platovia</span>
         </div>
 
         <AlertTriangle className="h-16 w-16 text-orange-500 mx-auto mb-6" />
