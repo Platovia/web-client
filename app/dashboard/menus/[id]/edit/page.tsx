@@ -1045,12 +1045,12 @@ export default function EditMenuPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Menu</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold text-foreground">Edit Menu</h1>
+              <p className="text-muted-foreground">
                 {menuData.menu.name} - {menuData.restaurant ? (
-                  <Link 
+                  <Link
                     href={`/dashboard/restaurants/${menuData.restaurant.id}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                    className="text-primary hover:underline"
                   >
                     {menuData.restaurant.name}
                   </Link>
@@ -1061,7 +1061,7 @@ export default function EditMenuPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {processing && (
               <div className="px-3 py-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-2 mr-4">
                 <Clock className="h-4 w-4" />
@@ -1090,7 +1090,7 @@ export default function EditMenuPage() {
             <Link href={activeToken ? `/menu/${menuData.restaurant?.id}?token=${activeToken}` : `/dashboard/menus/${id}/qr`} target={activeToken ? "_blank" : "_self"}>
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
-                {activeToken ? "Preview" : "Generate QR"}
+                Preview
               </Button>
             </Link>
             <Button onClick={handleSaveMenu} disabled={isSaving || isMenuLocked}>
@@ -1098,9 +1098,8 @@ export default function EditMenuPage() {
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>
-            <Button onClick={handleDeleteMenu} variant="destructive" disabled={isMenuLocked}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Menu
+            <Button onClick={handleDeleteMenu} variant="destructive" size="sm" disabled={isMenuLocked}>
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -1203,40 +1202,36 @@ export default function EditMenuPage() {
             )}
             <div className="grid gap-3 md:grid-cols-4">
               <div className="md:col-span-2">
-                <Label htmlFor="item-search">Search items</Label>
                 <Input
-                  id="item-search"
                   placeholder="Search by name or description"
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
                 />
               </div>
               <div>
-                <Label htmlFor="item-category">Filter by category</Label>
-                <select
-                  id="item-category"
-                  className="w-full p-2 border rounded-md"
-                  value={itemCategoryFilter}
-                  onChange={(e) => setItemCategoryFilter(e.target.value)}
-                >
-                  <option value="All">All</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <Select value={itemCategoryFilter} onValueChange={setItemCategoryFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Categories</SelectItem>
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="item-availability">Availability</Label>
-                <select
-                  id="item-availability"
-                  className="w-full p-2 border rounded-md"
-                  value={itemAvailabilityFilter}
-                  onChange={(e) => setItemAvailabilityFilter(e.target.value as typeof itemAvailabilityFilter)}
-                >
-                  <option value="All">All</option>
-                  <option value="Available">Available</option>
-                  <option value="Unavailable">Unavailable</option>
-                </select>
+                <Select value={itemAvailabilityFilter} onValueChange={(v) => setItemAvailabilityFilter(v as typeof itemAvailabilityFilter)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="Unavailable">Unavailable</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {filteredItems.length === 0 && (
@@ -1246,95 +1241,80 @@ export default function EditMenuPage() {
             )}
             {/* Menu Items by Category */}
             {filteredCategories.map((category) => (
-              <Card key={category}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>{category}</CardTitle>
-                    <Button size="sm" onClick={() => setAddingItem(category)} disabled={isItemsLocked}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Item
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                        {filteredItems
-                          .filter((item) => (item.category || "Other") === category)
-                      .map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          {/* Item Image */}
-                          {item.image_url && (
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden mr-4 flex-shrink-0">
-                              <img 
-                                src={resolveImageUrl(item.image_url) || "/placeholder.jpg"} 
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                              />
+              <div key={category} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-foreground">{category}</h3>
+                  <Button size="sm" onClick={() => setAddingItem(category)} disabled={isItemsLocked}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    + Add Item
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {filteredItems
+                    .filter((item) => (item.category || "Other") === category)
+                    .map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                        {/* Item Image */}
+                        <div className="w-10 h-10 bg-muted rounded-lg overflow-hidden mr-4 flex-shrink-0">
+                          {item.image_url ? (
+                            <img
+                              src={resolveImageUrl(item.image_url) || "/placeholder.jpg"}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-medium">{item.name}</h4>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-green-600">
-                                  {formatPrice(item.price, menuData.restaurant?.currency_code)}
-                                </Badge>
-                                {!item.is_available && <Badge variant="destructive">Unavailable</Badge>}
-                                {/* Display tags if available, otherwise fall back to legacy fields */}
-                                {item.tags && item.tags.length > 0 ? (
-                                  <TagList tags={item.tags} size="sm" maxTags={3} />
-                                ) : (
-                                  <>
-                                    {item.is_vegetarian && (
-                                      <Badge variant="outline" className="text-green-600">
-                                        Vegetarian
-                                      </Badge>
-                                    )}
-                                    {item.is_vegan && (
-                                      <Badge variant="outline" className="text-green-700">
-                                        Vegan
-                                      </Badge>
-                                    )}
-                                    {item.is_gluten_free && (
-                                      <Badge variant="outline" className="text-blue-600">
-                                        Gluten Free
-                                      </Badge>
-                                    )}
-                                  </>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold">{item.name}</h4>
+                            <span className="text-green-600 font-medium text-sm">
+                              {formatPrice(item.price, menuData.restaurant?.currency_code)}
+                            </span>
+                            {!item.is_available && <Badge variant="destructive" className="text-xs">Unavailable</Badge>}
+                            {item.tags && item.tags.length > 0 ? (
+                              <TagList tags={item.tags} size="sm" maxTags={3} />
+                            ) : (
+                              <>
+                                {item.is_vegetarian && (
+                                  <Badge variant="outline" className="text-green-600 text-xs">Vegetarian</Badge>
                                 )}
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-                            {item.allergens && item.allergens.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-orange-500" />
-                                <span className="text-xs text-gray-500">Allergens: {item.allergens.join(", ")}</span>
-                              </div>
+                                {item.is_vegan && (
+                                  <Badge variant="outline" className="text-green-700 text-xs">Vegan</Badge>
+                                )}
+                                {item.is_gluten_free && (
+                                  <Badge variant="outline" className="text-primary text-xs">Gluten Free</Badge>
+                                )}
+                              </>
                             )}
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant={item.is_available ? "outline" : "default"}
-                              size="sm"
-                              onClick={() => toggleItemAvailability(item.id)}
-                              disabled={isItemsLocked}
-                            >
-                              {item.is_available ? "Available" : "Unavailable"}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)} disabled={isItemsLocked}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={isItemsLocked}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                          )}
+                          {item.allergens && item.allergens.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <AlertTriangle className="h-3 w-3 text-orange-500" />
+                              <span className="text-xs text-muted-foreground">Allergens: {item.allergens.join(", ")}</span>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
+
+                        <div className="flex items-center gap-1 ml-4">
+                          <Button variant="ghost" size="sm" onClick={() => setEditingItem(item)} disabled={isItemsLocked}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={isItemsLocked}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             ))}
           </TabsContent>
 
@@ -1439,27 +1419,27 @@ export default function EditMenuPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <p className="text-2xl font-bold text-blue-600">{menuAnalytics.totalViews.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Total Views</p>
+                    <p className="text-sm text-muted-foreground">Total Views</p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <p className="text-2xl font-bold text-green-600">{menuAnalytics.uniqueViewers.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Unique Viewers</p>
+                    <p className="text-sm text-muted-foreground">Unique Viewers</p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
                     <p className="text-2xl font-bold text-purple-600">{menuAnalytics.qrScans.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">QR Scans</p>
+                    <p className="text-sm text-muted-foreground">QR Scans</p>
                   </div>
                   <div className="text-center p-4 bg-orange-50 rounded-lg">
                     <p className="text-2xl font-bold text-orange-600">{menuAnalytics.chatSessions.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Chat Sessions</p>
+                    <p className="text-sm text-muted-foreground">Chat Sessions</p>
                   </div>
                   <div className="text-center p-4 bg-teal-50 rounded-lg">
                     <p className="text-2xl font-bold text-teal-600">{menuAnalytics.chatMessages.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Chat Messages</p>
+                    <p className="text-sm text-muted-foreground">Chat Messages</p>
                   </div>
                   <div className="text-center p-4 bg-indigo-50 rounded-lg">
                     <p className="text-2xl font-bold text-indigo-600">{menuAnalytics.avgMessagesPerSession.toFixed(1)}</p>
-                    <p className="text-sm text-gray-600">Avg Messages/Session</p>
+                    <p className="text-sm text-muted-foreground">Avg Messages/Session</p>
                   </div>
                 </div>
               </CardContent>
@@ -2141,7 +2121,7 @@ export default function EditMenuPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-semibold text-lg">v{version.version_number}</span>
-                                <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
+                                <Badge variant="secondary" className="bg-muted text-muted-foreground border-muted">
                                   <Archive className="h-3 w-3 mr-1" />
                                   Archived
                                 </Badge>
@@ -2327,7 +2307,7 @@ export default function EditMenuPage() {
                   <div className="space-y-2">
                     <Label htmlFor="price">Price</Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="price"
                         type="number"
@@ -2398,7 +2378,7 @@ export default function EditMenuPage() {
                   
                   {/* Legacy dietary checkboxes for backward compatibility */}
                   <details className="mt-4">
-                    <summary className="text-sm text-gray-600 cursor-pointer">Legacy dietary options</summary>
+                    <summary className="text-sm text-muted-foreground cursor-pointer">Legacy dietary options</summary>
                     <div className="flex gap-4 mt-2">
                       <label className="flex items-center gap-2">
                         <input
@@ -2465,7 +2445,7 @@ export default function EditMenuPage() {
                     <div className="space-y-2">
                       <Label htmlFor="newItemPrice">Price</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="newItemPrice"
                           name="price"
