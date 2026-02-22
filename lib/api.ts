@@ -741,6 +741,12 @@ class ApiClient {
     });
   }
 
+  async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
+      method: 'POST',
+    });
+  }
+
   async logout(): Promise<void> {
     this.clearTokens();
   }

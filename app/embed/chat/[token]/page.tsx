@@ -281,6 +281,7 @@ export default function EmbeddedChatPage() {
                     <Send className="h-3 w-3" />
                   </Button>
                 </div>
+                <p className="text-[10px] text-gray-400 text-center mt-1.5">AI Assistant · Responses may contain inaccuracies</p>
               </div>
             </>
           )}

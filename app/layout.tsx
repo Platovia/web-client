@@ -3,6 +3,7 @@ import Script from 'next/script'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { AuthProvider } from '@/contexts/auth-context'
+import CookieConsent from '@/components/cookie-consent'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <CookieConsent />
         <Script src="https://cdn.paddle.com/paddle/v2/paddle.js" strategy="lazyOnload" />
       </body>
     </html>

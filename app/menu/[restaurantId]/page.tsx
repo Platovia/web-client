@@ -519,6 +519,13 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
         />
       </div>
 
+      <div className="container mx-auto px-4 py-4">
+        <p className="text-xs text-gray-400 text-center max-w-2xl mx-auto">
+          Menu information is processed by AI and may contain inaccuracies.
+          Please confirm allergen information and dietary requirements directly with the restaurant.
+        </p>
+      </div>
+
       {/* Chat Button - only show if we have a QR token */}
       {qrToken && (
         <Button
@@ -685,6 +692,7 @@ export default function MenuPage({ params }: { params: { restaurantId: string } 
                       <Send className="h-3 w-3" />
                     </Button>
                   </div>
+                  <p className="text-[10px] text-gray-400 text-center mt-1.5">AI Assistant · Responses may contain inaccuracies</p>
                 </div>
               </>
             )}

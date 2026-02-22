@@ -104,7 +104,7 @@ export default function RegisterPage() {
             <span className="text-2xl font-bold text-foreground">Platovia</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mb-2">Create your account</h1>
-          <p className="text-muted-foreground">Start your free trial today</p>
+          <p className="text-muted-foreground">Get started for free</p>
         </div>
 
         <Card>
@@ -268,7 +268,10 @@ export default function RegisterPage() {
                   disabled={loading}
                 />
                 <Label htmlFor="terms" className="text-sm">
-                  I agree to the Terms of Service and Privacy Policy
+                  I agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-primary hover:underline">Terms of Service</Link>
+                  {" "}and{" "}
+                  <Link href="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>
                 </Label>
               </div>
 
