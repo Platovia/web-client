@@ -28,6 +28,7 @@ interface User {
   is_verified: boolean;
   last_login: string | null;
   created_at: string;
+  roles: string[];
 }
 
 interface LoginRequest {
