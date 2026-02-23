@@ -42,7 +42,7 @@ const isValidUrl = (url: string): boolean => {
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { companies } = useAuth()
+  const { companies, refreshCompanies } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -159,8 +159,18 @@ export default function OnboardingPage() {
 
   const handleQuickSetup = async () => {
     if (!companies || companies.length === 0) {
-      setError("No company found. Please contact support.")
-      return
+      // Auto-create company using the restaurant name from step 1
+      const companyResponse = await apiClient.createCompany({
+        name: restaurantData.name.trim(),
+        description: `${restaurantData.name.trim()} - Restaurant company`,
+      })
+
+      if (companyResponse.error) {
+        setError("Failed to set up your account. Please contact support.")
+        return
+      }
+
+      await refreshCompanies()
     }
 
     setIsLoading(true)
