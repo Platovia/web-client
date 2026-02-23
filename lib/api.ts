@@ -754,14 +754,14 @@ class ApiClient {
 
   // Company endpoints
   async createCompany(companyData: { name: string; description?: string }): Promise<ApiResponse<Company>> {
-    return this.makeRequest<Company>('/companies', {
+    return this.makeRequest<Company>('/companies/', {
       method: 'POST',
       body: JSON.stringify(companyData),
     });
   }
 
   async getUserCompanies(): Promise<ApiResponse<{ companies: Company[], total: number }>> {
-    return this.makeRequest<{ companies: Company[], total: number }>('/companies');
+    return this.makeRequest<{ companies: Company[], total: number }>('/companies/');
   }
 
   async getCompany(companyId: string): Promise<ApiResponse<Company>> {
