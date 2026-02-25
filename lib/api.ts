@@ -1307,9 +1307,9 @@ class ApiClient {
     });
   }
 
-  async triggerImageExtraction(menuId: string, versionId?: string): Promise<ApiResponse<{ success: boolean; message: string; extracted_count: number }>> {
+  async triggerImageExtraction(menuId: string, versionId?: string): Promise<ApiResponse<{ success: boolean; message: string; task_id: string; menu_id: string }>> {
     const params = versionId ? `?version_id=${versionId}` : '';
-    return this.makeRequest<{ success: boolean; message: string; extracted_count: number }>(`/menus/${menuId}/extract-images${params}`, {
+    return this.makeRequest<{ success: boolean; message: string; task_id: string; menu_id: string }>(`/menus/${menuId}/extract-images${params}`, {
       method: 'POST',
     });
   }

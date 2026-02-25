@@ -114,14 +114,52 @@ export default function ImageMatchingTabContent({ menuId, versionId, readOnly }:
       const response = await apiClient.triggerImageExtraction(menuId, versionId || undefined)
       if (response.error) {
         setError(response.error)
-      } else if (response.data) {
-        setSuccess(`${response.data.extracted_count} images extracted successfully!`)
-        await loadData()
+        setIsExtracting(false)
+        return
+      }
+
+      if (response.data) {
+        setSuccess(response.data.message)
+
+        // Poll for results — check every 3s, stop after 60s or when new images appear
+        const initialCount = stats.total
+        const maxAttempts = 20 // 20 * 3s = 60s
+        let attempts = 0
+
+        const poll = setInterval(async () => {
+          attempts++
+          try {
+            const imagesResponse = await apiClient.getExtractedImages(menuId)
+            if (imagesResponse.data) {
+              const newTotal = imagesResponse.data.total_count
+              if (newTotal > initialCount || attempts >= maxAttempts) {
+                clearInterval(poll)
+                setExtractedImages(imagesResponse.data.extracted_images)
+                setStats({
+                  total: imagesResponse.data.total_count,
+                  assigned: imagesResponse.data.assigned_count,
+                  unassigned: imagesResponse.data.unassigned_count,
+                })
+                if (newTotal > initialCount) {
+                  setSuccess(`${newTotal - initialCount} new images extracted!`)
+                } else {
+                  setSuccess("Extraction finished. No new images found.")
+                }
+                setIsExtracting(false)
+              }
+            }
+          } catch {
+            // keep polling on transient errors
+          }
+          if (attempts >= maxAttempts) {
+            clearInterval(poll)
+            setIsExtracting(false)
+          }
+        }, 3000)
       }
     } catch (err) {
       console.error("Error triggering extraction:", err)
       setError("Failed to extract images")
-    } finally {
       setIsExtracting(false)
     }
   }
